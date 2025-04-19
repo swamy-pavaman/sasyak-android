@@ -25,7 +25,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.sasyak.R
+import com.kapilagro.sasyak.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -113,7 +113,7 @@ fun EditProfileScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Image(
-                            painter = painterResource(id = R.drawable.profile_placeholder),
+                            painter = painterResource(id = R.drawable.ic_person), // TODO profile_placeholder
                             contentDescription = "Profile Photo",
                             modifier = Modifier
                                 .size(100.dp)

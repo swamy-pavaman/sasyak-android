@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.kapilagro.sasyak.domain.models.DailyTaskCount
 import com.kapilagro.sasyak.presentation.common.theme.*
+import com.kapilagro.sasyak.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,7 +37,7 @@ fun ReportScreen(
                     IconButton(onClick = { /* Export reports */ }) {
                         Icon(
                             painter = androidx.compose.ui.res.painterResource(
-                                id = com.example.sasyak.R.drawable.ic_download
+                                id = R.drawable.ic_drop // TODO download icon
                             ),
                             contentDescription = "Export"
                         )
@@ -73,7 +74,7 @@ fun ReportScreen(
                     Spacer(modifier = Modifier.width(4.dp))
                     Icon(
                         painter = androidx.compose.ui.res.painterResource(
-                            id = com.example.sasyak.R.drawable.ic_calendar
+                            id = R.drawable.ic_calender
                         ),
                         contentDescription = "Select Date",
                         modifier = Modifier.size(16.dp)
