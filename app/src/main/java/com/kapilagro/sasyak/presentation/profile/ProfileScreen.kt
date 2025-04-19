@@ -2,28 +2,31 @@ package com.kapilagro.sasyak.presentation.profile
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import com.kapilagro.sasyak.presentation.common.theme.Green500
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.outlined.*
+
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.sasyak.R
-import com.example.sasyak.domain.models.User
-import com.example.sasyak.presentation.common.theme.Green500
+import com.kapilagro.sasyak.R
+import com.kapilagro.sasyak.domain.models.User
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -151,7 +154,7 @@ fun ProfileContent(
                 Box {
                     // Avatar
                     Image(
-                        painter = painterResource(id = R.drawable.profile_placeholder),
+                        painter = painterResource(id = R.drawable.ic_person), // TODO profile place holder
                         contentDescription = "Profile Photo",
                         modifier = Modifier
                             .size(100.dp)
@@ -272,7 +275,7 @@ fun ProfileContent(
                 ) {
                     // Manager avatar
                     Image(
-                        painter = painterResource(id = R.drawable.profile_placeholder),
+                        painter = painterResource(id = R.drawable.ic_person),//TODO profile_placeholder
                         contentDescription = "Manager Photo",
                         modifier = Modifier
                             .size(50.dp)
@@ -313,7 +316,7 @@ fun ProfileContent(
                 .padding(vertical = 16.dp)
         ) {
             Icon(
-                imageVector = Icons.Outlined.Logout,
+                imageVector = Icons.AutoMirrored.Outlined.Logout,
                 contentDescription = null
             )
             Spacer(modifier = Modifier.width(8.dp))

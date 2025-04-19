@@ -2,7 +2,7 @@ package com.kapilagro.sasyak.presentation.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.kapilagro.sasyak.data.repositories.WeatherRepository
+import com.kapilagro.sasyak.domain.repositories.WeatherRepository
 import com.kapilagro.sasyak.di.IoDispatcher
 import com.kapilagro.sasyak.domain.models.ApiResponse
 import com.kapilagro.sasyak.domain.models.Task

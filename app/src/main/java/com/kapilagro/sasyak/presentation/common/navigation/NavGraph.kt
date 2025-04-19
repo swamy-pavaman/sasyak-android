@@ -36,7 +36,6 @@ fun AppNavGraph(
 ) {
     val authViewModel: AuthViewModel = hiltViewModel()
     val authState by authViewModel.authState.collectAsState()
-    val userRole by authViewModel.userRole.collectAsState()
 
     NavHost(
         navController = navController,

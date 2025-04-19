@@ -10,8 +10,7 @@ import java.util.prefs.Preferences
 import javax.inject.Inject
 import javax.inject.Singleton
 
-private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "sasyak_preferences")
-
+private val Context.dataStore: DataStore<androidx.datastore.preferences.core.Preferences> by preferencesDataStore(name = "sasyak_preferences")
 @Singleton
 class DataStoreManager @Inject constructor(
     private val context: Context
@@ -98,7 +97,7 @@ class DataStoreManager @Inject constructor(
     }
 
     val isFirstLaunch: Flow<Boolean> = context.dataStore.data.map { preferences ->
-        preferences[IS_FIRST_LAUNCH] ?: true
+        preferences[IS_FIRST_LAUNCH] != false
     }
 
     suspend fun setDarkTheme(isDarkTheme: Boolean) {
@@ -108,6 +107,6 @@ class DataStoreManager @Inject constructor(
     }
 
     val isDarkTheme: Flow<Boolean> = context.dataStore.data.map { preferences ->
-        preferences[IS_DARK_THEME] ?: false
+        preferences[IS_DARK_THEME] == true
     }
 }

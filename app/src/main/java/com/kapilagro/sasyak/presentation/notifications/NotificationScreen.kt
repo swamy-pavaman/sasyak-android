@@ -1,7 +1,5 @@
 package com.kapilagro.sasyak.presentation.notifications
 
-// NotificationScreen.kt
-
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -14,9 +12,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.sasyak.presentation.common.components.NotificationItem
-import com.google.accompanist.swiperefresh.SwipeRefresh
-import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
+import com.kapilagro.sasyak.presentation.common.components.NotificationItem
+import androidx.compose.material.pullrefresh.PullRefreshIndicator
+import androidx.compose.material.pullrefresh.pullRefresh
+import androidx.compose.material.pullrefresh.rememberPullRefreshState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,12 +34,20 @@ fun NotificationScreen(
         }
     }
 
-    // Handle refresh state
     LaunchedEffect(notificationsState) {
         if (notificationsState !is NotificationViewModel.NotificationsState.Loading) {
             isRefreshing = false
         }
     }
+
+    val pullRefreshState = rememberPullRefreshState(
+        refreshing = isRefreshing,
+        onRefresh = {
+            isRefreshing = true
+            viewModel.loadNotifications()
+            viewModel.loadUnreadCount()
+        }
+    )
 
     Scaffold(
         topBar = {
@@ -67,20 +74,16 @@ fun NotificationScreen(
             )
         }
     ) { paddingValues ->
-        SwipeRefresh(
-            state = rememberSwipeRefreshState(isRefreshing),
-            onRefresh = {
-                isRefreshing = true
-                viewModel.loadNotifications()
-                viewModel.loadUnreadCount()
-            }
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .pullRefresh(pullRefreshState)
         ) {
             when (notificationsState) {
                 is NotificationViewModel.NotificationsState.Success -> {
                     val notifications = (notificationsState as NotificationViewModel.NotificationsState.Success).notifications
 
                     if (notifications.isEmpty()) {
-                        // Empty state
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -105,7 +108,6 @@ fun NotificationScreen(
                             }
                         }
                     } else {
-                        // Notification list
                         LazyColumn(
                             contentPadding = PaddingValues(
                                 top = paddingValues.calculateTopPadding(),
@@ -139,12 +141,9 @@ fun NotificationScreen(
                                 NotificationItem(
                                     notification = notification,
                                     onClick = {
-                                        // Mark as read when clicked
                                         if (!notification.isRead) {
                                             viewModel.markNotificationAsRead(notification.id)
                                         }
-
-                                        // Navigate to task if notification is related to a task
                                         notification.taskId?.let { taskId ->
                                             onTaskClick(taskId)
                                         }
@@ -154,8 +153,8 @@ fun NotificationScreen(
                         }
                     }
                 }
+
                 is NotificationViewModel.NotificationsState.Loading -> {
-                    // Loading state
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -165,8 +164,8 @@ fun NotificationScreen(
                         CircularProgressIndicator()
                     }
                 }
+
                 is NotificationViewModel.NotificationsState.Error -> {
-                    // Error state
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -190,6 +189,14 @@ fun NotificationScreen(
                     }
                 }
             }
+
+            PullRefreshIndicator(
+                refreshing = isRefreshing,
+                state = pullRefreshState,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = paddingValues.calculateTopPadding())
+            )
         }
     }
 }

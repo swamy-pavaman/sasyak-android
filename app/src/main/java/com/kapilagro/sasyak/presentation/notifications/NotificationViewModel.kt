@@ -2,10 +2,10 @@ package com.kapilagro.sasyak.presentation.notifications
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.sasyak.di.IoDispatcher
-import com.example.sasyak.domain.models.ApiResponse
-import com.example.sasyak.domain.models.Notification
-import com.example.sasyak.domain.repositories.NotificationRepository
+import com.kapilagro.sasyak.di.IoDispatcher
+import com.kapilagro.sasyak.domain.models.ApiResponse
+import com.kapilagro.sasyak.domain.models.Notification
+import com.kapilagro.sasyak.domain.repositories.NotificationRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow

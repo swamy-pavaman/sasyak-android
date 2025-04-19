@@ -167,7 +167,7 @@ class TaskViewModel @Inject constructor(
 
     fun addTaskAdvice(taskId: Int, adviceText: String) {
         viewModelScope.launch(ioDispatcher) {
-            when (val response = taskAdviceRepository.createTaskAdvice(taskId, adviceText)) {
+            when (taskAdviceRepository.createTaskAdvice(taskId, adviceText)) {
                 is ApiResponse.Success -> {
                     loadTaskDetail(taskId) // Refresh task detail to show new advice
                 }

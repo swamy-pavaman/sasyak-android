@@ -15,6 +15,8 @@ gson = "2.10.1"
 compileSdk = "35"
 minSdk = "24"
 targetSdk = "35"
+material = "1.6.0"
+
 
 [plugins]
 android-application = { id = "com.android.application", version = "8.1.2" }
@@ -23,6 +25,11 @@ kotlin-parcelize = { id = "org.jetbrains.kotlin.plugin.parcelize", version = "1.
 dagger-hilt = { id = "com.google.dagger.hilt.android", version = "2.48" }
 ksp = { id = "com.google.devtools.ksp", version = "1.9.10-1.0.13" }
 [libraries]
+androidx-material = { module = "androidx.compose.material:material", version.ref = "material" }
+
+datastore-core = "androidx.datastore:datastore-core:1.1.0-alpha06"
+datastore-preferences = "androidx.datastore:datastore-preferences:1.1.0-alpha06"
+
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "kotlin" }
 androidx-lifecycle-runtime-ktx = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "lifecycle" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version = "1.8.0" }

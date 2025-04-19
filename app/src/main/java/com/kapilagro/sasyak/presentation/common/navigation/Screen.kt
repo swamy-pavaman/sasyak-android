@@ -10,9 +10,9 @@ sealed class Screen(val route: String, val title: String, @DrawableRes val icon:
 
     // Main screens with bottom navigation
     object Home : Screen("home", "Home", R.drawable.ic_home)
-    object Reports : Screen("reports", "Reports", R.drawable.ic_reports)
-    object Notifications : Screen("notifications", "Notifications", R.drawable.ic_notifications)
-    object Profile : Screen("profile", "Profile", R.drawable.ic_profile)
+    object Reports : Screen("reports", "Reports", R.drawable.ic_rejected) // TODO chnage to report icon
+    object Notifications : Screen("notifications", "Notifications", R.drawable.ic_notification)
+    object Profile : Screen("profile", "Profile", R.drawable.ic_person)
 
     // Task related screens
     object TaskList : Screen("task_list", "Tasks")
