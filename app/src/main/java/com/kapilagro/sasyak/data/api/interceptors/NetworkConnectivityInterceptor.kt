@@ -4,13 +4,14 @@ package com.kapilagro.sasyak.data.api.interceptors
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import dagger.hilt.android.qualifiers.ApplicationContext
 import okhttp3.Interceptor
 import okhttp3.Response
 import java.io.IOException
 import javax.inject.Inject
 
 class NetworkConnectivityInterceptor @Inject constructor(
-    private val context: Context
+    @ApplicationContext private val context: Context
 ) : Interceptor {
 
     override fun intercept(chain: Interceptor.Chain): Response {

@@ -7,28 +7,14 @@ import okhttp3.Response
 import javax.inject.Inject
 
 class AuthInterceptor @Inject constructor(
-    private val authRepository: AuthRepository // Use interface instead of implementation
+    private val authRepository: dagger.Lazy<AuthRepository>
 ) : Interceptor {
-
     override fun intercept(chain: Interceptor.Chain): Response {
-        val originalRequest = chain.request()
-
-        // Skip token for authentication endpoints
-        if (originalRequest.url.encodedPath.contains("auth")) {
-            return chain.proceed(originalRequest)
+        val request = chain.request().newBuilder()
+        val token = authRepository.get().getAccessToken()
+        if (!token.isNullOrBlank()) {
+            request.addHeader("Authorization", "Bearer $token")
         }
-
-        val accessToken = authRepository.getAccessToken()
-
-        // If we have a token, add it to the request
-        return if (!accessToken.isNullOrEmpty()) {
-            val authenticatedRequest = originalRequest.newBuilder()
-                .header("Authorization", "Bearer $accessToken")
-                .build()
-
-            chain.proceed(authenticatedRequest)
-        } else {
-            chain.proceed(originalRequest)
-        }
+        return chain.proceed(request.build())
     }
 }

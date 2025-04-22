@@ -5,10 +5,14 @@ plugins {
     alias(libs.plugins.dagger.hilt)
     alias(libs.plugins.ksp)
 }
-apply plugin: 'kotlin-kapt'
 android {
     namespace = "com.kapilagro.sasyak"
     compileSdk = libs.versions.compileSdk.get().toInteger()
+
+    ksp {
+        arg("dagger.fastInit", "enabled")
+        arg("dagger.experimentalDaggerErrorMessages", "enabled")
+    }
 
     defaultConfig {
         applicationId = "com.kapilagro.sasyak"
@@ -67,7 +71,7 @@ dependencies {
     implementation(libs.androidx.hilt.navigation.compose)
 
     implementation(libs.hilt.android)
-    kapt(libs.hilt.compiler)
+    ksp(libs.hilt.compiler)
 
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
