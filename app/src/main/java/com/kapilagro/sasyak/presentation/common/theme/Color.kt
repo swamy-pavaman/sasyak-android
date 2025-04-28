@@ -10,9 +10,11 @@ val AgroLight = Color(0xFFE8F5E9)
 val AgroDark = Color(0xFF005025)
 val AgroMuted = Color(0xFFF0F7F1)
 val AgroMutedForeground = Color(0xFF707F75)
+val White=Color(0xFFFFFFFF)
 
 // UI Colors
-val Background = AgroLight
+//val Background = AgroLight
+val Background = White
 val Foreground = AgroDark
 val Border = Color(0xFFE0E5E3)
 val Card = Color(0xFFFFFFFF)
