@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import javax.inject.Inject
 import javax.inject.Singleton
+import androidx.core.content.edit
 
 @Singleton
 class AuthRepositoryImpl @Inject constructor(
@@ -84,12 +85,13 @@ class AuthRepositoryImpl @Inject constructor(
             putInt(KEY_USER_ID, authResponse.userId)
             putString(KEY_USER_EMAIL, authResponse.email)
             putString(KEY_USER_NAME, authResponse.name)
+            putString(KEY_USER_ROLE, authResponse.role)  // Save the role
             apply()
         }
 
         authStateFlow.value = true
+        userRoleFlow.value = authResponse.role  // Update the role flow
     }
-
     override suspend fun clearAuthTokens() {
         sharedPreferences.edit().apply {
             remove(KEY_ACCESS_TOKEN)
@@ -112,7 +114,7 @@ class AuthRepositoryImpl @Inject constructor(
 
     // Moved from implementation method to interface implementation
     override fun saveUserRole(role: String) {
-        sharedPreferences.edit().putString(KEY_USER_ROLE, role).apply()
+        sharedPreferences.edit() { putString(KEY_USER_ROLE, role) }
         userRoleFlow.value = role
     }
 

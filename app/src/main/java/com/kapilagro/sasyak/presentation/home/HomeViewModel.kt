@@ -8,6 +8,7 @@ import com.kapilagro.sasyak.domain.models.ApiResponse
 import com.kapilagro.sasyak.domain.models.Task
 import com.kapilagro.sasyak.domain.models.User
 import com.kapilagro.sasyak.domain.models.WeatherInfo
+import com.kapilagro.sasyak.domain.repositories.AuthRepository
 import com.kapilagro.sasyak.domain.repositories.TaskRepository
 import com.kapilagro.sasyak.domain.repositories.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -15,6 +16,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -23,6 +25,7 @@ class HomeViewModel @Inject constructor(
     private val userRepository: UserRepository,
     private val taskRepository: TaskRepository,
     private val weatherRepository: WeatherRepository,
+    private val authRepository: AuthRepository,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) : ViewModel() {
 
@@ -35,10 +38,29 @@ class HomeViewModel @Inject constructor(
     private val _tasksState = MutableStateFlow<TasksState>(TasksState.Loading)
     val tasksState: StateFlow<TasksState> = _tasksState.asStateFlow()
 
+
+
+    private val _userRole = MutableStateFlow<String?>(null)
+    val userRole: StateFlow<String?> = _userRole.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            authRepository.getUserRole().collect { role ->
+                _userRole.value = role
+            }
+        }
+    }
+
     init {
         loadUserData()
         loadWeatherData()
-        loadTasksData()
+
+        // Listen for role changes to load appropriate tasks
+        viewModelScope.launch {
+            userRole.collectLatest { role ->
+                loadTasksData()
+            }
+        }
     }
 
     fun loadUserData() {
@@ -79,7 +101,18 @@ class HomeViewModel @Inject constructor(
     fun loadTasksData() {
         _tasksState.value = TasksState.Loading
         viewModelScope.launch(ioDispatcher) {
-            when (val response = taskRepository.getAssignedTasks(0, 5)) {
+            val currentRole = userRole.value
+
+
+            val response = if (currentRole == "MANAGER") {
+                // For managers, get tasks created by them
+                taskRepository.getCreatedTasks(0, 5)
+            } else {
+                // For supervisors, get tasks assigned to them
+                taskRepository.getAssignedTasks(0, 5)
+            }
+
+            when (response) {
                 is ApiResponse.Success -> {
                     _tasksState.value = TasksState.Success(response.data.first)
                 }

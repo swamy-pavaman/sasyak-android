@@ -114,19 +114,19 @@ class UserRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun getTeamMemberById(userId: Int): ApiResponse<User> {
-        return try {
-            val response = apiService.getTeamMemberById(userId)
-
-            if (response.isSuccessful && response.body() != null) {
-                ApiResponse.Success(response.body()!!.toDomainModel())
-            } else {
-                ApiResponse.Error(response.errorBody()?.string() ?: "Failed to get team member")
-            }
-        } catch (e: Exception) {
-            ApiResponse.Error(e.message ?: "An unknown error occurred")
-        }
-    }
+//    override suspend fun getTeamMemberById(userId: Int): ApiResponse<User> {
+//        return try {
+//            val response = apiService.getTeamMemberById(userId)
+//
+//            if (response.isSuccessful && response.body() != null) {
+//                ApiResponse.Success(response.body()!!.toDomainModel())
+//            } else {
+//                ApiResponse.Error(response.errorBody()?.string() ?: "Failed to get team member")
+//            }
+//        } catch (e: Exception) {
+//            ApiResponse.Error(e.message ?: "An unknown error occurred")
+//        }
+//    }
 
     override suspend fun updateTeamMember(
         userId: Int,

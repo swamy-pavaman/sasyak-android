@@ -12,6 +12,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -31,14 +32,24 @@ class ProfileViewModel @Inject constructor(
     private val _updateProfileState = MutableStateFlow<UpdateProfileState>(UpdateProfileState.Idle)
     val updateProfileState: StateFlow<UpdateProfileState> = _updateProfileState.asStateFlow()
 
+
     private val _userRole = MutableStateFlow<String?>(null)
     val userRole: StateFlow<String?> = _userRole.asStateFlow()
 
     init {
-        loadUserProfile()
         viewModelScope.launch {
             authRepository.getUserRole().collect { role ->
                 _userRole.value = role
+            }
+        }
+    }
+
+    init {
+        loadUserProfile()
+
+        // Listen for role changes to load appropriate data
+        viewModelScope.launch {
+            userRole.collectLatest { role ->
                 if (role == "SUPERVISOR") {
                     loadManagerData()
                 }

@@ -10,6 +10,6 @@ interface UserRepository {
     suspend fun getSupervisorProfile(): ApiResponse<User>
     suspend fun getTeamMembers(): ApiResponse<List<User>>
     suspend fun getAllSupervisors(): ApiResponse<List<User>>
-    suspend fun getTeamMemberById(userId: Int): ApiResponse<User>
+    //suspend fun getTeamMemberById(userId: Int): ApiResponse<User>
     suspend fun updateTeamMember(userId: Int, name: String?, phoneNumber: String?): ApiResponse<User>
 }

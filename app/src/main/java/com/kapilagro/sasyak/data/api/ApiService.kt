@@ -14,7 +14,6 @@ interface ApiService {
 
     @POST("api/auth/refresh-token")
     suspend fun refreshToken(@Body refreshTokenRequest: RefreshTokenRequest): Response<AuthResponse>
-
     // User Endpoints
     @GET("api/user/me")
     suspend fun getCurrentUser(): Response<UserResponse>
@@ -85,10 +84,10 @@ interface ApiService {
     suspend fun getTeamMembers(): Response<UserListResponse>
 
     @GET("api/manager/users/supervisors")
-    suspend fun getAllSupervisors(): Response<UserListResponse>
-
-    @GET("api/manager/users/{id}")
-    suspend fun getTeamMemberById(@Path("id") userId: Int): Response<UserResponse>
+    suspend fun getAllSupervisors(
+        @Query("page") page: Int = 0,
+        @Query("size") size: Int = 10
+    ): Response<PagedUserListResponse>
 
     @PUT("api/manager/users/team/{id}")
     suspend fun updateTeamMember(
@@ -108,51 +107,6 @@ interface ApiService {
 
     @GET("api/supervisor/profile")
     suspend fun getSupervisorProfile(): Response<UserResponse>
-
-    // Admin operations - these are not used in the mobile app but included for completeness
-    @GET("api/admin/users")
-    suspend fun getAllUsers(): Response<UserListResponse>
-
-    @GET("api/admin/users/{id}")
-    suspend fun getUserByIdAdmin(@Path("id") userId: Int): Response<UserResponse>
-
-    @POST("api/admin/users")
-    suspend fun createUserAdmin(@Body createUserRequest: CreateUserRequest): Response<UserResponse>
-
-    @PUT("api/admin/users/{id}")
-    suspend fun updateUserAdmin(
-        @Path("id") userId: Int,
-        @Body updateUserAdminRequest: UpdateUserAdminRequest
-    ): Response<UserResponse>
-
-    @DELETE("api/admin/users/{id}")
-    suspend fun deleteUserAdmin(@Path("id") userId: Int): Response<SuccessResponse>
-
-    @GET("api/admin/users/by-role/{role}")
-    suspend fun getUsersByRole(@Path("role") role: String): Response<UserListResponse>
-
-    @GET("api/admin/users/by-role/{role}/paged")
-    suspend fun getPagedUsersByRole(
-        @Path("role") role: String,
-        @Query("page") page: Int = 0,
-        @Query("size") size: Int = 10
-    ): Response<PagedUserListResponse>
-
-    @PUT("api/admin/users/{userId}/assign-manager/{managerId}")
-    suspend fun assignManagerToUser(
-        @Path("userId") userId: Int,
-        @Path("managerId") managerId: Int
-    ): Response<UserResponse>
-
-    @PUT("api/admin/users/{userId}/remove-manager")
-    suspend fun removeManagerFromUser(@Path("userId") userId: Int): Response<UserResponse>
-
-    @GET("api/admin/users/manager/{managerId}")
-    suspend fun getUsersByManager(@Path("managerId") managerId: Int): Response<UserListResponse>
-
-    // Report endpoints
-    @GET("api/tasks/report")
-    suspend fun getTaskReport(): Response<TaskReportResponse>
 
     // Global search endpoint
     @GET("api/search")

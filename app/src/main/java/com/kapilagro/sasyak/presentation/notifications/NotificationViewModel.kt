@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.kapilagro.sasyak.di.IoDispatcher
 import com.kapilagro.sasyak.domain.models.ApiResponse
 import com.kapilagro.sasyak.domain.models.Notification
+import com.kapilagro.sasyak.domain.repositories.AuthRepository
 import com.kapilagro.sasyak.domain.repositories.NotificationRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
@@ -17,6 +18,7 @@ import javax.inject.Inject
 @HiltViewModel
 class NotificationViewModel @Inject constructor(
     private val notificationRepository: NotificationRepository,
+    private val authRepository: AuthRepository,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) : ViewModel() {
 
@@ -26,24 +28,26 @@ class NotificationViewModel @Inject constructor(
     private val _unreadCountState = MutableStateFlow<UnreadCountState>(UnreadCountState.Loading)
     val unreadCountState: StateFlow<UnreadCountState> = _unreadCountState.asStateFlow()
 
-    private val _markAsReadState = MutableStateFlow<MarkAsReadState>(MarkAsReadState.Idle)
-    val markAsReadState: StateFlow<MarkAsReadState> = _markAsReadState.asStateFlow()
+    private val _userRole = MutableStateFlow<String?>(null)
+    val userRole: StateFlow<String?> = _userRole.asStateFlow()
 
     init {
         loadNotifications()
         loadUnreadCount()
+
+        viewModelScope.launch {
+            authRepository.getUserRole().collect { role ->
+                _userRole.value = role
+            }
+        }
     }
 
-    fun loadNotifications(onlyUnread: Boolean = false, page: Int = 0, size: Int = 20) {
+    fun loadNotifications() {
         _notificationsState.value = NotificationsState.Loading
         viewModelScope.launch(ioDispatcher) {
-            when (val response = notificationRepository.getNotifications(onlyUnread, page, size)) {
+            when (val response = notificationRepository.getNotifications(false, 0, 50)) {
                 is ApiResponse.Success -> {
-                    _notificationsState.value = NotificationsState.Success(
-                        notifications = response.data.first,
-                        totalCount = response.data.second,
-                        hasMore = response.data.second > (page + 1) * size
-                    )
+                    _notificationsState.value = NotificationsState.Success(response.data.first)
                 }
                 is ApiResponse.Error -> {
                     _notificationsState.value = NotificationsState.Error(response.errorMessage)
@@ -54,7 +58,6 @@ class NotificationViewModel @Inject constructor(
             }
         }
     }
-
     fun loadUnreadCount() {
         _unreadCountState.value = UnreadCountState.Loading
         viewModelScope.launch(ioDispatcher) {
@@ -73,54 +76,52 @@ class NotificationViewModel @Inject constructor(
     }
 
     fun markNotificationAsRead(notificationId: Int) {
-        _markAsReadState.value = MarkAsReadState.Loading
         viewModelScope.launch(ioDispatcher) {
-            when (val response = notificationRepository.markNotificationAsRead(notificationId)) {
+            when (notificationRepository.markNotificationAsRead(notificationId)) {
                 is ApiResponse.Success -> {
-                    _markAsReadState.value = MarkAsReadState.Success
-                    loadNotifications()
+                    // Update notification in the list to show as read
+                    val currentNotifications = (_notificationsState.value as? NotificationsState.Success)?.notifications ?: emptyList()
+                    val updatedNotifications = currentNotifications.map { notification ->
+                        if (notification.id == notificationId) {
+                            notification.copy(isRead = true)
+                        } else {
+                            notification
+                        }
+                    }
+                    _notificationsState.value = NotificationsState.Success(updatedNotifications)
+
+                    // Reload unread count
                     loadUnreadCount()
                 }
-                is ApiResponse.Error -> {
-                    _markAsReadState.value = MarkAsReadState.Error(response.errorMessage)
-                }
-                is ApiResponse.Loading -> {
-                    _markAsReadState.value = MarkAsReadState.Loading
+                else -> {
+                    // Handle error if needed
                 }
             }
         }
     }
 
     fun markAllNotificationsAsRead() {
-        _markAsReadState.value = MarkAsReadState.Loading
         viewModelScope.launch(ioDispatcher) {
-            when (val response = notificationRepository.markAllNotificationsAsRead()) {
+            when (notificationRepository.markAllNotificationsAsRead()) {
                 is ApiResponse.Success -> {
-                    _markAsReadState.value = MarkAsReadState.Success
-                    loadNotifications()
-                    loadUnreadCount()
+                    // Update all notifications to show as read
+                    val currentNotifications = (_notificationsState.value as? NotificationsState.Success)?.notifications ?: emptyList()
+                    val updatedNotifications = currentNotifications.map { it.copy(isRead = true) }
+                    _notificationsState.value = NotificationsState.Success(updatedNotifications)
+
+                    // Update unread count to 0
+                    _unreadCountState.value = UnreadCountState.Success(0)
                 }
-                is ApiResponse.Error -> {
-                    _markAsReadState.value = MarkAsReadState.Error(response.errorMessage)
-                }
-                is ApiResponse.Loading -> {
-                    _markAsReadState.value = MarkAsReadState.Loading
+                else -> {
+                    // Handle error if needed
                 }
             }
         }
     }
 
-    fun clearMarkAsReadState() {
-        _markAsReadState.value = MarkAsReadState.Idle
-    }
-
     sealed class NotificationsState {
         object Loading : NotificationsState()
-        data class Success(
-            val notifications: List<Notification>,
-            val totalCount: Int,
-            val hasMore: Boolean
-        ) : NotificationsState()
+        data class Success(val notifications: List<Notification>) : NotificationsState()
         data class Error(val message: String) : NotificationsState()
     }
 
@@ -128,12 +129,5 @@ class NotificationViewModel @Inject constructor(
         object Loading : UnreadCountState()
         data class Success(val count: Int) : UnreadCountState()
         data class Error(val message: String) : UnreadCountState()
-    }
-
-    sealed class MarkAsReadState {
-        object Idle : MarkAsReadState()
-        object Loading : MarkAsReadState()
-        object Success : MarkAsReadState()
-        data class Error(val message: String) : MarkAsReadState()
     }
 }

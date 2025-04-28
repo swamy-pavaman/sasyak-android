@@ -26,7 +26,7 @@ import java.util.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    onTaskClick: (String) -> Unit, // Adjusted to match task.id type
+    onTaskClick: (String) -> Unit,
     onCreateTaskClick: () -> Unit,
     onScannerClick: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
@@ -34,6 +34,7 @@ fun HomeScreen(
     val userState by viewModel.userState.collectAsState()
     val weatherState by viewModel.weatherState.collectAsState()
     val tasksState by viewModel.tasksState.collectAsState()
+    val userRole by viewModel.userRole.collectAsState()
 
     val userName = when (userState) {
         is HomeViewModel.UserState.Success -> (userState as HomeViewModel.UserState.Success).user.name
@@ -63,11 +64,14 @@ fun HomeScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = onScannerClick) {
-                        Icon(
-                            imageVector = Icons.Outlined.CameraAlt,
-                            contentDescription = "Scan Plant"
-                        )
+                    // Scanner button only for Supervisors
+                    if (userRole == "SUPERVISOR") {
+                        IconButton(onClick = onScannerClick) {
+                            Icon(
+                                imageVector = Icons.Outlined.CameraAlt,
+                                contentDescription = "Scan Plant"
+                            )
+                        }
                     }
                     IconButton(onClick = { /* TODO: Add search logic */ }) {
                         Icon(
@@ -79,14 +83,17 @@ fun HomeScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = onCreateTaskClick,
-                containerColor = MaterialTheme.colorScheme.primary
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Add,
-                    contentDescription = "Create Task"
-                )
+            // Only show FAB for managers and supervisors
+            if (userRole == "MANAGER" || userRole == "SUPERVISOR") {
+                FloatingActionButton(
+                    onClick = onCreateTaskClick,
+                    containerColor = MaterialTheme.colorScheme.primary
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Add,
+                        contentDescription = "Create Task"
+                    )
+                }
             }
         }
     ) { paddingValues ->
@@ -96,7 +103,7 @@ fun HomeScreen(
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
         ) {
-            // Weather Section
+            // Weather Section - visible to both roles
             when (weatherState) {
                 is HomeViewModel.WeatherState.Success -> {
                     WeatherCard(
@@ -146,112 +153,117 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Quick Actions
-            Text(
-                text = "Quick Actions",
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-            )
-
-            QuickActionsRow()
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Task Section Header
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(text = "Task List", style = MaterialTheme.typography.titleLarge)
-                TextButton(onClick = { /* TODO: Handle View All */ }) {
-                    Text("View All")
+            // Role-specific sections
+            when (userRole) {
+                "MANAGER" -> {
+                    ManagerHomeContent(
+                        onTaskClick = onTaskClick,
+                        tasksState = tasksState,
+                        loadTasksData = { viewModel.loadTasksData() }
+                    )
                 }
-            }
-
-            // Tab Row
-            TabRow(
-                selectedTabIndex = selectedTabIndex,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                containerColor = MaterialTheme.colorScheme.surface,
-                contentColor = MaterialTheme.colorScheme.primary
-            ) {
-                listOf("Pending", "Approved", "Rejected").forEachIndexed { index, title ->
-                    Tab(
-                        selected = index == selectedTabIndex,
-                        onClick = { selectedTabIndex = index },
-                        text = { Text(title) }
+                "SUPERVISOR" -> {
+                    SupervisorHomeContent(
+                        onTaskClick = onTaskClick,
+                        tasksState = tasksState,
+                        loadTasksData = { viewModel.loadTasksData() }
+                    )
+                }
+                else -> {
+                    // Default view if role is unknown
+                    DefaultHomeContent(
+                        onTaskClick = onTaskClick,
+                        tasksState = tasksState,
+                        loadTasksData = { viewModel.loadTasksData() }
                     )
                 }
             }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Task Cards
-            when (tasksState) {
-                is HomeViewModel.TasksState.Success -> {
-                    val tasks = (tasksState as HomeViewModel.TasksState.Success).tasks
-                    if (tasks.isEmpty()) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(200.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("No pending tasks", style = MaterialTheme.typography.bodyLarge)
-                        }
-                    } else {
-                        tasks.forEach { task ->
-                            TaskCard(
-                                task = task,
-                                onClick = { onTaskClick(task.id.toString()) }
-                            )
-                        }
-                    }
-                }
-                is HomeViewModel.TasksState.Loading -> {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(200.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
-                    }
-                }
-                is HomeViewModel.TasksState.Error -> {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(200.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = "Failed to load tasks",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.error
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Button(onClick = { viewModel.loadTasksData() }) {
-                                Text("Retry")
-                            }
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }
 
 @Composable
-fun QuickActionsRow() {
+fun ManagerHomeContent(
+    onTaskClick: (String) -> Unit,
+    tasksState: HomeViewModel.TasksState,
+    loadTasksData: () -> Unit
+) {
+    // Manager-specific quick actions
+    Text(
+        text = "Quick Actions",
+        style = MaterialTheme.typography.titleLarge,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+    )
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+            .padding(horizontal = 8.dp),
+        horizontalArrangement = Arrangement.SpaceAround
+    ) {
+        QuickActionButton(
+            icon = Icons.Outlined.PeopleAlt,
+            label = "Team",
+            backgroundColor = Blue500,
+            onClick = { /* Handle team management */ }
+        )
+
+        QuickActionButton(
+            icon = Icons.Outlined.Assessment,
+            label = "Reports",
+            backgroundColor = Green500,
+            onClick = { /* Handle reports */ }
+        )
+
+        QuickActionButton(
+            icon = Icons.Outlined.Assignment,
+            label = "Tasks",
+            backgroundColor = Purple500,
+            onClick = { /* Handle tasks */ }
+        )
+
+        QuickActionButton(
+            icon = Icons.Outlined.Healing,
+            label = "Advice",
+            backgroundColor = Orange500,
+            onClick = { /* Handle advice */ }
+        )
+    }
+
+    Spacer(modifier = Modifier.height(16.dp))
+
+    // Created tasks section for managers
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(text = "Tasks Created", style = MaterialTheme.typography.titleLarge)
+        TextButton(onClick = { /* TODO: Handle View All */ }) {
+            Text("View All")
+        }
+    }
+
+    // Task Cards
+    TasksList(tasksState, onTaskClick, loadTasksData)
+}
+
+@Composable
+fun SupervisorHomeContent(
+    onTaskClick: (String) -> Unit,
+    tasksState: HomeViewModel.TasksState,
+    loadTasksData: () -> Unit
+) {
+    // Supervisor-specific quick actions
+    Text(
+        text = "Quick Actions",
+        style = MaterialTheme.typography.titleLarge,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+    )
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -286,12 +298,153 @@ fun QuickActionsRow() {
             backgroundColor = Orange500,
             onClick = { /* Handle fuel action */ }
         )
+    }
+
+    Spacer(modifier = Modifier.height(16.dp))
+
+    // Assigned tasks section for supervisors
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(text = "My Tasks", style = MaterialTheme.typography.titleLarge)
+        TextButton(onClick = { /* TODO: Handle View All */ }) {
+            Text("View All")
+        }
+    }
+
+    // Task Cards
+    TasksList(tasksState, onTaskClick, loadTasksData)
+}
+
+@Composable
+fun DefaultHomeContent(
+    onTaskClick: (String) -> Unit,
+    tasksState: HomeViewModel.TasksState,
+    loadTasksData: () -> Unit
+) {
+    // Default quick actions
+    Text(
+        text = "Quick Actions",
+        style = MaterialTheme.typography.titleLarge,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+    )
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+            .padding(horizontal = 8.dp),
+        horizontalArrangement = Arrangement.SpaceAround
+    ) {
+        QuickActionButton(
+            icon = Icons.Outlined.Search,
+            label = "Scouting",
+            backgroundColor = Blue500,
+            onClick = { /* Handle scouting action */ }
+        )
 
         QuickActionButton(
-            icon = Icons.Outlined.Balance,
-            label = "Yield",
-            backgroundColor = Pink500,
-            onClick = { /* Handle yield action */ }
+            icon = Icons.Outlined.Opacity,
+            label = "Spraying",
+            backgroundColor = Green500,
+            onClick = { /* Handle spraying action */ }
         )
+
+        QuickActionButton(
+            icon = Icons.Outlined.Grass,
+            label = "Sowing",
+            backgroundColor = Purple500,
+            onClick = { /* Handle sowing action */ }
+        )
+
+        QuickActionButton(
+            icon = Icons.Outlined.LocalGasStation,
+            label = "Fuel",
+            backgroundColor = Orange500,
+            onClick = { /* Handle fuel action */ }
+        )
+    }
+
+    Spacer(modifier = Modifier.height(16.dp))
+
+    // Task section
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(text = "Task List", style = MaterialTheme.typography.titleLarge)
+        TextButton(onClick = { /* TODO: Handle View All */ }) {
+            Text("View All")
+        }
+    }
+
+    // Task Cards
+    TasksList(tasksState, onTaskClick, loadTasksData)
+}
+
+@Composable
+fun TasksList(
+    tasksState: HomeViewModel.TasksState,
+    onTaskClick: (String) -> Unit,
+    loadTasksData: () -> Unit
+) {
+    when (tasksState) {
+        is HomeViewModel.TasksState.Success -> {
+            val tasks = (tasksState as HomeViewModel.TasksState.Success).tasks
+            if (tasks.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("No tasks available", style = MaterialTheme.typography.bodyLarge)
+                }
+            } else {
+                tasks.forEach { task ->
+                    TaskCard(
+                        task = task,
+                        onClick = { onTaskClick(task.id.toString()) }
+                    )
+                }
+            }
+        }
+        is HomeViewModel.TasksState.Loading -> {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        }
+        is HomeViewModel.TasksState.Error -> {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "Failed to load tasks",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Button(onClick = loadTasksData) {
+                        Text("Retry")
+                    }
+                }
+            }
+        }
     }
 }
