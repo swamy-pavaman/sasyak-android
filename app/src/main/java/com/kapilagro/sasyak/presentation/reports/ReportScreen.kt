@@ -185,11 +185,11 @@ fun TaskTypeSummary(
             val percentage = if (totalTasks > 0) count * 100f / totalTasks else 0f
 
             val barColor = when (taskType.lowercase()) {
-                "scouting" -> Blue500
-                "spraying" -> Green500
-                "sowing" -> Purple500
-                "fuel" -> Orange500
-                "yield" -> Pink500
+                "scouting" -> ScoutingIcon
+                "spraying" -> SprayingIcon
+                "sowing" -> SowingIcon
+                "fuel" -> FuelIcon
+                "yield" -> YieldIcon
                 else -> Color.Gray
             }
 
@@ -320,7 +320,7 @@ fun TaskCompletionChart(
 
                     // Draw bar with rounded corners
                     drawRoundRect(
-                        color = Blue500,
+                        color = Info,
                         topLeft = Offset(barX, barY),
                         size = Size(barWidth - 16.dp.toPx(), barHeight),
                         cornerRadius = androidx.compose.ui.geometry.CornerRadius(4.dp.toPx()),

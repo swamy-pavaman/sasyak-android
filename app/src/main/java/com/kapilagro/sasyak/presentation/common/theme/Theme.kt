@@ -12,35 +12,52 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-
 private val LightColorScheme = lightColorScheme(
-    primary = Green500,
-    primaryContainer = Green100,
-    onPrimaryContainer = Green900,
-    secondary = Blue500,
-    tertiary = Purple500,
-    background = BackgroundLight,
-    surface = CardBackground,
+    primary = AgroPrimary,
     onPrimary = Color.White,
+    primaryContainer = AgroLight,
+    onPrimaryContainer = AgroDark,
+    secondary = AgroSecondary,
     onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = TextPrimary,
-    onSurface = TextPrimary,
+    secondaryContainer = AgroMuted,
+    onSecondaryContainer = AgroDark,
+    tertiary = AgroAccent,
+    onTertiary = Color.Black,
+    background = Background,
+    onBackground = Foreground,
+    surface = Card,
+    onSurface = Foreground,
+    surfaceVariant = AgroMuted,
+    onSurfaceVariant = AgroMutedForeground,
+    outline = Border,
+    error = Error,
+    errorContainer = Color(0xFFFFDAD6),
+    onError = Color.White,
+    onErrorContainer = Color(0xFF410002)
 )
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Green500,
-    primaryContainer = Green700,
-    onPrimaryContainer = Green100,
-    secondary = Blue500,
-    tertiary = Purple500,
-    background = BackgroundDark,
-    surface = Color(0xFF1E1E1E),
+    primary = AgroPrimary,
     onPrimary = Color.White,
+    primaryContainer = AgroDark,
+    onPrimaryContainer = AgroLight,
+    secondary = AgroSecondary,
     onSecondary = Color.White,
-    onTertiary = Color.White,
+    secondaryContainer = Color(0xFF004D40),
+    onSecondaryContainer = AgroLight,
+    tertiary = AgroAccent,
+    onTertiary = Color.Black,
+    background = BackgroundDark,
     onBackground = Color.White,
+    surface = SurfaceDark,
     onSurface = Color.White,
+    surfaceVariant = Color(0xFF424242),
+    onSurfaceVariant = Color(0xFFBFBFBF),
+    outline = Color(0xFF707070),
+    error = Error,
+    errorContainer = Color(0xFF93000A),
+    onError = Color.White,
+    onErrorContainer = Color(0xFFFFDAD6)
 )
 
 @Composable
@@ -65,4 +82,3 @@ fun SasyakTheme(
         content = content
     )
 }
-

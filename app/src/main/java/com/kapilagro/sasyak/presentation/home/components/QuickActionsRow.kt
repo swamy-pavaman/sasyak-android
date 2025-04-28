@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -21,28 +22,32 @@ fun QuickActionButton(
     icon: ImageVector,
     label: String,
     backgroundColor: Color,
-    contentColor: Color = Color.White,
+    containerColor: Color,
     onClick: () -> Unit
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
-            .padding(8.dp)
-            .width(80.dp)
+            .padding(horizontal = 4.dp)
+            .width(86.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(containerColor)
+            .clickable(onClick = onClick)
+            .padding(vertical = 12.dp, horizontal = 8.dp)
     ) {
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
-                .size(56.dp)
+                .size(48.dp)
                 .clip(CircleShape)
                 .background(backgroundColor)
-                .clickable(onClick = onClick)
+                .padding(12.dp)
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = label,
-                tint = contentColor,
-                modifier = Modifier.size(28.dp)
+                tint = Color.White,
+                modifier = Modifier.size(24.dp)
             )
         }
 
@@ -50,7 +55,7 @@ fun QuickActionButton(
 
         Text(
             text = label,
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center
         )
     }

@@ -7,7 +7,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Assignment
 import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.outlined.Assignment
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -200,33 +202,39 @@ fun ManagerHomeContent(
             .fillMaxWidth()
             .padding(vertical = 8.dp)
             .padding(horizontal = 8.dp),
-        horizontalArrangement = Arrangement.SpaceAround
+        horizontalArrangement = Arrangement.SpaceEvenly
     ) {
+
+
         QuickActionButton(
             icon = Icons.Outlined.PeopleAlt,
             label = "Team",
-            backgroundColor = Blue500,
+            backgroundColor = TeamIcon,
+            containerColor = TeamContainer,
             onClick = { /* Handle team management */ }
         )
 
         QuickActionButton(
             icon = Icons.Outlined.Assessment,
             label = "Reports",
-            backgroundColor = Green500,
+            backgroundColor = ReportsIcon,
+            containerColor = ReportsContainer,
             onClick = { /* Handle reports */ }
         )
 
         QuickActionButton(
-            icon = Icons.Outlined.Assignment,
+            icon = Icons.AutoMirrored.Outlined.Assignment,
             label = "Tasks",
-            backgroundColor = Purple500,
+            backgroundColor = TasksIcon,
+            containerColor = TasksContainer,
             onClick = { /* Handle tasks */ }
         )
 
         QuickActionButton(
             icon = Icons.Outlined.Healing,
             label = "Advice",
-            backgroundColor = Orange500,
+            backgroundColor = AdviceIcon,
+            containerColor = AdviceContainer,
             onClick = { /* Handle advice */ }
         )
     }
@@ -269,38 +277,51 @@ fun SupervisorHomeContent(
             .fillMaxWidth()
             .padding(vertical = 8.dp)
             .padding(horizontal = 8.dp),
-        horizontalArrangement = Arrangement.SpaceAround
+        horizontalArrangement = Arrangement.SpaceEvenly
     ) {
         QuickActionButton(
             icon = Icons.Outlined.Search,
             label = "Scouting",
-            backgroundColor = Blue500,
+            backgroundColor = ScoutingIcon,
+            containerColor = ScoutingContainer,
             onClick = { /* Handle scouting action */ }
         )
 
         QuickActionButton(
             icon = Icons.Outlined.Opacity,
             label = "Spraying",
-            backgroundColor = Green500,
+            backgroundColor = SprayingIcon,
+            containerColor = SprayingContainer,
             onClick = { /* Handle spraying action */ }
         )
 
         QuickActionButton(
             icon = Icons.Outlined.Grass,
             label = "Sowing",
-            backgroundColor = Purple500,
+            backgroundColor = SowingIcon,
+            containerColor = SowingContainer,
             onClick = { /* Handle sowing action */ }
         )
 
         QuickActionButton(
             icon = Icons.Outlined.LocalGasStation,
             label = "Fuel",
-            backgroundColor = Orange500,
+            backgroundColor = FuelIcon,
+            containerColor = FuelContainer,
             onClick = { /* Handle fuel action */ }
+        )
+
+        QuickActionButton(
+            icon = Icons.Outlined.Balance,
+            label = "Yield",
+            backgroundColor = YieldIcon,
+            containerColor = YieldContainer,
+            onClick = { /* Handle yield action */ }
         )
     }
 
     Spacer(modifier = Modifier.height(16.dp))
+
 
     // Assigned tasks section for supervisors
     Row(
@@ -341,31 +362,35 @@ fun DefaultHomeContent(
         horizontalArrangement = Arrangement.SpaceAround
     ) {
         QuickActionButton(
-            icon = Icons.Outlined.Search,
-            label = "Scouting",
-            backgroundColor = Blue500,
-            onClick = { /* Handle scouting action */ }
-        )
-
-        QuickActionButton(
             icon = Icons.Outlined.Opacity,
             label = "Spraying",
-            backgroundColor = Green500,
+            backgroundColor = SprayingIcon,
+            containerColor = SprayingContainer,
             onClick = { /* Handle spraying action */ }
         )
 
         QuickActionButton(
             icon = Icons.Outlined.Grass,
             label = "Sowing",
-            backgroundColor = Purple500,
+            backgroundColor = SowingIcon,
+            containerColor = SowingContainer,
             onClick = { /* Handle sowing action */ }
         )
 
         QuickActionButton(
             icon = Icons.Outlined.LocalGasStation,
             label = "Fuel",
-            backgroundColor = Orange500,
+            backgroundColor = FuelIcon,
+            containerColor = FuelContainer,
             onClick = { /* Handle fuel action */ }
+        )
+
+        QuickActionButton(
+            icon = Icons.Outlined.Balance,
+            label = "Yield",
+            backgroundColor = YieldIcon,
+            containerColor = YieldContainer,
+            onClick = { /* Handle yield action */ }
         )
     }
 
