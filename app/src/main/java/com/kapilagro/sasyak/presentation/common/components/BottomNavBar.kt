@@ -1,16 +1,20 @@
 package com.kapilagro.sasyak.presentation.common.components
 
 
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.kapilagro.sasyak.presentation.common.navigation.Screen
+import com.kapilagro.sasyak.presentation.common.theme.AgroPrimary
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -51,7 +55,9 @@ fun BottomNavBar(
                             painter = screen.icon?.let {
                                 painterResource(id = it)
                             } ?: return@BadgedBox,
-                            contentDescription = screen.title
+                            contentDescription = screen.title,
+                            modifier = Modifier.size(32.dp),  // Increase from 26.dp to 32.dp or your preferred size
+                            tint = if (selected) AgroPrimary else Color.Gray
                         )
                     }
                 },
