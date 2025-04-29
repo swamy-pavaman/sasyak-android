@@ -8,10 +8,12 @@ import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -82,7 +84,8 @@ fun MainScreen() {
                                     ) {
                                         Icon(
                                             painter = painterResource(id = iconId),
-                                            contentDescription = screen.title
+                                            contentDescription = screen.title,
+                                            modifier = Modifier.size(25.dp)  // Add consistent size
                                         )
                                     }
                                 }

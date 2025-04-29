@@ -7,6 +7,8 @@ import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.MarkEmailRead
+import androidx.compose.material.icons.outlined.Air
+import androidx.compose.material.icons.outlined.NotificationAdd
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
@@ -79,8 +81,10 @@ fun NotificationScreen(
                         EmptyStateView(
                             title = "No notifications yet",
                             message = "New notifications will appear here",
-                            icon = TODO(),
-                            modifier = TODO()
+                            icon = Icons.Outlined.NotificationAdd,
+                            modifier = Modifier
+//                                .fillMaxSize()
+//                                .padding(16.dp)
                         )
                     } else {
                         LazyColumn(

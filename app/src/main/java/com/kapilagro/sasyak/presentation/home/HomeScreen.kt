@@ -112,7 +112,7 @@ fun HomeScreen(
                         weatherInfo = (weatherState as HomeViewModel.WeatherState.Success).weatherInfo,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                            .padding(horizontal = 0.dp, vertical = 8.dp)
                     )
                 }
                 is HomeViewModel.WeatherState.Loading -> {

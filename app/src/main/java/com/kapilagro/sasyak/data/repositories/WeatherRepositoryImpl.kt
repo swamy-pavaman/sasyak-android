@@ -12,7 +12,6 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.random.Random
 
-
 @Singleton
 class WeatherRepositoryImpl @Inject constructor() : WeatherRepository {
 
@@ -24,13 +23,13 @@ class WeatherRepositoryImpl @Inject constructor() : WeatherRepository {
         // Mock weather data
         return try {
             val weatherInfo = WeatherInfo(
-                location = location,
-                temperature = 22.0 + Random.nextDouble(-5.0, 5.0),
-                feelsLike = 20.0 + Random.nextDouble(-3.0, 3.0),
-                humidity = Random.nextInt(40, 80),
-                windSpeed = 5.0 + Random.nextDouble(0.0, 10.0),
-                description = getRandomWeatherDescription(),
-                icon = "01d", // Sunny icon code
+                location = "Pithapuram, Andhra Pradesh",
+                temperature = 32.0,       // Approximate daytime temperature (real-time varies)
+                feelsLike = 35.0,         // Feels hotter due to humidity
+                humidity = 68,            // Coastal Andhra has high humidity
+                windSpeed = 14.0,         // Light to moderate winds
+                description = "Partly Cloudy",  // Typical description for Pithapuram's April weather
+                icon = "02d",             // 02d means 'few clouds' icon
                 formattedDate = "Today, ${LocalDate.now().format(DateTimeFormatter.ofPattern("MMM d"))}"
             )
             ApiResponse.Success(weatherInfo)
