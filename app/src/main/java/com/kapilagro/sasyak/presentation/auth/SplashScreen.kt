@@ -1,20 +1,26 @@
 package com.kapilagro.sasyak.presentation.auth
 
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.*
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.*
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.kapilagro.sasyak.R
 import kotlinx.coroutines.delay
@@ -27,78 +33,150 @@ fun SplashScreen(
 ) {
     val authState by viewModel.authState.collectAsState()
 
-    // Animation states
-    val scale = remember { Animatable(0.7f) }
-    val alpha = remember { Animatable(0f) }
+    // Animations
+    val logoScale = remember { Animatable(0.7f) }
+    val logoAlpha = remember { Animatable(0f) }
+    val fieldDarkness = remember { Animatable(0f) }
+    val progressLine = remember { Animatable(0f) }
+    val fieldFill = remember { Animatable(0f) }
 
-    LaunchedEffect(key1 = true) {
-        // Start animations
-        scale.animateTo(
-            targetValue = 1f,
-            animationSpec = tween(
-                durationMillis = 500,
-                easing = EaseOutBack
-            )
-        )
-        alpha.animateTo(
-            targetValue = 1f,
-            animationSpec = tween(
-                durationMillis = 700,
-                easing = LinearEasing
-            )
-        )
+    val sunOffsetX = remember { Animatable(0f) }
+    val sunOffsetY = remember { Animatable(0f) }
+    val sunScale = remember { Animatable(1f) }
 
-        // Wait a bit before checking auth state
-        delay(1000)
+    var showPlant by remember { mutableStateOf(false) }
 
-        // Navigate based on auth state
-        if (authState) {
-            onNavigateToHome()
-        } else {
-            onNavigateToLogin()
-        }
+    LaunchedEffect(true) {
+        // Animate logo
+        logoScale.animateTo(1f, tween(500, easing = EaseOutBack))
+        logoAlpha.animateTo(1f, tween(700))
+        fieldDarkness.animateTo(0.6f, tween(1000))
+
+        // Animate green fill inside circle
+        fieldFill.animateTo(1f, tween(1200))
+
+        // Sun animation (moves and scales)
+        sunOffsetX.animateTo(-25f, tween(800))
+        sunOffsetY.animateTo(-25f, tween(800))
+        sunScale.animateTo(1.3f, tween(800))
+
+        delay(600)
+        showPlant = true
+
+        // Animate progress bar below text
+        progressLine.animateTo(1f, tween(1500))
+
+        delay(600)
+
+        if (authState) onNavigateToHome()
+        else onNavigateToLogin()
     }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
+            .background(Color.White), // full white background only
         contentAlignment = Alignment.Center
-    ) {
+    )
+
+    {
+
         Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
             modifier = Modifier
-                .scale(scale.value)
-                .alpha(alpha.value)
+                .scale(logoScale.value)
+                .alpha(logoAlpha.value),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Logo
-            Image(
-                painter = painterResource(id = R.drawable.app_logo),
-                contentDescription = "App Logo",
+            Box(
                 modifier = Modifier
-                    .size(120.dp)
-                    .padding(8.dp)
-            )
+                    .size(112.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                // Green circle base + vertical fill
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    val fullSize = size
+                    val fillHeight = fullSize.height * fieldFill.value
 
-            Spacer(modifier = Modifier.height(16.dp))
+                    // Light green base circle
+                    drawCircle(
+                        color = Color(0xFF16A34A),
+                        radius = size.minDimension / 2,
+                        center = center
+                    )
+                    // Circle fill inside the animated Canvas
+//                    drawRect(
+//                        color = Color(0xFF16A34A).copy(alpha = 0.85f), // softer fill
+//                        topLeft = Offset(0f, fullSize.height - fillHeight),
+//                        size = Size(fullSize.width, fillHeight)
+//                    )
 
-            // App name
+
+                    // Darker green fill rising from bottom
+//                    drawRect(
+//                        color = Color(0xFF16A34A),
+//                        topLeft = Offset(0f, fullSize.height - fillHeight),
+//                        size = Size(fullSize.width, fillHeight)
+//                    )
+                }
+
+                // 🌞 Sun icon (moving to top-left with scale)
+                Image(
+                    painter = painterResource(id = R.drawable.ic_sun), // Add this to drawable
+                    contentDescription = "Sun",
+                    colorFilter = ColorFilter.tint(Color.White),
+
+                    modifier = Modifier
+                        .size((32 * sunScale.value).dp)
+                        .offset(x = Dp(sunOffsetX.value), y = Dp(sunOffsetY.value))
+
+                )
+
+                // 🌱 Plant icon appears after delay
+                if (showPlant) {
+
+                    Image(
+                        painter = painterResource(id = R.drawable.ic_plant), // Already available
+                        contentDescription = "Plant",
+                        modifier = Modifier.size(60.dp),
+                        colorFilter = ColorFilter.tint(Color(0xFFF1F1F1)),
+                        contentScale = ContentScale.Fit // Softer white
+
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
             Text(
-                text = "Sasyak",
-                fontSize = 32.sp,
+                text = "Kapil Agro",
+                fontSize = 34.sp,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
+                color = Color.Black
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Tagline
             Text(
-                text = "Farm Management Simplified",
-                fontSize = 16.sp,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                text = "Scouting Hub",
+                fontSize = 18.sp,
+                color = Color(0xFF16A34A).copy(alpha = 0.7f)
             )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Bottom progress bar
+            Canvas(
+                modifier = Modifier
+                    .fillMaxWidth(0.3f)
+                    .height(6.dp)
+            ) {
+                drawRoundRect(
+                    color = Color(0xFF16A34A),
+                    topLeft = Offset(0f, 0f),
+                    size = Size(size.width * progressLine.value, size.height),
+                    cornerRadius = CornerRadius(8f, 8f)
+                )
+            }
         }
     }
 }
