@@ -15,6 +15,9 @@ gson = "2.10.1"
 compileSdk = "35"
 minSdk = "24"
 targetSdk = "35"
+playservices-location = "21.3.0"
+accompanist = "0.31.1-alpha"
+
 
 [plugins]
 android-application = { id = "com.android.application", version = "8.3.0" }
@@ -29,6 +32,8 @@ ksp = { id = "com.google.devtools.ksp", version = "1.9.20-1.0.14" }
 
 [libraries]
 androidx-material = { module = "androidx.compose.material:material", version.ref = "material" }
+
+accompanist-permissions = { group = "com.google.accompanist", name = "accompanist-permissions", version.ref = "accompanist" }
 
 datastore-core = "androidx.datastore:datastore-core:1.1.4"
 datastore-preferences = "androidx.datastore:datastore-preferences:1.1.4"
@@ -76,3 +81,4 @@ espresso-core = { module = "androidx.test.espresso:espresso-core", version = "3.
 compose-ui-test-junit4 = { module = "androidx.compose.ui:ui-test-junit4", version.ref = "compose" }
 ui-tooling = { module = "androidx.compose.ui:ui-tooling", version.ref = "compose" }
 ui-test-manifest = { module = "androidx.compose.ui:ui-test-manifest", version.ref = "compose" }
+playservices-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playservices-location" }

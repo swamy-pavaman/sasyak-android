@@ -2,8 +2,8 @@ package com.kapilagro.sasyak.di
 
 import android.content.Context
 import android.content.SharedPreferences
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
+
+import com.kapilagro.sasyak.utils.LocationService
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -18,27 +18,30 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object AppModule {
 
-    @Singleton
-    @Provides
-    fun provideMasterKey(@ApplicationContext context: Context): MasterKey {
-        return MasterKey.Builder(context)
-            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .build()
-    }
-
+//    @Singleton
+//    @Provides
+//    fun provideMasterKey(@ApplicationContext context: Context): MasterKey {
+//        return MasterKey.Builder(context)
+//            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+//            .build()
+//    }
     @Singleton
     @Provides
     fun provideSecureSharedPreferences(
-        @ApplicationContext context: Context,
-        masterKey: MasterKey
+        // TODO change this to secured sharedpreference by adding excruption
+        @ApplicationContext context: Context
     ): SharedPreferences {
-        return EncryptedSharedPreferences.create(
-            context,
+        return context.getSharedPreferences(
             "sasyak_secure_prefs",
-            masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            Context.MODE_PRIVATE
         )
+    }
+
+
+    @Singleton
+    @Provides
+    fun provideLocationService(@ApplicationContext context: Context): LocationService {
+        return LocationService(context)
     }
 
     @IoDispatcher
