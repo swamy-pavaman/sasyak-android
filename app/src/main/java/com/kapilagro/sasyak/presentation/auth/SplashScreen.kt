@@ -135,7 +135,7 @@ fun SplashScreen(
                 if (showPlant) {
 
                     Image(
-                        painter = painterResource(id = R.drawable.ic_plant), // Already available
+                        painter = painterResource(id = R.drawable.ic_sprout), // Already available
                         contentDescription = "Plant",
                         modifier = Modifier.size(60.dp),
                         colorFilter = ColorFilter.tint(Color(0xFFF1F1F1)),

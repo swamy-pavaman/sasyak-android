@@ -121,9 +121,13 @@ fun AppNavGraph(
                 onScannerClick = {
                     navController.navigate(Screen.Scanner.route)
                 },
-                onWeatherDetailsClick = { // Add this
-                    navController.navigate(Screen.WeatherDetail.route)
-                }
+onNotificationClick = {
+    navController.navigate(Screen.Notifications.route)
+},
+onWeatherDetailsClick = {
+    navController.navigate(Screen.WeatherDetail.route)
+}
+
 
 
             )
