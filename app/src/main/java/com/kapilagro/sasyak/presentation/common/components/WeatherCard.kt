@@ -4,33 +4,32 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Air
-import androidx.compose.material.icons.outlined.WaterDrop
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.kapilagro.sasyak.domain.models.DailyForecast
 import com.kapilagro.sasyak.domain.models.WeatherInfo
 import com.kapilagro.sasyak.presentation.common.theme.AgroPrimary
 import com.kapilagro.sasyak.presentation.common.theme.AgroLight
-
-import java.time.LocalDate
-
-import java.time.format.TextStyle
-import java.util.*
+import com.kapilagro.sasyak.presentation.common.theme.AgroSecondary
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun WeatherCard(
     weatherInfo: WeatherInfo,
+    onFullDetailsClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -50,122 +49,122 @@ fun WeatherCard(
                     .background(color = AgroPrimary)
                     .padding(16.dp)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Location and current weather
-                    Column {
-                        Text(
-                            text = weatherInfo.location,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = Color.White,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Text(
-                            text = "Today's Weather with mock data", // TODO change this in production to original
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.White.copy(alpha = 0.9f)
-                        )
-                    }
+                Column {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        // Location and current weather
+                        Column {
+                            Text(
+                                text = weatherInfo.location,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = Color.White,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                text = weatherInfo.formattedDate,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.White.copy(alpha = 0.9f)
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = weatherInfo.description,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color.White
+                            )
+                        }
 
-                    // Temperature
-                    Text(
-                        text = "${weatherInfo.temperature.toInt()}°C",
-                        style = MaterialTheme.typography.headlineLarge,
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
-                    )
+                        // Temperature
+                        Column(
+                            horizontalAlignment = Alignment.End
+                        ) {
+                            Text(
+                                text = "${weatherInfo.temperature.toInt()}°C",
+                                style = MaterialTheme.typography.headlineLarge,
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "Min: ${weatherInfo.tempMin.toInt()}° / Max: ${weatherInfo.tempMax.toInt()}°",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.White.copy(alpha = 0.9f)
+                            )
+                        }
+                    }
                 }
             }
 
-            // Weather details section
+            // Critical information for farmers
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp)
             ) {
-                // Humidity and wind speed
+                // Primary metrics row
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    // Humidity
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.WaterDrop,
-                            contentDescription = "Humidity",
-                            tint = AgroPrimary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Column {
-                            Text(
-                                text = "Humidity",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = Color.Gray
-                            )
-                            Text(
-                                text = "${weatherInfo.humidity}%",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                    }
+                    WeatherMetricItem(
+                        icon = Icons.Outlined.WaterDrop,
+                        title = "Rain Chance",
+                        value = "${weatherInfo.precipitationProbability}%",
+                        tint = AgroPrimary
+                    )
+                    WeatherMetricItem(
+                        icon = Icons.Outlined.Air,
+                        title = "Wind",
+                        value = "${weatherInfo.windSpeed.toInt()} km/h",
+                        tint = AgroPrimary
+                    )
+                    WeatherMetricItem(
+                        icon = Icons.Outlined.WaterDrop,
+                        title = "Humidity",
+                        value = "${weatherInfo.humidity}%",
+                        tint = AgroPrimary
+                    )
+                }
 
-                    // Wind Speed
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Air,
-                            contentDescription = "Wind Speed",
-                            tint = AgroPrimary,
-                            modifier = Modifier.size(20.dp)
+                Divider(
+                    modifier = Modifier.padding(vertical = 16.dp),
+                    color = Color.Gray.copy(alpha = 0.2f)
+                )
+
+                // 7-Day forecast
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "7-Day Forecast",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Medium
+                    )
+
+                    TextButton(onClick = onFullDetailsClick) {
+                        Text(
+                            text = "Full Details",
+                            color = AgroPrimary,
+                            style = MaterialTheme.typography.bodySmall
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Column {
-                            Text(
-                                text = "Wind Speed",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = Color.Gray
-                            )
-                            Text(
-                                text = "${weatherInfo.windSpeed.toInt()} km/h",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.Outlined.ChevronRight,
+                            contentDescription = "View full details",
+                            tint = AgroPrimary,
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // 5-Day forecast
-                Text(
-                    text = "5-Day Forecast",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = Color.Gray,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-
-                Row(
+                LazyRow(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Generate 5-day forecast starting from tomorrow
-                    val today = LocalDate.now()
-                    for (i in 0 until 5) {
-                        val forecastDate = today.plusDays(i.toLong())
-                        ForecastDayItem(
-                            day = forecastDate.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()),
-                            temperature = if (i == 0) weatherInfo.temperature.toInt() else
-                                (weatherInfo.temperature.toInt() + (-3..3).random()),
-                            isRainy = (0..10).random() > 7 // 30% chance of rain
-                        )
+                    items(weatherInfo.forecast.take(7)) { forecast ->
+                        ForecastDayCard(forecast = forecast)
                     }
                 }
             }
@@ -174,36 +173,106 @@ fun WeatherCard(
 }
 
 @Composable
-fun ForecastDayItem(
-    day: String,
-    temperature: Int,
-    isRainy: Boolean
+fun WeatherMetricItem(
+    icon: ImageVector,
+    title: String,
+    value: String,
+    tint: Color
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.width(50.dp)
+        modifier = Modifier.width(80.dp)
     ) {
-        Text(
-            text = day,
-            style = MaterialTheme.typography.bodySmall,
-            color = Color.Gray
+        Icon(
+            imageVector = icon,
+            contentDescription = title,
+            tint = tint,
+            modifier = Modifier.size(24.dp)
         )
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        // Weather icon (simple emoji for now)
         Text(
-            text = if (isRainy) "🌧️" else "☀️",
-            fontSize = 18.sp,
+            text = title,
+            style = MaterialTheme.typography.bodySmall,
+            color = Color.Gray,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 4.dp)
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
             textAlign = TextAlign.Center
         )
+    }
+}
 
-        Spacer(modifier = Modifier.height(4.dp))
+@Composable
+fun ForecastDayCard(
+    forecast: DailyForecast
+) {
+    Card(
+        modifier = Modifier
+            .width(90.dp)
+            .height(140.dp),
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = CardDefaults.outlinedCardBorder()
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceEvenly
+        ) {
+            Text(
+                text = forecast.dayOfWeek,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Medium
+            )
 
-        Text(
-            text = "${temperature}°",
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium
-        )
+            Text(
+                text = getWeatherEmoji(forecast.description),
+                fontSize = 24.sp
+            )
+
+            Text(
+                text = "${forecast.tempMax.toInt()}°/${forecast.tempMin.toInt()}°",
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            // Rain probability if significant
+            if (forecast.precipitationProbability > 20) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.WaterDrop,
+                        contentDescription = "Rain probability",
+                        tint = Color.Blue,
+                        modifier = Modifier.size(12.dp)
+                    )
+                    Text(
+                        text = "${forecast.precipitationProbability}%",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.Blue,
+                        modifier = Modifier.padding(start = 2.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun getWeatherEmoji(description: String): String {
+    return when {
+        description.contains("rain", ignoreCase = true) -> "🌧️"
+        description.contains("cloud", ignoreCase = true) -> "☁️"
+        description.contains("sun", ignoreCase = true) || description.contains("clear", ignoreCase = true) -> "☀️"
+        description.contains("storm", ignoreCase = true) -> "⛈️"
+        description.contains("thunder", ignoreCase = true) -> "⚡"
+        else -> "🌤️"
     }
 }

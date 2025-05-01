@@ -8,7 +8,6 @@ import retrofit2.Response
 import retrofit2.http.*
 
 interface ApiService {
-    // Auth Endpoints
     @POST("api/auth/login")
     suspend fun login(@Body loginRequest: LoginRequest): Response<AuthResponse>
 
