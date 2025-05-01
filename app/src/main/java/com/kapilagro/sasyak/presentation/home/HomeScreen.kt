@@ -1,5 +1,6 @@
 package com.kapilagro.sasyak.presentation.home
 
+import android.Manifest
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.*
@@ -14,8 +15,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.rememberMultiplePermissionsState
+
 import com.kapilagro.sasyak.presentation.common.components.TaskCard
 import com.kapilagro.sasyak.presentation.common.components.WeatherCard
 import com.kapilagro.sasyak.presentation.common.theme.*
@@ -23,9 +28,8 @@ import com.kapilagro.sasyak.presentation.home.components.QuickActionButton
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.*
-
 @RequiresApi(Build.VERSION_CODES.O)
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
 fun HomeScreen(
     onTaskClick: (String) -> Unit,
@@ -39,6 +43,14 @@ fun HomeScreen(
     val tasksState by viewModel.tasksState.collectAsState()
     val userRole by viewModel.userRole.collectAsState()
 
+    // Permission state for location
+    val locationPermissionState = rememberMultiplePermissionsState(
+        permissions = listOf(
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        )
+    )
+
     val userName = when (userState) {
         is HomeViewModel.UserState.Success -> (userState as HomeViewModel.UserState.Success).user.name
         else -> ""
@@ -49,6 +61,20 @@ fun HomeScreen(
     }
 
     var selectedTabIndex by remember { mutableStateOf(0) }
+
+    // Check permissions on first composition and when permission state changes
+    LaunchedEffect(locationPermissionState.allPermissionsGranted) {
+        if (locationPermissionState.allPermissionsGranted) {
+            viewModel.loadWeatherData()
+        }
+    }
+
+    // Request permissions if not granted
+    LaunchedEffect(Unit) {
+        if (!locationPermissionState.allPermissionsGranted) {
+            locationPermissionState.launchMultiplePermissionRequest()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -106,50 +132,95 @@ fun HomeScreen(
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
         ) {
-            // Weather Section - visible to both roles
-            // Weather Section - visible to both roles
-            when (weatherState) {
-                is HomeViewModel.WeatherState.Success -> {
-                    WeatherCard(
-                        weatherInfo = (weatherState as HomeViewModel.WeatherState.Success).weatherInfo,
-                        onFullDetailsClick = onWeatherDetailsClick, // Add this
+            // Weather Section with permission handling
+            if (!locationPermissionState.allPermissionsGranted) {
+                // Show permission request card
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 0.dp, vertical = 8.dp)
-                    )
-                }
-                is HomeViewModel.WeatherState.Loading -> {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(180.dp)
                             .padding(16.dp),
-                        shape = RoundedCornerShape(16.dp)
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
                     ) {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator()
+                        Text(
+                            text = "Location permission is required to show weather information",
+                            style = MaterialTheme.typography.bodyLarge,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(
+                            onClick = {
+                                locationPermissionState.launchMultiplePermissionRequest()
+                            }
+                        ) {
+                            Text("Grant Permission")
+                        }
+                        if (locationPermissionState.shouldShowRationale) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Location access is needed to provide accurate weather information for your area",
+                                style = MaterialTheme.typography.bodySmall,
+                                textAlign = TextAlign.Center,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                 }
-                is HomeViewModel.WeatherState.Error -> {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(120.dp)
-                            .padding(16.dp),
-                        shape = RoundedCornerShape(16.dp)
-                    ) {
-                        Column(
+            } else {
+                // Show weather content when permissions are granted
+                when (weatherState) {
+                    is HomeViewModel.WeatherState.Success -> {
+                        WeatherCard(
+                            weatherInfo = (weatherState as HomeViewModel.WeatherState.Success).weatherInfo,
+                            onFullDetailsClick = onWeatherDetailsClick,
                             modifier = Modifier
-                                .fillMaxSize()
+                                .fillMaxWidth()
+                                .padding(horizontal = 0.dp, vertical = 8.dp)
+                        )
+                    }
+                    is HomeViewModel.WeatherState.Loading -> {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(180.dp)
                                 .padding(16.dp),
-                            verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.CenterHorizontally
+                            shape = RoundedCornerShape(16.dp)
                         ) {
-                            Text("Unable to load weather", style = MaterialTheme.typography.bodyLarge)
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Button(onClick = { viewModel.loadWeatherData() }) {
-                                Text("Retry")
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator()
+                            }
+                        }
+                    }
+                    is HomeViewModel.WeatherState.Error -> {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(120.dp)
+                                .padding(16.dp),
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(16.dp),
+                                verticalArrangement = Arrangement.Center,
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = (weatherState as HomeViewModel.WeatherState.Error).message,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    textAlign = TextAlign.Center
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Button(onClick = { viewModel.loadWeatherData() }) {
+                                    Text("Retry")
+                                }
                             }
                         }
                     }
