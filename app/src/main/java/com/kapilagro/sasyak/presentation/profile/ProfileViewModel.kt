@@ -91,10 +91,16 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
-    fun updateProfile(name: String?, phoneNumber: String?, password: String?) {
+    fun updateProfile(
+        name: String?,
+        phoneNumber: String?,
+        password: String?,
+        location: String?,
+        profileImageUrl: String?
+    ) {
         _updateProfileState.value = UpdateProfileState.Loading
         viewModelScope.launch(ioDispatcher) {
-            when (val response = userRepository.updateProfile(name, phoneNumber, password)) {
+            when (val response = userRepository.updateProfile(name, phoneNumber, password, location, profileImageUrl)) {
                 is ApiResponse.Success -> {
                     _updateProfileState.value = UpdateProfileState.Success(response.data)
                     loadUserProfile() // Refresh profile data

@@ -34,17 +34,46 @@ class UserRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun updateProfile(
+
+//    override suspend fun updateProfile(
+//        name: String?,
+//        phoneNumber: String?,
+//        password: String?
+//    ): ApiResponse<User> {
+//        return try {
+//            val response = apiService.updateUserProfile(
+//                UpdateProfileRequest(
+//                    name = name,
+//                    phoneNumber = phoneNumber,
+//                    password = password
+//                )
+//            )
+//
+//            if (response.isSuccessful && response.body() != null) {
+//                ApiResponse.Success(response.body()!!.toDomainModel())
+//            } else {
+//                ApiResponse.Error(response.errorBody()?.string() ?: "Failed to update profile")
+//            }
+//        } catch (e: Exception) {
+//            ApiResponse.Error(e.message ?: "An unknown error occurred")
+//        }
+//    }
+
+     override suspend fun updateProfile(
         name: String?,
         phoneNumber: String?,
-        password: String?
+        password: String?,
+        location: String?,
+        profileImageUrl: String?
     ): ApiResponse<User> {
         return try {
-            val response = apiService.updateSupervisorProfile(
+            val response = apiService.updateUserProfile(
                 UpdateProfileRequest(
                     name = name,
-                    phone_number = phoneNumber,
-                    password = password
+                    phoneNumber = phoneNumber,
+                    password = password,
+                    location = location,
+                    profileImageUrl = profileImageUrl
                 )
             )
 
@@ -57,6 +86,7 @@ class UserRepositoryImpl @Inject constructor(
             ApiResponse.Error(e.message ?: "An unknown error occurred")
         }
     }
+
 
     override suspend fun getSupervisorManager(): ApiResponse<User> {
         return try {

@@ -14,11 +14,13 @@ interface ApiService {
     @POST("api/auth/refresh-token")
     suspend fun refreshToken(@Body refreshTokenRequest: RefreshTokenRequest): Response<AuthResponse>
     // User Endpoints
-    @GET("api/user/me")
+    @GET("api/user/profile")
     suspend fun getCurrentUser(): Response<UserResponse>
 
-    @PUT("api/supervisor/profile")
-    suspend fun updateSupervisorProfile(@Body updateProfileRequest: UpdateProfileRequest): Response<UserResponse>
+//    @PUT("api/supervisor/profile")
+//    suspend fun updateSupervisorProfile(@Body updateProfileRequest: UpdateProfileRequest): Response<UserResponse>
+    @PUT("api/user/profile")
+    suspend fun updateUserProfile(@Body updateProfileRequest: UpdateProfileRequest): Response<UserResponse>
 
     // Task Endpoints
     @GET("api/tasks/assigned")
