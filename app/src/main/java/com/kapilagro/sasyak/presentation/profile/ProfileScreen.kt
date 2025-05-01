@@ -23,6 +23,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.kapilagro.sasyak.R
 import com.kapilagro.sasyak.domain.models.User
 import com.kapilagro.sasyak.presentation.common.theme.Green500
+import coil.compose.rememberAsyncImagePainter
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -171,7 +173,8 @@ fun ManagerProfileContent(
                 Box {
                     // Avatar
                     Image(
-                        painter = painterResource(id = R.drawable.ic_person),
+                        painter = rememberAsyncImagePainter(user.profileImageUrl?.ifBlank { null }
+                            ?: R.drawable.ic_person),
                         contentDescription = "Profile Photo",
                         modifier = Modifier
                             .size(100.dp)
@@ -314,7 +317,8 @@ fun SupervisorProfileContent(
                 Box {
                     // Avatar
                     Image(
-                        painter = painterResource(id = R.drawable.ic_person),
+                        painter = rememberAsyncImagePainter(user.profileImageUrl?.ifBlank { null }
+                            ?: R.drawable.ic_person),
                         contentDescription = "Profile Photo",
                         modifier = Modifier
                             .size(100.dp)
@@ -404,7 +408,7 @@ fun SupervisorProfileContent(
             ) {
                 // Manager avatar
                 Image(
-                    painter = painterResource(id = R.drawable.ic_person),
+                    painter = rememberAsyncImagePainter(user.profileImageUrl?.ifBlank { null } ?: R.drawable.ic_person),
                     contentDescription = "Manager Photo",
                     modifier = Modifier
                         .size(50.dp)
@@ -462,7 +466,7 @@ fun DefaultProfileContent(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Image(
-                    painter = painterResource(id = R.drawable.ic_person),
+                    painter = rememberAsyncImagePainter(user.profileImageUrl?.ifBlank { null } ?: R.drawable.ic_person),
                     contentDescription = "Profile Photo",
                     modifier = Modifier
                         .size(100.dp)

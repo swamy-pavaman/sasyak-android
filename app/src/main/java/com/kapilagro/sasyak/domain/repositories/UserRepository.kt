@@ -5,7 +5,10 @@ import com.kapilagro.sasyak.domain.models.User
 
 interface UserRepository {
     suspend fun getCurrentUser(): ApiResponse<User>
-    suspend fun updateProfile(name: String?, phoneNumber: String?, password: String?): ApiResponse<User>
+//    suspend fun updateProfile(name: String?, phoneNumber: String?, password: String?): ApiResponse<User>
+suspend fun updateProfile(name: String?, phoneNumber: String?, password: String?, location: String?, profileImageUrl: String?
+): ApiResponse<User>
+
     suspend fun getSupervisorManager(): ApiResponse<User>
     suspend fun getSupervisorProfile(): ApiResponse<User>
     suspend fun getTeamMembers(): ApiResponse<List<User>>

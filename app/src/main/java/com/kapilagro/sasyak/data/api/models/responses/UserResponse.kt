@@ -1,5 +1,4 @@
 package com.kapilagro.sasyak.data.api.models.responses
-
 data class UserResponse(
     val id: Int,
     val name: String,
@@ -7,5 +6,7 @@ data class UserResponse(
     val role: String,
     val tenantId: String,
     val phoneNumber: String? = null,
-    val managerId: Int? = null
+    val managerId: Int? = null,
+    val location: String? = null,
+    val profile: String? = null
 )

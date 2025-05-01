@@ -25,6 +25,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.rememberAsyncImagePainter
 import com.kapilagro.sasyak.R
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -37,23 +38,25 @@ fun EditProfileScreen(
     val profileState by viewModel.profileState.collectAsState()
     val updateProfileState by viewModel.updateProfileState.collectAsState()
 
-    // Form state
     var name by remember { mutableStateOf("") }
     var phoneNumber by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
 
-    // Initialize form with user data
+    var location by remember { mutableStateOf("") }
+    var profileImageUrl by remember { mutableStateOf("") }
+
     LaunchedEffect(profileState) {
         if (profileState is ProfileViewModel.ProfileState.Success) {
             val user = (profileState as ProfileViewModel.ProfileState.Success).user
             name = user.name
             phoneNumber = user.phoneNumber
+            location = user.location.orEmpty()
+            profileImageUrl = user.profileImageUrl.orEmpty()
         }
     }
 
-    // Handle update success
     LaunchedEffect(updateProfileState) {
         if (updateProfileState is ProfileViewModel.UpdateProfileState.Success) {
             viewModel.clearUpdateProfileState()
@@ -67,26 +70,19 @@ fun EditProfileScreen(
                 title = { Text("Edit Profile") },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowBack,
-                            contentDescription = "Back"
-                        )
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
                     TextButton(
                         onClick = {
-                            // Validate form
-                            if (password.isNotEmpty() && password != confirmPassword) {
-                                // Show error - passwords don't match
-                                return@TextButton
-                            }
-
-                            // Update profile
+                            if (password.isNotEmpty() && password != confirmPassword) return@TextButton
                             viewModel.updateProfile(
                                 name = name.takeIf { it.isNotBlank() },
                                 phoneNumber = phoneNumber.takeIf { it.isNotBlank() },
-                                password = password.takeIf { it.isNotBlank() }
+                                password = password.takeIf { it.isNotBlank() },
+                                location = location.takeIf { it.isNotBlank() },
+                                profileImageUrl = profileImageUrl.takeIf { it.isNotBlank() }
                             )
                         },
                         enabled = updateProfileState !is ProfileViewModel.UpdateProfileState.Loading
@@ -107,40 +103,18 @@ fun EditProfileScreen(
                         .padding(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Profile photo
-                    Box(
-                        modifier = Modifier.padding(vertical = 16.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.ic_person), // TODO profile_placeholder
-                            contentDescription = "Profile Photo",
-                            modifier = Modifier
-                                .size(100.dp)
-                                .clip(CircleShape),
-                            contentScale = ContentScale.Crop
-                        )
+                    // Profile image from URL
+                    Image(
+                        painter = rememberAsyncImagePainter(profileImageUrl.ifBlank { null } ?: R.drawable.ic_person),
+                        contentDescription = "Profile Image",
+                        modifier = Modifier
+                            .size(100.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
 
-                        // Change photo button
-                        Box(
-                            contentAlignment = Alignment.Center,
-                            modifier = Modifier
-                                .size(100.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f))
-                        ) {
-                            Button(
-                                onClick = { /* Open photo picker */ },
-                                shape = RoundedCornerShape(16.dp)
-                            ) {
-                                Text("Change Photo")
-                            }
-                        }
-                    }
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Form fields
                     OutlinedTextField(
                         value = name,
                         onValueChange = { name = it },
@@ -165,17 +139,33 @@ fun EditProfileScreen(
                         shape = RoundedCornerShape(12.dp)
                     )
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                    Divider()
+                    OutlinedTextField(
+                        value = location,
+                        onValueChange = { location = it },
+                        label = { Text("Location") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    )
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    Text(
-                        text = "Change Password",
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.align(Alignment.Start)
+                    OutlinedTextField(
+                        value = profileImageUrl,
+                        onValueChange = { profileImageUrl = it },
+                        label = { Text("Profile Image URL") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
                     )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Divider()
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text("Change Password", style = MaterialTheme.typography.titleMedium)
 
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -185,15 +175,12 @@ fun EditProfileScreen(
                         label = { Text("New Password") },
                         singleLine = true,
                         visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Password,
-                            imeAction = ImeAction.Next
-                        ),
+                        keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Password),
                         trailingIcon = {
                             IconButton(onClick = { passwordVisible = !passwordVisible }) {
                                 Icon(
                                     imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                    contentDescription = if (passwordVisible) "Hide password" else "Show password"
+                                    contentDescription = null
                                 )
                             }
                         },
@@ -209,10 +196,7 @@ fun EditProfileScreen(
                         label = { Text("Confirm New Password") },
                         singleLine = true,
                         visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Password,
-                            imeAction = ImeAction.Done
-                        ),
+                        keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Password),
                         isError = password.isNotEmpty() && password != confirmPassword,
                         supportingText = {
                             if (password.isNotEmpty() && password != confirmPassword) {
@@ -223,48 +207,37 @@ fun EditProfileScreen(
                         shape = RoundedCornerShape(12.dp)
                     )
 
-                    // Error message
                     if (updateProfileState is ProfileViewModel.UpdateProfileState.Error) {
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
                             text = (updateProfileState as ProfileViewModel.UpdateProfileState.Error).message,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodyMedium
+                            color = MaterialTheme.colorScheme.error
                         )
                     }
 
-                    // Loading indicator
                     if (updateProfileState is ProfileViewModel.UpdateProfileState.Loading) {
                         Spacer(modifier = Modifier.height(16.dp))
                         CircularProgressIndicator()
                     }
                 }
             }
+
             is ProfileViewModel.ProfileState.Loading -> {
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
+                    modifier = Modifier.fillMaxSize().padding(paddingValues),
                     contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator()
                 }
             }
+
             is ProfileViewModel.ProfileState.Error -> {
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
+                    modifier = Modifier.fillMaxSize().padding(paddingValues),
                     contentAlignment = Alignment.Center
                 ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = "Failed to load profile",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.error
-                        )
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("Failed to load profile", color = MaterialTheme.colorScheme.error)
                         Spacer(modifier = Modifier.height(8.dp))
                         Button(onClick = { viewModel.loadUserProfile() }) {
                             Text("Retry")

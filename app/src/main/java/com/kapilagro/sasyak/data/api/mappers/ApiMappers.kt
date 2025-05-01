@@ -37,7 +37,11 @@ fun UserResponse.toDomainModel(): User {
         phoneNumber = phoneNumber ?: "",
         role = role,
         tenantId = tenantId,
-        managerId = managerId
+        managerId = managerId,
+        profileImageUrl = profile, // mapping profile to profileImageUrl
+        location = location,
+        joinedDate = null,         // not present in response; set as null
+        specialization = emptyList() // not present in response; set as empty list
     )
 }
 
