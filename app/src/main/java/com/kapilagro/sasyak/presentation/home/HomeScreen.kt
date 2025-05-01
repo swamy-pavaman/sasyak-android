@@ -31,6 +31,8 @@ fun HomeScreen(
     onTaskClick: (String) -> Unit,
     onCreateTaskClick: () -> Unit,
     onScannerClick: () -> Unit,
+    onNotificationClick: () -> Unit, // ✅ NEW
+
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val userState by viewModel.userState.collectAsState()
@@ -66,15 +68,22 @@ fun HomeScreen(
                     }
                 },
                 actions = {
-                    // Scanner button only for Supervisors
-                    if (userRole == "SUPERVISOR") {
-                        IconButton(onClick = onScannerClick) {
-                            Icon(
-                                imageVector = Icons.Outlined.CameraAlt,
-                                contentDescription = "Scan Plant"
-                            )
-                        }
+
+                    IconButton(onClick = onNotificationClick) {
+                        Icon(
+                            imageVector = Icons.Outlined.Notifications,
+                            contentDescription = "Notifications"
+                        )
                     }
+                    // Scanner button only for Supervisors
+//                    if (userRole == "SUPERVISOR") {
+//                        IconButton(onClick = onScannerClick) {
+//                            Icon(
+//                                imageVector = Icons.Outlined.CameraAlt,
+//                                contentDescription = "Scan Plant"
+//                            )
+//                        }
+//                    }
                     IconButton(onClick = { /* TODO: Add search logic */ }) {
                         Icon(
                             imageVector = Icons.Outlined.Search,

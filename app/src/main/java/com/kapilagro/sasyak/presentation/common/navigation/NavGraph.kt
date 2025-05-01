@@ -80,6 +80,9 @@ fun AppNavGraph(
                 },
                 onScannerClick = {
                     navController.navigate(Screen.Scanner.route)
+                },
+                onNotificationClick = {
+                    navController.navigate(Screen.Notifications.route)
                 }
             )
         }

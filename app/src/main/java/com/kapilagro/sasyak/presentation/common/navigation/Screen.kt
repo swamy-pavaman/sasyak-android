@@ -2,6 +2,10 @@ package com.kapilagro.sasyak.presentation.common.navigation
 
 import androidx.annotation.DrawableRes
 import com.kapilagro.sasyak.R
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.QrCode
+
+
 
 sealed class Screen(val route: String, val title: String, @DrawableRes val icon: Int? = null) {
     // Auth screens
@@ -10,9 +14,13 @@ sealed class Screen(val route: String, val title: String, @DrawableRes val icon:
 
     // Main screens with bottom navigation
     object Home : Screen("home", "Home", R.drawable.ic_home)
-    object Reports : Screen("reports", "Reports", R.drawable.ic_rejected) // TODO chnage to report icon
+    object Reports : Screen("reports", "Reports", R.drawable.ic_baseline_analytics_24) // TODO chnage to report icon
     object Notifications : Screen("notifications", "Notifications", R.drawable.ic_notification)
     object Profile : Screen("profile", "Profile", R.drawable.ic_person)
+    object Search : Screen("scanner", "Scanner", R.drawable.ic_baseline_image_search)
+
+
+
 
     // Task related screens
     object TaskList : Screen("task_list", "Tasks")
@@ -29,6 +37,6 @@ sealed class Screen(val route: String, val title: String, @DrawableRes val icon:
     object EditProfile : Screen("edit_profile", "Edit Profile")
 
     companion object {
-        val bottomNavItems = listOf(Home, Reports, Notifications, Profile)
+        val bottomNavItems = listOf(Home, Reports, Search, Profile)
     }
 }
