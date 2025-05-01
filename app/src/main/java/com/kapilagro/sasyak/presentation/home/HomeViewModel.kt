@@ -80,11 +80,12 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    // In HomeViewModel.kt, update the loadWeatherData function:
+
     fun loadWeatherData() {
         _weatherState.value = WeatherState.Loading
         viewModelScope.launch(ioDispatcher) {
-            // For now using a generic location
-            when (val response = weatherRepository.getWeatherForLocation("Current Location")) {
+            when (val response = weatherRepository.getWeatherForLocation("")) {
                 is ApiResponse.Success -> {
                     _weatherState.value = WeatherState.Success(response.data)
                 }

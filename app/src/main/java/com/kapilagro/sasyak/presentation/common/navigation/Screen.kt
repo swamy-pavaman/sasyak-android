@@ -8,13 +8,18 @@ import androidx.compose.material.icons.filled.QrCode
 
 
 sealed class Screen(val route: String, val title: String, @DrawableRes val icon: Int? = null) {
+
+
+    // weather
+    object WeatherDetail : Screen("weather_detail", "Weather Details")
+
     // Auth screens
     object Splash : Screen("splash", "Splash")
     object Login : Screen("login", "Login")
 
     // Main screens with bottom navigation
     object Home : Screen("home", "Home", R.drawable.ic_home)
-    object Reports : Screen("reports", "Reports", R.drawable.ic_baseline_analytics_24) // TODO chnage to report icon
+    object Reports : Screen("reports", "Reports", R.drawable.ic_baseline_analytics_24) // TODO change to report icon
     object Notifications : Screen("notifications", "Notifications", R.drawable.ic_notification)
     object Profile : Screen("profile", "Profile", R.drawable.ic_person)
     object Search : Screen("scanner", "Scanner", R.drawable.ic_baseline_image_search)
