@@ -4,13 +4,21 @@ import androidx.annotation.DrawableRes
 import com.kapilagro.sasyak.R
 
 sealed class Screen(val route: String, val title: String, @DrawableRes val icon: Int? = null) {
+
+
+    // weather
+    object WeatherDetail : Screen("weather_detail", "Weather Details")
+
     // Auth screens
     object Splash : Screen("splash", "Splash")
     object Login : Screen("login", "Login")
 
     // Main screens with bottom navigation
     object Home : Screen("home", "Home", R.drawable.ic_home)
+
     object Reports : Screen("reports", "Reports", R.drawable.ic_rejected) // TODO chnage to report icon
+
+
     object Notifications : Screen("notifications", "Notifications", R.drawable.ic_notification)
     object Profile : Screen("profile", "Profile", R.drawable.ic_person)
 

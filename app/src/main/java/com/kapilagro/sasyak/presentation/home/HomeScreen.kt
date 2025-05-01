@@ -31,6 +31,7 @@ fun HomeScreen(
     onTaskClick: (String) -> Unit,
     onCreateTaskClick: () -> Unit,
     onScannerClick: () -> Unit,
+    onWeatherDetailsClick: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val userState by viewModel.userState.collectAsState()
@@ -106,10 +107,12 @@ fun HomeScreen(
                 .verticalScroll(rememberScrollState())
         ) {
             // Weather Section - visible to both roles
+            // Weather Section - visible to both roles
             when (weatherState) {
                 is HomeViewModel.WeatherState.Success -> {
                     WeatherCard(
                         weatherInfo = (weatherState as HomeViewModel.WeatherState.Success).weatherInfo,
+                        onFullDetailsClick = onWeatherDetailsClick, // Add this
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 0.dp, vertical = 8.dp)
