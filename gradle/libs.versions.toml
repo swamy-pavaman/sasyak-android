@@ -17,6 +17,8 @@ minSdk = "24"
 targetSdk = "35"
 playservices-location = "21.3.0"
 accompanist = "0.31.1-alpha"
+kotlin-serialization = "1.6.3"
+kotlin-serialization-plugin = "1.9.20"
 
 
 [plugins]
@@ -25,12 +27,15 @@ kotlin-android = { id = "org.jetbrains.kotlin.android", version = "1.9.20" }
 kotlin-parcelize = { id = "org.jetbrains.kotlin.plugin.parcelize", version = "1.9.20" }
 dagger-hilt = { id = "com.google.dagger.hilt.android", version = "2.48" }
 ksp = { id = "com.google.devtools.ksp", version = "1.9.20-1.0.14" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin-serialization-plugin" }
 
 
 
 
 
 [libraries]
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlin-serialization" }
+
 androidx-material = { module = "androidx.compose.material:material", version.ref = "material" }
 
 accompanist-permissions = { group = "com.google.accompanist", name = "accompanist-permissions", version.ref = "accompanist" }

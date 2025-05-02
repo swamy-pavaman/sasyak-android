@@ -10,8 +10,8 @@ data class Task(
     val taskType: String, // "scouting", "spraying", "sowing", "fuel", "yield"
     val createdBy: String,
     val assignedTo: String?,
-    val createdAt: String,
-    val updatedAt: String,
+    val createdAt: String?,
+    val updatedAt: String?,
     val detailsJson: String?,
     val imagesJson: String?,
     val implementationJson: String?

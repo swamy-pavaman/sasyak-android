@@ -1,5 +1,4 @@
 package com.kapilagro.sasyak.presentation.home
-
 import android.Manifest
 import android.os.Build
 import androidx.annotation.RequiresApi
@@ -10,7 +9,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Assignment
 import androidx.compose.material.icons.outlined.*
-import androidx.compose.material.icons.outlined.Assignment
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -23,6 +21,7 @@ import com.google.accompanist.permissions.rememberMultiplePermissionsState
 
 import com.kapilagro.sasyak.presentation.common.components.TaskCard
 import com.kapilagro.sasyak.presentation.common.components.WeatherCard
+import com.kapilagro.sasyak.presentation.common.navigation.Screen
 import com.kapilagro.sasyak.presentation.common.theme.*
 import com.kapilagro.sasyak.presentation.home.components.QuickActionButton
 import java.time.LocalDate
@@ -37,8 +36,11 @@ fun HomeScreen(
     onScannerClick: () -> Unit,
     onNotificationClick: () -> Unit,
     onWeatherDetailsClick: () -> Unit,
+    onScoutingTaskClick: () -> Unit,
 
-    viewModel: HomeViewModel = hiltViewModel()
+
+    viewModel: HomeViewModel = hiltViewModel(),
+
 ) {
     val userState by viewModel.userState.collectAsState()
     val weatherState by viewModel.weatherState.collectAsState()
@@ -251,7 +253,8 @@ fun HomeScreen(
                     SupervisorHomeContent(
                         onTaskClick = onTaskClick,
                         tasksState = tasksState,
-                        loadTasksData = { viewModel.loadTasksData() }
+                        loadTasksData = { viewModel.loadTasksData() },
+                        onScoutingTaskClick = onScoutingTaskClick
                     )
                 }
                 else -> {
@@ -346,7 +349,8 @@ fun ManagerHomeContent(
 fun SupervisorHomeContent(
     onTaskClick: (String) -> Unit,
     tasksState: HomeViewModel.TasksState,
-    loadTasksData: () -> Unit
+    loadTasksData: () -> Unit,
+    onScoutingTaskClick: () -> Unit
 ) {
     // Supervisor-specific quick actions
     Text(
@@ -367,7 +371,7 @@ fun SupervisorHomeContent(
             label = "Scouting",
             backgroundColor = ScoutingIcon,
             containerColor = ScoutingContainer,
-            onClick = { /* Handle scouting action */ }
+            onClick = onScoutingTaskClick
         )
 
         QuickActionButton(

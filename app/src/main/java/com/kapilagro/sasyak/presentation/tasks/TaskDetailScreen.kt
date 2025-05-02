@@ -208,7 +208,7 @@ fun TaskDetailScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
-                                text = task.createdAt, // Would format properly in real app
+                                text = task.createdAt?: "", // TODO Would format properly in real app
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Medium
                             )
