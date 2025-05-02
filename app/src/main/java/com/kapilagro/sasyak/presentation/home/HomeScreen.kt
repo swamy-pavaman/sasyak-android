@@ -111,12 +111,12 @@ fun HomeScreen(
 //                            )
 //                        }
 //                    }
-                    IconButton(onClick = { /* TODO: Add search logic */ }) {
-                        Icon(
-                            imageVector = Icons.Outlined.Search,
-                            contentDescription = "Search"
-                        )
-                    }
+//                    IconButton(onClick = { /* TODO: Add search logic */ }) {
+//                        Icon(
+//                            imageVector = Icons.Outlined.Search,
+//                            contentDescription = "Search"
+//                        )
+//                    }
                 }
             )
         },

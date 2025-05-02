@@ -30,6 +30,195 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kapilagro.sasyak.presentation.common.theme.AgroLight
 import androidx.hilt.navigation.compose.hiltViewModel
+
+//fun LoginScreen(
+//    onLoginSuccess: () -> Unit,
+//    viewModel: AuthViewModel = hiltViewModel()
+//) {
+//    val loginState by viewModel.loginState.collectAsState()
+//    var email by remember { mutableStateOf("") }
+//    var password by remember { mutableStateOf("") }
+//    var passwordVisible by remember { mutableStateOf(false) }
+//
+//    val colorScheme = MaterialTheme.colorScheme
+//
+//    LaunchedEffect(loginState) {
+//        if (loginState is AuthViewModel.LoginState.Success) {
+//            onLoginSuccess()
+//            viewModel.clearLoginState()
+//        }
+//    }
+//
+//    Box(
+//        modifier = Modifier
+//            .fillMaxSize()
+//            .background(colorScheme.background)
+//            .padding(horizontal = 16.dp),
+//        contentAlignment = Alignment.Center
+//    ) {
+//        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+//            Text(
+//                "Kapil Agro",
+//                fontSize = 26.sp,
+//                fontWeight = FontWeight.Bold,
+//                color = colorScheme.onBackground
+//            )
+//            Text(
+//                "Scouting Hub",
+//                fontSize = 14.sp,
+//                color = colorScheme.primary
+//            )
+//
+//            Spacer(modifier = Modifier.height(16.dp))
+//
+//            Card(
+//                modifier = Modifier.fillMaxWidth(),
+//                shape = RoundedCornerShape(16.dp),
+//                elevation = CardDefaults.cardElevation(8.dp),
+//                colors = CardDefaults.cardColors(
+//                    containerColor = AgroLight,
+//                    contentColor = colorScheme.onSurface
+//                )
+//            ) {
+//                Column(
+//                    modifier = Modifier
+//                        .padding(16.dp)
+//                        .verticalScroll(rememberScrollState()),
+//                    horizontalAlignment = Alignment.CenterHorizontally
+//                ) {
+//                    Text("Login", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+//                    Text(
+//                        "Enter your credentials to access your account",
+//                        fontSize = 12.sp,
+//                        color = colorScheme.onSurfaceVariant
+//                    )
+//
+//                    Spacer(modifier = Modifier.height(16.dp))
+//
+//                    Text(
+//                        "Email",
+//                        fontSize = 12.sp,
+//                        fontWeight = FontWeight.Medium,
+//                        modifier = Modifier.align(Alignment.Start)
+//                    )
+//                    OutlinedTextField(
+//                        value = email,
+//                        onValueChange = { email = it.trim() }, // 🔧 trim() applied here
+//                        placeholder = { Text("example@email.com") },
+//                        singleLine = true,
+//                        keyboardOptions = KeyboardOptions.Default.copy(
+//                            keyboardType = KeyboardType.Email,
+//                            imeAction = ImeAction.Next
+//                        ),
+//                        leadingIcon = {
+//                            Icon(imageVector = Icons.Default.Email, contentDescription = null)
+//                        },
+//                        modifier = Modifier.fillMaxWidth(),
+//                        shape = RoundedCornerShape(8.dp),
+//                        colors = OutlinedTextFieldDefaults.colors(
+//                            focusedBorderColor = colorScheme.primary,
+//                            unfocusedBorderColor = colorScheme.outline,
+//                            focusedLabelColor = colorScheme.primary
+//                        )
+//                    )
+//
+//                    Spacer(modifier = Modifier.height(12.dp))
+//
+//                    Text(
+//                        "Password",
+//                        fontSize = 12.sp,
+//                        fontWeight = FontWeight.Medium,
+//                        modifier = Modifier.align(Alignment.Start)
+//                    )
+//                    OutlinedTextField(
+//                        value = password,
+//                        onValueChange = { password = it.trim() }, // 🔧 trim() applied here too (optional but helpful)
+//                        placeholder = { Text("password") },
+//                        singleLine = true,
+//                        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+//                        keyboardOptions = KeyboardOptions.Default.copy(
+//                            keyboardType = KeyboardType.Password,
+//                            imeAction = ImeAction.Done
+//                        ),
+//                        leadingIcon = {
+//                            Icon(imageVector = Icons.Default.Lock, contentDescription = null)
+//                        },
+//                        trailingIcon = {
+//                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
+//                                Icon(
+//                                    imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+//                                    contentDescription = null,
+//                                    modifier = Modifier.size(18.dp)
+//                                )
+//                            }
+//                        },
+//                        modifier = Modifier
+//                            .fillMaxWidth()
+//                            .height(56.dp),
+//                        shape = RoundedCornerShape(10.dp),
+//                        colors = OutlinedTextFieldDefaults.colors(
+//                            focusedBorderColor = colorScheme.primary,
+//                            unfocusedBorderColor = colorScheme.outline
+//                        )
+//                    )
+//
+//                    Spacer(modifier = Modifier.height(12.dp))
+//
+//                    Row(
+//                        modifier = Modifier.fillMaxWidth(),
+//                        horizontalArrangement = Arrangement.End
+//                    ) {
+//                        TextButton(onClick = { /* TODO: Forgot Password */ }) {
+//                            Text(
+//                                "Forgot password?",
+//                                color = colorScheme.primary,
+//                                fontSize = 12.sp
+//                            )
+//                        }
+//                    }
+//
+//                    Spacer(modifier = Modifier.height(16.dp))
+//
+//                    Button(
+//                        onClick = {
+//                            viewModel.login(email.trim(), password.trim()) // 🔧 ensures trimmed values sent
+//                        },
+//                        enabled = email.isNotBlank() && password.isNotBlank() && loginState !is AuthViewModel.LoginState.Loading,
+//                        modifier = Modifier
+//                            .fillMaxWidth()
+//                            .height(45.dp),
+//                        shape = RoundedCornerShape(10.dp),
+//                        colors = ButtonDefaults.buttonColors(
+//                            containerColor = colorScheme.primary,
+//                            contentColor = colorScheme.onPrimary
+//                        )
+//                    ) {
+//                        if (loginState is AuthViewModel.LoginState.Loading) {
+//                            CircularProgressIndicator(
+//                                color = colorScheme.onPrimary,
+//                                modifier = Modifier.size(18.dp)
+//                            )
+//                        } else {
+//                            Text("Sign in", fontSize = 14.sp)
+//                        }
+//                    }
+//                }
+//            }
+//
+//            Spacer(modifier = Modifier.height(16.dp))
+//            Text(
+//                text = "© 2025 Kapil Agro Scouting Hub. All Rights Reserved.",
+//                fontSize = 10.sp,
+//                color = colorScheme.onSurfaceVariant,
+//                modifier = Modifier.align(Alignment.CenterHorizontally),
+//                lineHeight = 12.sp
+//            )
+//        }
+//    }
+//}
+
+
+
 @Composable
 fun LoginScreen(
     onLoginSuccess: () -> Unit,
@@ -103,7 +292,7 @@ fun LoginScreen(
                     )
                     OutlinedTextField(
                         value = email,
-                        onValueChange = { email = it.trim() }, // 🔧 trim() applied here
+                        onValueChange = { email = it.trim() },
                         placeholder = { Text("example@email.com") },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions.Default.copy(
@@ -132,7 +321,7 @@ fun LoginScreen(
                     )
                     OutlinedTextField(
                         value = password,
-                        onValueChange = { password = it.trim() }, // 🔧 trim() applied here too (optional but helpful)
+                        onValueChange = { password = it.trim() },
                         placeholder = { Text("password") },
                         singleLine = true,
                         visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
@@ -177,11 +366,23 @@ fun LoginScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    if (loginState is AuthViewModel.LoginState.Error) {
+                        val errorMessage = (loginState as AuthViewModel.LoginState.Error).message
+                        Text(
+                            text = errorMessage,
+                            color = MaterialTheme.colorScheme.error,
+                            fontSize = 12.sp,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 8.dp)
+                        )
+                    }
 
                     Button(
                         onClick = {
-                            viewModel.login(email.trim(), password.trim()) // 🔧 ensures trimmed values sent
+                            viewModel.login(email.trim(), password.trim())
                         },
                         enabled = email.isNotBlank() && password.isNotBlank() && loginState !is AuthViewModel.LoginState.Loading,
                         modifier = Modifier
