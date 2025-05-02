@@ -29,6 +29,7 @@ import com.kapilagro.sasyak.presentation.profile.ProfileScreen
 import com.kapilagro.sasyak.presentation.reports.ReportScreen
 import com.kapilagro.sasyak.presentation.scanner.ScanResultScreen
 import com.kapilagro.sasyak.presentation.scanner.ScannerScreen
+import com.kapilagro.sasyak.presentation.scouting.ScoutingScreen
 import com.kapilagro.sasyak.presentation.tasks.CreateTaskScreen
 import com.kapilagro.sasyak.presentation.tasks.TaskDetailScreen
 import com.kapilagro.sasyak.presentation.tasks.TaskListScreen
@@ -50,6 +51,19 @@ fun AppNavGraph(
         startDestination = startDestination,
         modifier = modifier
     ) {
+
+        // scouting screen
+        composable(Screen.Scouting.route) {
+            ScoutingScreen(
+                onTaskCreated = {
+                    navController.popBackStack()
+                    // Optionally navigate to task list or show success message
+                },
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
 
 
         // weather screen
@@ -121,12 +135,16 @@ fun AppNavGraph(
                 onScannerClick = {
                     navController.navigate(Screen.Scanner.route)
                 },
-onNotificationClick = {
-    navController.navigate(Screen.Notifications.route)
-},
-onWeatherDetailsClick = {
-    navController.navigate(Screen.WeatherDetail.route)
-}
+                onNotificationClick = {
+                    navController.navigate(Screen.Notifications.route)
+                },
+                onWeatherDetailsClick = {
+                    navController.navigate(Screen.WeatherDetail.route)
+                },
+                onScoutingTaskClick = {
+                    navController.navigate(Screen.Scouting.route)
+                }
+
 
 
 

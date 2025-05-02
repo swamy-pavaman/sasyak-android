@@ -34,6 +34,8 @@ sealed class Screen(val route: String, val title: String, @DrawableRes val icon:
     }
     object CreateTask : Screen("create_task", "Create Task")
 
+    object Scouting : Screen("scouting", "Scouting")
+
     // Scanner related screens
     object Scanner : Screen("scanner", "Plant Scanner")
     object ScanResult : Screen("scan_result", "Scan Result")
