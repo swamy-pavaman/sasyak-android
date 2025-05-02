@@ -96,7 +96,7 @@ fun HomeScreen(
                 },
                 actions = {
 
-                    IconButton(onClick = onNotificationClick) {
+                    IconButton(onClick = onNotificationClick,    modifier = Modifier.padding(end = 8.dp) ) {
                         Icon(
                             imageVector = Icons.Outlined.Notifications,
                             contentDescription = "Notifications"

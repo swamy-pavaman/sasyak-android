@@ -77,7 +77,10 @@ fun NotificationScreen(
             when (notificationsState) {
                 is NotificationViewModel.NotificationsState.Success -> {
                     val notifications = (notificationsState as NotificationViewModel.NotificationsState.Success).notifications
-                    if (notifications.isEmpty()) {
+                    if (notifications.isEmpty())Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
                         EmptyStateView(
                             title = "No notifications yet",
                             message = "New notifications will appear here",
