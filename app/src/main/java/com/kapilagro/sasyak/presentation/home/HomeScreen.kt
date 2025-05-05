@@ -37,6 +37,7 @@ fun HomeScreen(
     onWeatherDetailsClick: () -> Unit,
     onScoutingTaskClick: () -> Unit,
     onFuelRequestClick: ()-> Unit,
+    onSowingTaskClick: () -> Unit,
 
 
     viewModel: HomeViewModel = hiltViewModel(),
@@ -255,7 +256,8 @@ fun HomeScreen(
                         tasksState = tasksState,
                         loadTasksData = { viewModel.loadTasksData() },
                         onScoutingTaskClick = onScoutingTaskClick,
-                        onFuelRequestClick = onFuelRequestClick
+                        onFuelRequestClick = onFuelRequestClick,
+                        onSowingTaskClick =onSowingTaskClick
                     )
                 }
                 else -> {
@@ -263,7 +265,8 @@ fun HomeScreen(
                     DefaultHomeContent(
                         onTaskClick = onTaskClick,
                         tasksState = tasksState,
-                        loadTasksData = { viewModel.loadTasksData() }
+                        loadTasksData = { viewModel.loadTasksData() },
+                        onSowingTaskClick =onSowingTaskClick
                     )
                 }
             }
@@ -352,7 +355,8 @@ fun SupervisorHomeContent(
     tasksState: HomeViewModel.TasksState,
     loadTasksData: () -> Unit,
     onScoutingTaskClick: () -> Unit,
-    onFuelRequestClick: () -> Unit
+    onFuelRequestClick: () -> Unit,
+    onSowingTaskClick: () -> Unit
 ) {
     // Supervisor-specific quick actions
     Text(
@@ -389,7 +393,7 @@ fun SupervisorHomeContent(
             label = "Sowing",
             backgroundColor = SowingIcon,
             containerColor = SowingContainer,
-            onClick = { /* Handle sowing action */ }
+            onClick = onSowingTaskClick
         )
 
         QuickActionButton(
@@ -434,7 +438,8 @@ fun SupervisorHomeContent(
 fun DefaultHomeContent(
     onTaskClick: (String) -> Unit,
     tasksState: HomeViewModel.TasksState,
-    loadTasksData: () -> Unit
+    loadTasksData: () -> Unit,
+    onSowingTaskClick: () -> Unit
 ) {
     // Default quick actions
     Text(
@@ -463,7 +468,7 @@ fun DefaultHomeContent(
             label = "Sowing",
             backgroundColor = SowingIcon,
             containerColor = SowingContainer,
-            onClick = { /* Handle sowing action */ }
+            onClick = onSowingTaskClick
         )
 
         QuickActionButton(

@@ -24,6 +24,9 @@ sealed class Screen(val route: String, val title: String, @DrawableRes val icon:
     object Profile : Screen("profile", "Profile", R.drawable.ic_person)
     object Search : Screen("scanner", "Scanner", R.drawable.ic_baseline_image_search)
 
+    // Add this in the sealed class Screen
+    object SowingRequestScreen : Screen("sowing_request", "Sowing Request")
+
 
 
 
