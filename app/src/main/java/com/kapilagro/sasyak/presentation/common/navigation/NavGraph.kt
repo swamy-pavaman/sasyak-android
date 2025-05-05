@@ -21,6 +21,8 @@ import androidx.navigation.navArgument
 import com.kapilagro.sasyak.presentation.auth.LoginScreen
 import com.kapilagro.sasyak.presentation.auth.SplashScreen
 import com.kapilagro.sasyak.presentation.auth.AuthViewModel
+import com.kapilagro.sasyak.presentation.common.navigation.Screen.FuelRequestScreen
+import com.kapilagro.sasyak.presentation.fuel.FuelRequestScreen
 import com.kapilagro.sasyak.presentation.home.HomeScreen
 import com.kapilagro.sasyak.presentation.home.HomeViewModel
 import com.kapilagro.sasyak.presentation.notifications.NotificationScreen
@@ -52,18 +54,33 @@ fun AppNavGraph(
         modifier = modifier
     ) {
 
-        // scouting screen
+        // Scouting screen
         composable(Screen.Scouting.route) {
             ScoutingScreen(
                 onTaskCreated = {
                     navController.popBackStack()
-                    // Optionally navigate to task list or show success message
                 },
                 onBackClick = {
                     navController.popBackStack()
                 }
             )
         }
+
+        // Fuel
+        composable(Screen.FuelRequestScreen.route) {
+            FuelRequestScreen(
+                onBackClick = {
+                    navController.popBackStack()
+                },
+                onFuelRequestCreated = {
+                    // No navigation here – handled in dialog's OK button
+                }
+            )
+        }
+
+
+
+
 
 
         // weather screen
@@ -143,8 +160,10 @@ fun AppNavGraph(
                 },
                 onScoutingTaskClick = {
                     navController.navigate(Screen.Scouting.route)
+                },
+                onFuelRequestClick = {
+                    navController.navigate(FuelRequestScreen.route)
                 }
-
 
 
 
