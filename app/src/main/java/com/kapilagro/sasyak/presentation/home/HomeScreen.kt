@@ -40,6 +40,7 @@ fun HomeScreen(
     onFuelRequestClick: ()-> Unit,
     onSowingTaskClick: () -> Unit,
     onSprayingTaskClick: () -> Unit,  // Add this parameter
+    onYieldTaskClick: () -> Unit,  // Add this parameter
 
 
 
@@ -126,20 +127,20 @@ fun HomeScreen(
                 }
             )
         },
-        floatingActionButton = {
-            // Only show FAB for managers and supervisors
-            if (userRole == "MANAGER" || userRole == "SUPERVISOR") {
-                FloatingActionButton(
-                    onClick = onCreateTaskClick,
-                    containerColor = MaterialTheme.colorScheme.primary
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Add,
-                        contentDescription = "Create Task"
-                    )
-                }
-            }
-        }
+//        floatingActionButton = {
+//            // Only show FAB for managers and supervisors
+//            if (userRole == "MANAGER" || userRole == "SUPERVISOR") {
+//                FloatingActionButton(
+//                    onClick = onCreateTaskClick,
+//                    containerColor = MaterialTheme.colorScheme.primary
+//                ) {
+//                    Icon(
+//                        imageVector = Icons.Outlined.Add,
+//                        contentDescription = "Create Task"
+//                    )
+//                }
+//            }
+//        }
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -261,7 +262,9 @@ fun HomeScreen(
                         onScoutingTaskClick = onScoutingTaskClick,
                         onFuelRequestClick = onFuelRequestClick,
                         onSowingTaskClick =onSowingTaskClick,
-                        onSprayingTaskClick = onSprayingTaskClick  // Pass the parameter
+                        onSprayingTaskClick = onSprayingTaskClick ,
+                        onYieldTaskClick = onYieldTaskClick  // Pass the parameter
+// Pass the parameteronYieldTaskClick = onYieldTaskClick  // Pass the parameter
 
                     )
                 }
@@ -272,7 +275,8 @@ fun HomeScreen(
                         tasksState = tasksState,
                         loadTasksData = { viewModel.loadTasksData() },
                         onSowingTaskClick =onSowingTaskClick,
-                        onSprayingTaskClick = onSprayingTaskClick  // Pass the parameter
+                        onSprayingTaskClick = onSprayingTaskClick ,
+                        onYieldTaskClick=onYieldTaskClick// Pass the parameter
 
                     )
                 }
@@ -364,7 +368,10 @@ fun SupervisorHomeContent(
     onScoutingTaskClick: () -> Unit,
     onFuelRequestClick: () -> Unit,
     onSowingTaskClick: () -> Unit,
-    onSprayingTaskClick: () -> Unit  // Add this parameter
+    onSprayingTaskClick: () -> Unit ,
+    onYieldTaskClick: () -> Unit  // New parameter
+
+    // Add this parameter
 
 ) {
     // Supervisor-specific quick actions
@@ -428,7 +435,7 @@ fun SupervisorHomeContent(
                 label = "Yield",
                 backgroundColor = YieldIcon,
                 containerColor = YieldContainer,
-                onClick = { /* Handle yield action */ }
+                onClick = onYieldTaskClick  // Use the parameter
             )
         }
     }
@@ -461,7 +468,9 @@ fun DefaultHomeContent(
     tasksState: HomeViewModel.TasksState,
     loadTasksData: () -> Unit,
     onSowingTaskClick: () -> Unit,
-    onSprayingTaskClick: () -> Unit  // Add this parameter
+    onSprayingTaskClick: () -> Unit ,
+    onYieldTaskClick: () -> Unit  // New parameter
+// Add this parameter
 
 ) {
     // Default quick actions
@@ -507,7 +516,7 @@ fun DefaultHomeContent(
             label = "Yield",
             backgroundColor = YieldIcon,
             containerColor = YieldContainer,
-            onClick = { /* Handle yield action */ }
+            onClick = onYieldTaskClick  // Use the parameter
         )
     }
 

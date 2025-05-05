@@ -23,6 +23,7 @@ import com.kapilagro.sasyak.presentation.auth.SplashScreen
 import com.kapilagro.sasyak.presentation.auth.AuthViewModel
 import com.kapilagro.sasyak.presentation.common.navigation.Screen.FuelRequestScreen
 import com.kapilagro.sasyak.presentation.common.navigation.Screen.SprayingRequestScreen
+import com.kapilagro.sasyak.presentation.common.navigation.Screen.YieldRequestScreen
 import com.kapilagro.sasyak.presentation.fuel.FuelRequestScreen
 import com.kapilagro.sasyak.presentation.home.HomeScreen
 import com.kapilagro.sasyak.presentation.home.HomeViewModel
@@ -39,6 +40,7 @@ import com.kapilagro.sasyak.presentation.tasks.CreateTaskScreen
 import com.kapilagro.sasyak.presentation.tasks.TaskDetailScreen
 import com.kapilagro.sasyak.presentation.tasks.TaskListScreen
 import com.kapilagro.sasyak.presentation.weather.WeatherDetailScreen
+import com.kapilagro.sasyak.presentation.yield.YieldRequestScreen
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -93,6 +95,19 @@ fun AppNavGraph(
         // Spraying screen
         composable(Screen.SprayingRequestScreen.route) {
             SprayingRequestScreen(
+                onTaskCreated = {
+                    navController.popBackStack()
+                },
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+
+        // Yield screen
+        composable(Screen.YieldRequestScreen.route) {
+            YieldRequestScreen(
                 onTaskCreated = {
                     navController.popBackStack()
                 },
@@ -186,6 +201,9 @@ fun AppNavGraph(
                 },
                 onSprayingTaskClick = {
                     navController.navigate(Screen.SprayingRequestScreen.route)
+                },
+                onYieldTaskClick = {
+                    navController.navigate(Screen.YieldRequestScreen.route)
                 }
             )
         }

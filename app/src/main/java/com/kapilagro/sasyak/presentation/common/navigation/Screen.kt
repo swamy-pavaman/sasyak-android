@@ -29,6 +29,7 @@ sealed class Screen(val route: String, val title: String, @DrawableRes val icon:
     object SprayingRequestScreen : Screen("spraying_request", "Spraying Request")
     object Scouting : Screen("scouting", "Scouting")
     object FuelRequestScreen : Screen("fuel_request_screen", "Fuel Request")
+    object YieldRequestScreen : Screen("yield_request", "Yield Request")
 
 
 
