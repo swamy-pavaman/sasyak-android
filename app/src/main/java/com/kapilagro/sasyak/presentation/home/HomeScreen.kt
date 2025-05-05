@@ -39,6 +39,9 @@ fun HomeScreen(
     onScoutingTaskClick: () -> Unit,
     onFuelRequestClick: ()-> Unit,
     onSowingTaskClick: () -> Unit,
+    onSprayingTaskClick: () -> Unit,  // Add this parameter
+    onYieldTaskClick: () -> Unit,  // Add this parameter
+
 
 
     viewModel: HomeViewModel = hiltViewModel(),
@@ -124,20 +127,20 @@ fun HomeScreen(
                 }
             )
         },
-        floatingActionButton = {
-            // Only show FAB for managers and supervisors
-            if (userRole == "MANAGER" || userRole == "SUPERVISOR") {
-                FloatingActionButton(
-                    onClick = onCreateTaskClick,
-                    containerColor = MaterialTheme.colorScheme.primary
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Add,
-                        contentDescription = "Create Task"
-                    )
-                }
-            }
-        }
+//        floatingActionButton = {
+//            // Only show FAB for managers and supervisors
+//            if (userRole == "MANAGER" || userRole == "SUPERVISOR") {
+//                FloatingActionButton(
+//                    onClick = onCreateTaskClick,
+//                    containerColor = MaterialTheme.colorScheme.primary
+//                ) {
+//                    Icon(
+//                        imageVector = Icons.Outlined.Add,
+//                        contentDescription = "Create Task"
+//                    )
+//                }
+//            }
+//        }
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -258,7 +261,11 @@ fun HomeScreen(
                         loadTasksData = { viewModel.loadTasksData() },
                         onScoutingTaskClick = onScoutingTaskClick,
                         onFuelRequestClick = onFuelRequestClick,
-                        onSowingTaskClick =onSowingTaskClick
+                        onSowingTaskClick =onSowingTaskClick,
+                        onSprayingTaskClick = onSprayingTaskClick ,
+                        onYieldTaskClick = onYieldTaskClick  // Pass the parameter
+// Pass the parameteronYieldTaskClick = onYieldTaskClick  // Pass the parameter
+
                     )
                 }
                 else -> {
@@ -267,7 +274,10 @@ fun HomeScreen(
                         onTaskClick = onTaskClick,
                         tasksState = tasksState,
                         loadTasksData = { viewModel.loadTasksData() },
-                        onSowingTaskClick =onSowingTaskClick
+                        onSowingTaskClick =onSowingTaskClick,
+                        onSprayingTaskClick = onSprayingTaskClick ,
+                        onYieldTaskClick=onYieldTaskClick// Pass the parameter
+
                     )
                 }
             }
@@ -357,7 +367,12 @@ fun SupervisorHomeContent(
     loadTasksData: () -> Unit,
     onScoutingTaskClick: () -> Unit,
     onFuelRequestClick: () -> Unit,
-    onSowingTaskClick: () -> Unit
+    onSowingTaskClick: () -> Unit,
+    onSprayingTaskClick: () -> Unit ,
+    onYieldTaskClick: () -> Unit  // New parameter
+
+    // Add this parameter
+
 ) {
     // Supervisor-specific quick actions
     Text(
@@ -390,7 +405,7 @@ fun SupervisorHomeContent(
                 label = "Spraying",
                 backgroundColor = SprayingIcon,
                 containerColor = SprayingContainer,
-                onClick = { /* Handle spraying action */ }
+                onClick = onSprayingTaskClick  // Update this line
             )
         }
 
@@ -420,7 +435,7 @@ fun SupervisorHomeContent(
                 label = "Yield",
                 backgroundColor = YieldIcon,
                 containerColor = YieldContainer,
-                onClick = { /* Handle yield action */ }
+                onClick = onYieldTaskClick  // Use the parameter
             )
         }
     }
@@ -452,7 +467,11 @@ fun DefaultHomeContent(
     onTaskClick: (String) -> Unit,
     tasksState: HomeViewModel.TasksState,
     loadTasksData: () -> Unit,
-    onSowingTaskClick: () -> Unit
+    onSowingTaskClick: () -> Unit,
+    onSprayingTaskClick: () -> Unit ,
+    onYieldTaskClick: () -> Unit  // New parameter
+// Add this parameter
+
 ) {
     // Default quick actions
     Text(
@@ -473,7 +492,7 @@ fun DefaultHomeContent(
             label = "Spraying",
             backgroundColor = SprayingIcon,
             containerColor = SprayingContainer,
-            onClick = { /* Handle spraying action */ }
+            onClick = onSprayingTaskClick  // Update this line
         )
 
         QuickActionButton(
@@ -497,7 +516,7 @@ fun DefaultHomeContent(
             label = "Yield",
             backgroundColor = YieldIcon,
             containerColor = YieldContainer,
-            onClick = { /* Handle yield action */ }
+            onClick = onYieldTaskClick  // Use the parameter
         )
     }
 

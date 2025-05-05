@@ -26,6 +26,11 @@ sealed class Screen(val route: String, val title: String, @DrawableRes val icon:
 
     // Add this in the sealed class Screen
     object SowingRequestScreen : Screen("sowing_request", "Sowing Request")
+    object SprayingRequestScreen : Screen("spraying_request", "Spraying Request")
+    object Scouting : Screen("scouting", "Scouting")
+    object FuelRequestScreen : Screen("fuel_request_screen", "Fuel Request")
+    object YieldRequestScreen : Screen("yield_request", "Yield Request")
+
 
 
 
@@ -37,10 +42,7 @@ sealed class Screen(val route: String, val title: String, @DrawableRes val icon:
     }
     object CreateTask : Screen("create_task", "Create Task")
 
-    object Scouting : Screen("scouting", "Scouting")
 
-
-    object FuelRequestScreen : Screen("FuelRequestScreen","FuelRequestScreen")
 
     // Scanner related screens
     object Scanner : Screen("scanner", "Plant Scanner")
