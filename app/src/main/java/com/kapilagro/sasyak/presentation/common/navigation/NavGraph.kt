@@ -101,7 +101,6 @@ fun AppNavGraph(
                 }
             )
         }
-
         // Weather screen
         composable(Screen.WeatherDetail.route) {
             // Get the HomeViewModel to access weather data

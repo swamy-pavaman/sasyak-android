@@ -39,6 +39,8 @@ fun HomeScreen(
     onScoutingTaskClick: () -> Unit,
     onFuelRequestClick: ()-> Unit,
     onSowingTaskClick: () -> Unit,
+    onSprayingTaskClick: () -> Unit,  // Add this parameter
+
 
 
     viewModel: HomeViewModel = hiltViewModel(),
@@ -258,7 +260,9 @@ fun HomeScreen(
                         loadTasksData = { viewModel.loadTasksData() },
                         onScoutingTaskClick = onScoutingTaskClick,
                         onFuelRequestClick = onFuelRequestClick,
-                        onSowingTaskClick =onSowingTaskClick
+                        onSowingTaskClick =onSowingTaskClick,
+                        onSprayingTaskClick = onSprayingTaskClick  // Pass the parameter
+
                     )
                 }
                 else -> {
@@ -267,7 +271,9 @@ fun HomeScreen(
                         onTaskClick = onTaskClick,
                         tasksState = tasksState,
                         loadTasksData = { viewModel.loadTasksData() },
-                        onSowingTaskClick =onSowingTaskClick
+                        onSowingTaskClick =onSowingTaskClick,
+                        onSprayingTaskClick = onSprayingTaskClick  // Pass the parameter
+
                     )
                 }
             }
@@ -357,7 +363,9 @@ fun SupervisorHomeContent(
     loadTasksData: () -> Unit,
     onScoutingTaskClick: () -> Unit,
     onFuelRequestClick: () -> Unit,
-    onSowingTaskClick: () -> Unit
+    onSowingTaskClick: () -> Unit,
+    onSprayingTaskClick: () -> Unit  // Add this parameter
+
 ) {
     // Supervisor-specific quick actions
     Text(
@@ -390,7 +398,7 @@ fun SupervisorHomeContent(
                 label = "Spraying",
                 backgroundColor = SprayingIcon,
                 containerColor = SprayingContainer,
-                onClick = { /* Handle spraying action */ }
+                onClick = onSprayingTaskClick  // Update this line
             )
         }
 
@@ -452,7 +460,9 @@ fun DefaultHomeContent(
     onTaskClick: (String) -> Unit,
     tasksState: HomeViewModel.TasksState,
     loadTasksData: () -> Unit,
-    onSowingTaskClick: () -> Unit
+    onSowingTaskClick: () -> Unit,
+    onSprayingTaskClick: () -> Unit  // Add this parameter
+
 ) {
     // Default quick actions
     Text(
@@ -473,7 +483,7 @@ fun DefaultHomeContent(
             label = "Spraying",
             backgroundColor = SprayingIcon,
             containerColor = SprayingContainer,
-            onClick = { /* Handle spraying action */ }
+            onClick = onSprayingTaskClick  // Update this line
         )
 
         QuickActionButton(
