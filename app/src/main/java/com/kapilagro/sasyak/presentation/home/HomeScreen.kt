@@ -3,6 +3,7 @@ import android.Manifest
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -365,55 +366,67 @@ fun SupervisorHomeContent(
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
     )
 
-    Row(
+    LazyRow(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp)
             .padding(horizontal = 8.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly
+        horizontalArrangement = Arrangement.spacedBy(0.dp),  // space between buttons
+        contentPadding = PaddingValues(horizontal = 8.dp)     // padding at edges
     ) {
-        QuickActionButton(
-            icon = Icons.Outlined.Search,
-            label = "Scouting",
-            backgroundColor = ScoutingIcon,
-            containerColor = ScoutingContainer,
-            onClick = onScoutingTaskClick
-        )
+        item {
+            QuickActionButton(
+                icon = Icons.Outlined.Search,
+                label = "Scouting",
+                backgroundColor = ScoutingIcon,
+                containerColor = ScoutingContainer,
+                onClick = onScoutingTaskClick
+            )
+        }
 
-        QuickActionButton(
-            icon = Icons.Outlined.Opacity,
-            label = "Spraying",
-            backgroundColor = SprayingIcon,
-            containerColor = SprayingContainer,
-            onClick = { /* Handle spraying action */ }
-        )
+        item {
+            QuickActionButton(
+                icon = Icons.Outlined.Opacity,
+                label = "Spraying",
+                backgroundColor = SprayingIcon,
+                containerColor = SprayingContainer,
+                onClick = { /* Handle spraying action */ }
+            )
+        }
 
-        QuickActionButton(
-            icon = Icons.Outlined.Grass,
-            label = "Sowing",
-            backgroundColor = SowingIcon,
-            containerColor = SowingContainer,
-            onClick = onSowingTaskClick
-        )
+        item {
+            QuickActionButton(
+                icon = Icons.Outlined.Grass,
+                label = "Sowing",
+                backgroundColor = SowingIcon,
+                containerColor = SowingContainer,
+                onClick = onSowingTaskClick
+            )
+        }
 
-        QuickActionButton(
-            icon = Icons.Outlined.LocalGasStation,
-            label = "Fuel",
-            backgroundColor = FuelIcon,
-            containerColor = FuelContainer,
-            onClick = onFuelRequestClick
-        )
+        item {
+            QuickActionButton(
+                icon = Icons.Outlined.LocalGasStation,
+                label = "Fuel",
+                backgroundColor = FuelIcon,
+                containerColor = FuelContainer,
+                onClick = onFuelRequestClick
+            )
+        }
 
-        QuickActionButton(
-            icon = Icons.Outlined.Balance,
-            label = "Yield",
-            backgroundColor = YieldIcon,
-            containerColor = YieldContainer,
-            onClick = { /* Handle yield action */ }
-        )
+        item {
+            QuickActionButton(
+                icon = Icons.Outlined.Balance,
+                label = "Yield",
+                backgroundColor = YieldIcon,
+                containerColor = YieldContainer,
+                onClick = { /* Handle yield action */ }
+            )
+        }
     }
 
     Spacer(modifier = Modifier.height(16.dp))
+
 
 
     // Assigned tasks section for supervisors
