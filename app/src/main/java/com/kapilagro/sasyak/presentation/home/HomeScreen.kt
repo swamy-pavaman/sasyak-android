@@ -3,6 +3,7 @@ import android.Manifest
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -26,7 +27,6 @@ import com.kapilagro.sasyak.presentation.home.components.QuickActionButton
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.*
-
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
@@ -37,11 +37,12 @@ fun HomeScreen(
     onNotificationClick: () -> Unit,
     onWeatherDetailsClick: () -> Unit,
     onScoutingTaskClick: () -> Unit,
-    onFuelRequestClick: () -> Unit,
+    onFuelRequestClick: ()-> Unit,
     onSowingTaskClick: () -> Unit,
-    onSprayingTaskClick: () -> Unit,  // New parameter
+
 
     viewModel: HomeViewModel = hiltViewModel(),
+
 ) {
     val userState by viewModel.userState.collectAsState()
     val weatherState by viewModel.weatherState.collectAsState()
@@ -98,12 +99,28 @@ fun HomeScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = onNotificationClick, modifier = Modifier.padding(end = 8.dp)) {
+
+                    IconButton(onClick = onNotificationClick,    modifier = Modifier.padding(end = 8.dp) ) {
                         Icon(
                             imageVector = Icons.Outlined.Notifications,
                             contentDescription = "Notifications"
                         )
                     }
+                    // Scanner button only for Supervisors
+//                    if (userRole == "SUPERVISOR") {
+//                        IconButton(onClick = onScannerClick) {
+//                            Icon(
+//                                imageVector = Icons.Outlined.CameraAlt,
+//                                contentDescription = "Scan Plant"
+//                            )
+//                        }
+//                    }
+//                    IconButton(onClick = { /* TODO: Add search logic */ }) {
+//                        Icon(
+//                            imageVector = Icons.Outlined.Search,
+//                            contentDescription = "Search"
+//                        )
+//                    }
                 }
             )
         },
@@ -241,8 +258,7 @@ fun HomeScreen(
                         loadTasksData = { viewModel.loadTasksData() },
                         onScoutingTaskClick = onScoutingTaskClick,
                         onFuelRequestClick = onFuelRequestClick,
-                        onSowingTaskClick = onSowingTaskClick,
-                        onSprayingTaskClick = onSprayingTaskClick  // Pass the parameter
+                        onSowingTaskClick =onSowingTaskClick
                     )
                 }
                 else -> {
@@ -251,8 +267,7 @@ fun HomeScreen(
                         onTaskClick = onTaskClick,
                         tasksState = tasksState,
                         loadTasksData = { viewModel.loadTasksData() },
-                        onSowingTaskClick = onSowingTaskClick,
-                        onSprayingTaskClick = onSprayingTaskClick  // Pass the parameter
+                        onSowingTaskClick =onSowingTaskClick
                     )
                 }
             }
@@ -280,6 +295,8 @@ fun ManagerHomeContent(
             .padding(horizontal = 8.dp),
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
+
+
         QuickActionButton(
             icon = Icons.Outlined.PeopleAlt,
             label = "Team",
@@ -340,8 +357,7 @@ fun SupervisorHomeContent(
     loadTasksData: () -> Unit,
     onScoutingTaskClick: () -> Unit,
     onFuelRequestClick: () -> Unit,
-    onSowingTaskClick: () -> Unit,
-    onSprayingTaskClick: () -> Unit  // New parameter
+    onSowingTaskClick: () -> Unit
 ) {
     // Supervisor-specific quick actions
     Text(
@@ -350,55 +366,68 @@ fun SupervisorHomeContent(
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
     )
 
-    Row(
+    LazyRow(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp)
             .padding(horizontal = 8.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly
+        horizontalArrangement = Arrangement.spacedBy(0.dp),  // space between buttons
+        contentPadding = PaddingValues(horizontal = 8.dp)     // padding at edges
     ) {
-        QuickActionButton(
-            icon = Icons.Outlined.Search,
-            label = "Scouting",
-            backgroundColor = ScoutingIcon,
-            containerColor = ScoutingContainer,
-            onClick = onScoutingTaskClick
-        )
+        item {
+            QuickActionButton(
+                icon = Icons.Outlined.Search,
+                label = "Scouting",
+                backgroundColor = ScoutingIcon,
+                containerColor = ScoutingContainer,
+                onClick = onScoutingTaskClick
+            )
+        }
 
-        QuickActionButton(
-            icon = Icons.Outlined.Opacity,
-            label = "Spraying",
-            backgroundColor = SprayingIcon,
-            containerColor = SprayingContainer,
-            onClick = onSprayingTaskClick  // Use the parameter
-        )
+        item {
+            QuickActionButton(
+                icon = Icons.Outlined.Opacity,
+                label = "Spraying",
+                backgroundColor = SprayingIcon,
+                containerColor = SprayingContainer,
+                onClick = { /* Handle spraying action */ }
+            )
+        }
 
-        QuickActionButton(
-            icon = Icons.Outlined.Grass,
-            label = "Sowing",
-            backgroundColor = SowingIcon,
-            containerColor = SowingContainer,
-            onClick = onSowingTaskClick
-        )
+        item {
+            QuickActionButton(
+                icon = Icons.Outlined.Grass,
+                label = "Sowing",
+                backgroundColor = SowingIcon,
+                containerColor = SowingContainer,
+                onClick = onSowingTaskClick
+            )
+        }
 
-        QuickActionButton(
-            icon = Icons.Outlined.LocalGasStation,
-            label = "Fuel",
-            backgroundColor = FuelIcon,
-            containerColor = FuelContainer,
-            onClick = onFuelRequestClick
-        )
+        item {
+            QuickActionButton(
+                icon = Icons.Outlined.LocalGasStation,
+                label = "Fuel",
+                backgroundColor = FuelIcon,
+                containerColor = FuelContainer,
+                onClick = onFuelRequestClick
+            )
+        }
 
-        QuickActionButton(
-            icon = Icons.Outlined.Balance,
-            label = "Yield",
-            backgroundColor = YieldIcon,
-            containerColor = YieldContainer,
-            onClick = { /* Handle yield action */ }
-        )
+        item {
+            QuickActionButton(
+                icon = Icons.Outlined.Balance,
+                label = "Yield",
+                backgroundColor = YieldIcon,
+                containerColor = YieldContainer,
+                onClick = { /* Handle yield action */ }
+            )
+        }
     }
 
     Spacer(modifier = Modifier.height(16.dp))
+
+
 
     // Assigned tasks section for supervisors
     Row(
@@ -423,8 +452,7 @@ fun DefaultHomeContent(
     onTaskClick: (String) -> Unit,
     tasksState: HomeViewModel.TasksState,
     loadTasksData: () -> Unit,
-    onSowingTaskClick: () -> Unit,
-    onSprayingTaskClick: () -> Unit  // New parameter
+    onSowingTaskClick: () -> Unit
 ) {
     // Default quick actions
     Text(
@@ -445,7 +473,7 @@ fun DefaultHomeContent(
             label = "Spraying",
             backgroundColor = SprayingIcon,
             containerColor = SprayingContainer,
-            onClick = onSprayingTaskClick  // Use the parameter
+            onClick = { /* Handle spraying action */ }
         )
 
         QuickActionButton(
