@@ -1,21 +1,26 @@
-// Update presentation/scouting/ScoutingScreen.kt
 package com.kapilagro.sasyak.presentation.scouting
 
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.kapilagro.sasyak.domain.models.ScoutingDetails
+import com.kapilagro.sasyak.presentation.common.components.SuccessDialog
 import com.kapilagro.sasyak.presentation.common.theme.*
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -32,6 +37,7 @@ fun ScoutingScreen(
 
     // Dialog state
     var showSuccessDialog by remember { mutableStateOf(false) }
+    var submittedEntry by remember { mutableStateOf<ScoutingDetails?>(null) }
 
     // Form fields
     var scoutingDate by remember { mutableStateOf(LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))) }
@@ -46,6 +52,7 @@ fun ScoutingScreen(
     var noOfFruitsDropped by remember { mutableStateOf("") }
     var nameOfDisease by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
+    var imageUploaded by remember { mutableStateOf(false) } // Added to track upload state
 
     val crops = listOf(
         "Wheat", "Rice", "Maize", "Barley", "Sorghum",
@@ -58,32 +65,39 @@ fun ScoutingScreen(
 
     // Handle task creation success
     LaunchedEffect(createScoutingState) {
-        if (createScoutingState is ScoutingViewModel.CreateScoutingState.Success) {
-            showSuccessDialog = true
+        when (createScoutingState) {
+            is ScoutingViewModel.CreateScoutingState.Success -> {
+                showSuccessDialog = true
+            }
+            else -> {
+                // Handle other states if needed
+            }
         }
     }
 
     // Success Dialog
-    if (showSuccessDialog) {
-        AlertDialog(
-            onDismissRequest = {
+    if (showSuccessDialog && submittedEntry != null) {
+        val details = listOf(
+            "Date" to submittedEntry!!.scoutingDate,
+            "Crop Name" to submittedEntry!!.cropName,
+            "Row" to submittedEntry!!.row.toString(),
+            "Tree No" to submittedEntry!!.treeNo.toString(),
+            "Fruits Seen" to (submittedEntry!!.noOfFruitSeen ?: "Not specified"),
+            "Flowers Seen" to (submittedEntry!!.noOfFlowersSeen ?: "Not specified"),
+            "Fruits Dropped" to (submittedEntry!!.noOfFruitsDropped ?: "Not specified"),
+            "Disease" to (submittedEntry!!.nameOfDisease ?: "None detected")
+        )
+
+        SuccessDialog(
+            title = "Scouting Report Sent!",
+            message = "Your manager will be notified when they take action on it.",
+            details = details,
+            description = description,
+            primaryButtonText = "OK",
+            onPrimaryButtonClick = {
                 showSuccessDialog = false
                 viewModel.clearCreateScoutingState()
                 onTaskCreated()
-            },
-            title = { Text("Success") },
-            text = { Text("Scouting task created successfully!") },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showSuccessDialog = false
-                        viewModel.clearCreateScoutingState()
-                        onTaskCreated()
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = AgroPrimary)
-                ) {
-                    Text("OK")
-                }
             }
         )
     }
@@ -242,7 +256,9 @@ fun ScoutingScreen(
                 onValueChange = { noOfFruitSeen = it },
                 label = { Text("No of fruit seen") },
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp)
+                shape = RoundedCornerShape(8.dp),
+
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -253,7 +269,9 @@ fun ScoutingScreen(
                 onValueChange = { noOfFlowersSeen = it },
                 label = { Text("No of Flowers Seen") },
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp)
+                shape = RoundedCornerShape(8.dp),
+
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -264,7 +282,9 @@ fun ScoutingScreen(
                 onValueChange = { noOfFruitsDropped = it },
                 label = { Text("No of Fruits Dropped") },
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp)
+                shape = RoundedCornerShape(8.dp),
+
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -280,7 +300,7 @@ fun ScoutingScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Upload Section - TODO: Implement file upload
+            // Upload Section with clickable cards
             Text(
                 text = "Upload *",
                 style = MaterialTheme.typography.bodyLarge,
@@ -294,22 +314,40 @@ fun ScoutingScreen(
                 Card(
                     modifier = Modifier
                         .weight(1f)
-                        .height(100.dp),
+                        .height(100.dp)
+                        .clickable { imageUploaded = true },
                     shape = RoundedCornerShape(8.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (imageUploaded) Color(0xFFE0F7FA) else MaterialTheme.colorScheme.surfaceVariant
+                    )
                 ) {
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("Scan Plant Image")
+                        if (imageUploaded) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Image Uploaded",
+                                    tint = Color(0xFF4CAF50),
+                                    modifier = Modifier.size(28.dp)
+                                )
+                                Text("Image Uploaded", color = Color(0xFF4CAF50))
+                            }
+                        } else {
+                            Text("Scan Plant Image")
+                        }
                     }
                 }
 
                 Card(
                     modifier = Modifier
                         .weight(1f)
-                        .height(100.dp),
+                        .height(100.dp)
+                        .clickable { /* Handle video upload */ },
                     shape = RoundedCornerShape(8.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                 ) {
@@ -338,6 +376,14 @@ fun ScoutingScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            // Loading indicator
+            if (createScoutingState is ScoutingViewModel.CreateScoutingState.Loading) {
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = AgroPrimary)
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
             // Submit Button
             Button(
                 onClick = {
@@ -353,24 +399,19 @@ fun ScoutingScreen(
                             nameOfDisease = nameOfDisease.ifBlank { null },
                             uploadedFiles = null // TODO: Handle file uploads
                         )
+                        submittedEntry = scoutingDetails
                         viewModel.createScoutingTask(scoutingDetails, description)
                     }
                 },
                 enabled = cropName.isNotBlank() && row.isNotBlank() && treeNo.isNotBlank() &&
+                        imageUploaded && // Added upload validation
                         createScoutingState !is ScoutingViewModel.CreateScoutingState.Loading,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = AgroPrimary)
             ) {
-                if (createScoutingState is ScoutingViewModel.CreateScoutingState.Loading) {
-                    CircularProgressIndicator(
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.size(24.dp)
-                    )
-                } else {
-                    Text("Submit")
-                }
+                Text("Submit")
             }
 
             // Error message
