@@ -21,7 +21,6 @@ import com.google.accompanist.permissions.rememberMultiplePermissionsState
 
 import com.kapilagro.sasyak.presentation.common.components.TaskCard
 import com.kapilagro.sasyak.presentation.common.components.WeatherCard
-import com.kapilagro.sasyak.presentation.common.navigation.Screen
 import com.kapilagro.sasyak.presentation.common.theme.*
 import com.kapilagro.sasyak.presentation.home.components.QuickActionButton
 import java.time.LocalDate
@@ -37,6 +36,7 @@ fun HomeScreen(
     onNotificationClick: () -> Unit,
     onWeatherDetailsClick: () -> Unit,
     onScoutingTaskClick: () -> Unit,
+    onFuelRequestClick: ()-> Unit,
 
 
     viewModel: HomeViewModel = hiltViewModel(),
@@ -254,7 +254,8 @@ fun HomeScreen(
                         onTaskClick = onTaskClick,
                         tasksState = tasksState,
                         loadTasksData = { viewModel.loadTasksData() },
-                        onScoutingTaskClick = onScoutingTaskClick
+                        onScoutingTaskClick = onScoutingTaskClick,
+                        onFuelRequestClick = onFuelRequestClick
                     )
                 }
                 else -> {
@@ -350,7 +351,8 @@ fun SupervisorHomeContent(
     onTaskClick: (String) -> Unit,
     tasksState: HomeViewModel.TasksState,
     loadTasksData: () -> Unit,
-    onScoutingTaskClick: () -> Unit
+    onScoutingTaskClick: () -> Unit,
+    onFuelRequestClick: () -> Unit
 ) {
     // Supervisor-specific quick actions
     Text(
@@ -395,7 +397,7 @@ fun SupervisorHomeContent(
             label = "Fuel",
             backgroundColor = FuelIcon,
             containerColor = FuelContainer,
-            onClick = { /* Handle fuel action */ }
+            onClick = onFuelRequestClick
         )
 
         QuickActionButton(
