@@ -1,10 +1,7 @@
-// Updated FuelRequestScreen.kt
 package com.kapilagro.sasyak.presentation.fuel
 
 import android.os.Build
 import androidx.annotation.RequiresApi
-import androidx.compose.animation.core.*
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -21,11 +18,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.kapilagro.sasyak.domain.models.FuelEntry
+import com.kapilagro.sasyak.presentation.common.components.SuccessDialog
 import com.kapilagro.sasyak.presentation.common.theme.AgroPrimary
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -35,7 +31,7 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun FuelRequestScreen(
     onBackClick: () -> Unit,
-    onFuelRequestCreated: (FuelEntry) -> Unit
+    viewModel: FuelViewModel = hiltViewModel()
 ) {
     var date by remember { mutableStateOf(LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))) }
     var openingStockLiters by remember { mutableStateOf("") }
@@ -57,6 +53,24 @@ fun FuelRequestScreen(
     var showSuccessDialog by remember { mutableStateOf(false) }
     var submittedEntry by remember { mutableStateOf<FuelEntry?>(null) }
 
+    // Observe the ViewModel state
+    val fuelRequestState by viewModel.createFuelRequestState.collectAsState()
+
+    // Process state changes
+    LaunchedEffect(fuelRequestState) {
+        when (fuelRequestState) {
+            is FuelViewModel.CreateFuelRequestState.Success -> {
+                showSuccessDialog = true
+            }
+            is FuelViewModel.CreateFuelRequestState.Error -> {
+                // Handle error state (could show a snackbar or error dialog)
+            }
+            else -> {
+                // Handle other states if needed
+            }
+        }
+    }
+
     // Mock data for dropdowns
     val vehicleTypes = listOf("Tractor", "Harvester", "Truck", "Bike", "Car", "Loader", "Tiller")
     val driverNames = listOf(
@@ -68,10 +82,28 @@ fun FuelRequestScreen(
 
     // Success Dialog
     if (showSuccessDialog && submittedEntry != null) {
+        val details = listOf(
+            "Date" to submittedEntry!!.date,
+            "Vehicle Number" to submittedEntry!!.vehicleNumber,
+            "Vehicle Type" to submittedEntry!!.vehicleType,
+            "Fuel Type" to submittedEntry!!.fuelType,
+            "Odometer Reading" to "${submittedEntry!!.odometerReading} km",
+            "Opening Stock" to "${submittedEntry!!.openingStock} liters",
+            "Quantity Needed" to "${submittedEntry!!.quantityIssued} liters",
+            "Expected Distance" to "${submittedEntry!!.expectedDistance} km",
+            "Purpose" to submittedEntry!!.purpose,
+            "Driver" to submittedEntry!!.driverName
+        )
+
         SuccessDialog(
-            fuelEntry = submittedEntry!!,
-            onDismiss = {
+            title = "Request Sent!",
+            message = "Your manager will notify when they take action on it.",
+            details = details,
+            description = submittedEntry!!.description,
+            primaryButtonText = "OK",
+            onPrimaryButtonClick = {
                 showSuccessDialog = false
+                viewModel.clearCreateFuelRequestState()
                 // No auto navigation - only close the dialog
             }
         )
@@ -357,6 +389,14 @@ fun FuelRequestScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            // Loading indicator
+            if (fuelRequestState is FuelViewModel.CreateFuelRequestState.Loading) {
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = AgroPrimary)
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
             // Submit Button
             Button(
                 onClick = {
@@ -376,14 +416,14 @@ fun FuelRequestScreen(
                         fuelType = fuelType
                     )
                     submittedEntry = entry
-                    onFuelRequestCreated(entry)
-                    showSuccessDialog = true
+                    viewModel.createFuelRequest(entry, "Fuel request for $vehicleType - $purpose")
                 },
                 enabled = openingStockLiters.isNotBlank() && vehicleType.isNotBlank() &&
                         quantityNeeded.isNotBlank() && purpose.isNotBlank() &&
                         driverName.isNotBlank() && imageUploaded &&
                         vehicleNumber.isNotBlank() && odometerReading.isNotBlank() &&
-                        expectedDistance.isNotBlank() && fuelType.isNotBlank(),
+                        expectedDistance.isNotBlank() && fuelType.isNotBlank() &&
+                        fuelRequestState != FuelViewModel.CreateFuelRequestState.Loading,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
@@ -392,148 +432,5 @@ fun FuelRequestScreen(
                 Text("Submit")
             }
         }
-    }
-}
-
-@Composable
-fun SuccessDialog(
-    fuelEntry: FuelEntry,
-    onDismiss: () -> Unit
-) {
-    // One-time animation for checkmark
-    val scale by animateFloatAsState(
-        targetValue = 1f,
-        animationSpec = tween(800, easing = LinearEasing),
-        label = "scaleAnimation"
-    )
-
-    Dialog(
-        onDismissRequest = { /* Do nothing to prevent accidental dismissal */ }
-    ) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            shape = RoundedCornerShape(16.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                // Success Icon with Animation
-                Box(
-                    modifier = Modifier
-                        .size(80.dp)
-                        .graphicsLayer {
-                            scaleX = scale
-                            scaleY = scale
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Surface(
-                        modifier = Modifier.size(80.dp),
-                        shape = androidx.compose.foundation.shape.CircleShape,
-                        color = Color(0xFF4CAF50)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = "Success",
-                            tint = Color.White,
-                            modifier = Modifier
-                                .size(48.dp)
-                                .padding(16.dp)
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Text(
-                    text = "Request Sent!",
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = AgroPrimary
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = "Your manager will notify when they take action on it.",
-                    textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Request Details
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = Color(0xFFE0F7FA),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp)
-                    ) {
-                        DetailRow("Date", fuelEntry.date)
-                        DetailRow("Vehicle Number", fuelEntry.vehicleNumber)
-                        DetailRow("Vehicle Type", fuelEntry.vehicleType)
-                        DetailRow("Fuel Type", fuelEntry.fuelType)
-                        DetailRow("Odometer Reading", "${fuelEntry.odometerReading} km")
-                        DetailRow("Opening Stock", "${fuelEntry.openingStock} liters")
-                        DetailRow("Quantity Needed", "${fuelEntry.quantityIssued} liters")
-                        DetailRow("Expected Distance", "${fuelEntry.expectedDistance} km")
-                        DetailRow("Purpose", fuelEntry.purpose)
-                        DetailRow("Driver", fuelEntry.driverName)
-                        if (fuelEntry.description?.isNotBlank() == true) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "Description:",
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = fuelEntry.description,
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Button(
-                    onClick = onDismiss,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = AgroPrimary)
-                ) {
-                    Text("OK")
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun DetailRow(label: String, value: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
-        )
     }
 }

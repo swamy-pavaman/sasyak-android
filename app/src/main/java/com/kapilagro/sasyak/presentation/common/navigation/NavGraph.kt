@@ -32,6 +32,7 @@ import com.kapilagro.sasyak.presentation.reports.ReportScreen
 import com.kapilagro.sasyak.presentation.scanner.ScanResultScreen
 import com.kapilagro.sasyak.presentation.scanner.ScannerScreen
 import com.kapilagro.sasyak.presentation.scouting.ScoutingScreen
+import com.kapilagro.sasyak.presentation.sowing.SowingRequestScreen
 import com.kapilagro.sasyak.presentation.tasks.CreateTaskScreen
 import com.kapilagro.sasyak.presentation.tasks.TaskDetailScreen
 import com.kapilagro.sasyak.presentation.tasks.TaskListScreen
@@ -67,24 +68,27 @@ fun AppNavGraph(
         }
 
         // Fuel
-        composable(Screen.FuelRequestScreen.route) {
+        composable(FuelRequestScreen.route) {
             FuelRequestScreen(
                 onBackClick = {
                     navController.popBackStack()
-                },
-                onFuelRequestCreated = {
-                    // No navigation here – handled in dialog's OK button
                 }
             )
         }
 
+        // Sowing screen
+        composable(Screen.SowingRequestScreen.route) {
+            SowingRequestScreen(
+                onTaskCreated = {
+                    navController.popBackStack()
+                },
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
 
-
-
-
-
-        // weather screen
-
+        // Weather screen
         composable(Screen.WeatherDetail.route) {
             // Get the HomeViewModel to access weather data
             val parentEntry = remember(it) {
@@ -163,10 +167,10 @@ fun AppNavGraph(
                 },
                 onFuelRequestClick = {
                     navController.navigate(FuelRequestScreen.route)
+                },
+                onSowingTaskClick = {
+                    navController.navigate(Screen.SowingRequestScreen.route)
                 }
-
-
-
             )
         }
 
@@ -283,5 +287,3 @@ fun AppNavGraph(
         }
     }
 }
-
-
