@@ -26,6 +26,7 @@ import com.kapilagro.sasyak.presentation.home.components.QuickActionButton
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.*
+
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
@@ -36,12 +37,11 @@ fun HomeScreen(
     onNotificationClick: () -> Unit,
     onWeatherDetailsClick: () -> Unit,
     onScoutingTaskClick: () -> Unit,
-    onFuelRequestClick: ()-> Unit,
+    onFuelRequestClick: () -> Unit,
     onSowingTaskClick: () -> Unit,
-
+    onSprayingTaskClick: () -> Unit,  // New parameter
 
     viewModel: HomeViewModel = hiltViewModel(),
-
 ) {
     val userState by viewModel.userState.collectAsState()
     val weatherState by viewModel.weatherState.collectAsState()
@@ -98,28 +98,12 @@ fun HomeScreen(
                     }
                 },
                 actions = {
-
-                    IconButton(onClick = onNotificationClick,    modifier = Modifier.padding(end = 8.dp) ) {
+                    IconButton(onClick = onNotificationClick, modifier = Modifier.padding(end = 8.dp)) {
                         Icon(
                             imageVector = Icons.Outlined.Notifications,
                             contentDescription = "Notifications"
                         )
                     }
-                    // Scanner button only for Supervisors
-//                    if (userRole == "SUPERVISOR") {
-//                        IconButton(onClick = onScannerClick) {
-//                            Icon(
-//                                imageVector = Icons.Outlined.CameraAlt,
-//                                contentDescription = "Scan Plant"
-//                            )
-//                        }
-//                    }
-//                    IconButton(onClick = { /* TODO: Add search logic */ }) {
-//                        Icon(
-//                            imageVector = Icons.Outlined.Search,
-//                            contentDescription = "Search"
-//                        )
-//                    }
                 }
             )
         },
@@ -257,7 +241,8 @@ fun HomeScreen(
                         loadTasksData = { viewModel.loadTasksData() },
                         onScoutingTaskClick = onScoutingTaskClick,
                         onFuelRequestClick = onFuelRequestClick,
-                        onSowingTaskClick =onSowingTaskClick
+                        onSowingTaskClick = onSowingTaskClick,
+                        onSprayingTaskClick = onSprayingTaskClick  // Pass the parameter
                     )
                 }
                 else -> {
@@ -266,7 +251,8 @@ fun HomeScreen(
                         onTaskClick = onTaskClick,
                         tasksState = tasksState,
                         loadTasksData = { viewModel.loadTasksData() },
-                        onSowingTaskClick =onSowingTaskClick
+                        onSowingTaskClick = onSowingTaskClick,
+                        onSprayingTaskClick = onSprayingTaskClick  // Pass the parameter
                     )
                 }
             }
@@ -294,8 +280,6 @@ fun ManagerHomeContent(
             .padding(horizontal = 8.dp),
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
-
-
         QuickActionButton(
             icon = Icons.Outlined.PeopleAlt,
             label = "Team",
@@ -356,7 +340,8 @@ fun SupervisorHomeContent(
     loadTasksData: () -> Unit,
     onScoutingTaskClick: () -> Unit,
     onFuelRequestClick: () -> Unit,
-    onSowingTaskClick: () -> Unit
+    onSowingTaskClick: () -> Unit,
+    onSprayingTaskClick: () -> Unit  // New parameter
 ) {
     // Supervisor-specific quick actions
     Text(
@@ -385,7 +370,7 @@ fun SupervisorHomeContent(
             label = "Spraying",
             backgroundColor = SprayingIcon,
             containerColor = SprayingContainer,
-            onClick = { /* Handle spraying action */ }
+            onClick = onSprayingTaskClick  // Use the parameter
         )
 
         QuickActionButton(
@@ -415,7 +400,6 @@ fun SupervisorHomeContent(
 
     Spacer(modifier = Modifier.height(16.dp))
 
-
     // Assigned tasks section for supervisors
     Row(
         modifier = Modifier
@@ -439,7 +423,8 @@ fun DefaultHomeContent(
     onTaskClick: (String) -> Unit,
     tasksState: HomeViewModel.TasksState,
     loadTasksData: () -> Unit,
-    onSowingTaskClick: () -> Unit
+    onSowingTaskClick: () -> Unit,
+    onSprayingTaskClick: () -> Unit  // New parameter
 ) {
     // Default quick actions
     Text(
@@ -460,7 +445,7 @@ fun DefaultHomeContent(
             label = "Spraying",
             backgroundColor = SprayingIcon,
             containerColor = SprayingContainer,
-            onClick = { /* Handle spraying action */ }
+            onClick = onSprayingTaskClick  // Use the parameter
         )
 
         QuickActionButton(
