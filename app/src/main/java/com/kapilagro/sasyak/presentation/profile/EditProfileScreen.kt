@@ -59,7 +59,13 @@ fun EditProfileScreen(
 
     LaunchedEffect(updateProfileState) {
         if (updateProfileState is ProfileViewModel.UpdateProfileState.Success) {
+            // Wait for the profile to be updated
+//            viewModel.loadUserProfile()
+            // Clear update state
             viewModel.clearUpdateProfileState()
+            // Give some time for the data to refresh
+//            kotlinx.coroutines.delay(300)
+            // Navigate back
             onProfileUpdated()
         }
     }

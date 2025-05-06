@@ -37,6 +37,13 @@ fun ProfileScreen(
     val managerState by viewModel.managerState.collectAsState()
     val userRole by viewModel.userRole.collectAsState()
 
+// Add a key to force recomposition
+    val recomposeKey = remember { mutableStateOf(0) }
+
+// Force a refresh when profile updated
+    LaunchedEffect( Unit) {
+        viewModel.loadUserProfile()
+    }
 
 
     // Show logout confirmation dialog
@@ -66,6 +73,8 @@ fun ProfileScreen(
             }
         )
     }
+    // Then wrap the main content in this key
+    key(recomposeKey.value) {
 
     Scaffold(
         topBar = {
@@ -88,6 +97,7 @@ fun ProfileScreen(
                             modifier = Modifier.padding(paddingValues)
                         )
                     }
+
                     "SUPERVISOR" -> {
                         SupervisorProfileContent(
                             user = user,
@@ -99,6 +109,7 @@ fun ProfileScreen(
                             modifier = Modifier.padding(paddingValues)
                         )
                     }
+
                     else -> {
                         DefaultProfileContent(
                             user = user,
@@ -109,6 +120,7 @@ fun ProfileScreen(
                     }
                 }
             }
+
             is ProfileViewModel.ProfileState.Loading -> {
                 Box(
                     modifier = Modifier
@@ -119,6 +131,7 @@ fun ProfileScreen(
                     CircularProgressIndicator()
                 }
             }
+
             is ProfileViewModel.ProfileState.Error -> {
                 Box(
                     modifier = Modifier
@@ -143,6 +156,7 @@ fun ProfileScreen(
             }
         }
     }
+}
 }
 
 @Composable

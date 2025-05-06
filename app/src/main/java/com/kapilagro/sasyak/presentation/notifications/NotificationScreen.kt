@@ -52,6 +52,7 @@ fun NotificationScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Notifications") },
+
                 actions = {
                     // Only show mark all as read if there are unread notifications
                     if (notificationsState is NotificationViewModel.NotificationsState.Success &&
