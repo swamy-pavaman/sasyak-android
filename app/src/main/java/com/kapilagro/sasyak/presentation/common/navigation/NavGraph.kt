@@ -30,6 +30,7 @@ import com.kapilagro.sasyak.presentation.home.HomeViewModel
 import com.kapilagro.sasyak.presentation.notifications.NotificationScreen
 import com.kapilagro.sasyak.presentation.profile.EditProfileScreen
 import com.kapilagro.sasyak.presentation.profile.ProfileScreen
+import com.kapilagro.sasyak.presentation.profile.ProfileViewModel
 import com.kapilagro.sasyak.presentation.reports.ReportScreen
 import com.kapilagro.sasyak.presentation.scanner.ScanResultScreen
 import com.kapilagro.sasyak.presentation.scanner.ScannerScreen
@@ -216,6 +217,8 @@ fun AppNavGraph(
             NotificationScreen(
                 onTaskClick = { taskId ->
                     navController.navigate(Screen.TaskDetail.createRoute(taskId.toString()))
+                },onBackClick = {
+                    navController.popBackStack()
                 }
             )
         }
@@ -223,7 +226,7 @@ fun AppNavGraph(
         composable(Screen.Profile.route) {
             ProfileScreen(
                 onEditProfileClick = {
-                    navController.navigate(Screen.EditProfile.route)
+                    navController.navigate("edit_profile")
                 },
                 onLogoutClick = {
                     authViewModel.logout()
@@ -298,10 +301,14 @@ fun AppNavGraph(
             )
         }
 
-        // Profile related screens
-        composable(Screen.EditProfile.route) {
+        // In your navigation setup (wherever you define your navigation)
+// When setting up the navigation to EditProfileScreen:
+        composable("edit_profile") {
+            val profileViewModel: ProfileViewModel = hiltViewModel()
+
             EditProfileScreen(
                 onProfileUpdated = {
+                    profileViewModel.refreshProfile() // ✅ This will now work
                     navController.popBackStack()
                 },
                 onBackClick = {
@@ -309,6 +316,7 @@ fun AppNavGraph(
                 }
             )
         }
+
     }
 
     // Handle authentication state changes

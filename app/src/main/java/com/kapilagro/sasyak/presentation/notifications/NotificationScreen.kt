@@ -27,6 +27,8 @@ import com.kapilagro.sasyak.presentation.common.components.EmptyStateView
 @Composable
 fun NotificationScreen(
     onTaskClick: (Int) -> Unit,
+    onBackClick: () -> Unit,
+
     viewModel: NotificationViewModel = hiltViewModel()
 ) {
     val notificationsState by viewModel.notificationsState.collectAsState()
@@ -52,6 +54,12 @@ fun NotificationScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Notifications") },
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                },
+
                 actions = {
                     // Only show mark all as read if there are unread notifications
                     if (notificationsState is NotificationViewModel.NotificationsState.Success &&

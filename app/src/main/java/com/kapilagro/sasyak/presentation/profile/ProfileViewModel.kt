@@ -57,12 +57,19 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
+    // In ProfileViewModel.kt
+// Update the loadUserProfile function to ensure it reloads data
+
     fun loadUserProfile() {
         _profileState.value = ProfileState.Loading
         viewModelScope.launch(ioDispatcher) {
             when (val response = userRepository.getCurrentUser()) {
                 is ApiResponse.Success -> {
                     _profileState.value = ProfileState.Success(response.data)
+                    // If this user is a supervisor, also reload manager data
+                    if (_userRole.value == "SUPERVISOR") {
+                        loadManagerData()
+                    }
                 }
                 is ApiResponse.Error -> {
                     _profileState.value = ProfileState.Error(response.errorMessage)
@@ -72,6 +79,16 @@ class ProfileViewModel @Inject constructor(
                 }
             }
         }
+    }
+    // In ProfileViewModel.kt
+// Add this function
+
+    private val _refreshTrigger = MutableStateFlow(0)
+    val refreshTrigger: StateFlow<Int> = _refreshTrigger.asStateFlow()
+
+    fun refreshProfile() {
+        _refreshTrigger.value = _refreshTrigger.value + 1
+        loadUserProfile()
     }
 
     fun loadManagerData() {
@@ -103,7 +120,7 @@ class ProfileViewModel @Inject constructor(
             when (val response = userRepository.updateProfile(name, phoneNumber, password, location, profileImageUrl)) {
                 is ApiResponse.Success -> {
                     _updateProfileState.value = UpdateProfileState.Success(response.data)
-                    loadUserProfile() // Refresh profile data
+                    _profileState.value = ProfileState.Success(response.data)
                 }
                 is ApiResponse.Error -> {
                     _updateProfileState.value = UpdateProfileState.Error(response.errorMessage)
