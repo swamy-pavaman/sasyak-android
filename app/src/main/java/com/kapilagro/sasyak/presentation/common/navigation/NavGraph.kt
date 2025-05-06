@@ -217,6 +217,8 @@ fun AppNavGraph(
             NotificationScreen(
                 onTaskClick = { taskId ->
                     navController.navigate(Screen.TaskDetail.createRoute(taskId.toString()))
+                },onBackClick = {
+                    navController.popBackStack()
                 }
             )
         }
