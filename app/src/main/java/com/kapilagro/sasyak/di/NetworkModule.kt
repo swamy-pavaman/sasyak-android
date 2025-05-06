@@ -1,10 +1,13 @@
 package com.kapilagro.sasyak.di
 
+import android.content.SharedPreferences
 import com.kapilagro.sasyak.BuildConfig
 import com.kapilagro.sasyak.data.api.ApiService
 import com.kapilagro.sasyak.data.api.OpenWeatherApiService
 import com.kapilagro.sasyak.data.api.interceptors.AuthInterceptor
 import com.kapilagro.sasyak.data.api.interceptors.NetworkConnectivityInterceptor
+import com.kapilagro.sasyak.data.api.interceptors.TokenAuthenticator
+import com.kapilagro.sasyak.domain.repositories.AuthRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -38,21 +41,32 @@ object NetworkModule {
 
     @Singleton
     @Provides
+    fun provideTokenAuthenticator(
+        authRepository: dagger.Lazy<AuthRepository>
+    ): TokenAuthenticator {
+        return TokenAuthenticator(authRepository)
+    }
+
+    @Singleton
+    @Provides
     @Named("mainClient")
     fun provideOkHttpClient(
         httpLoggingInterceptor: HttpLoggingInterceptor,
         networkConnectivityInterceptor: NetworkConnectivityInterceptor,
-        authInterceptor: AuthInterceptor
+        authInterceptor: AuthInterceptor,
+        tokenAuthenticator: TokenAuthenticator
     ): OkHttpClient {
         return OkHttpClient.Builder()
             .addInterceptor(httpLoggingInterceptor)
             .addInterceptor(networkConnectivityInterceptor)
             .addInterceptor(authInterceptor)
+            .authenticator(tokenAuthenticator) // Add the authenticator here
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
             .build()
     }
+
 
     @Singleton
     @Provides
