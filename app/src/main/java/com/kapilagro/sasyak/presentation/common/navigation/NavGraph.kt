@@ -25,6 +25,7 @@ import com.kapilagro.sasyak.presentation.common.navigation.Screen.FuelRequestScr
 import com.kapilagro.sasyak.presentation.common.navigation.Screen.SprayingRequestScreen
 import com.kapilagro.sasyak.presentation.common.navigation.Screen.YieldRequestScreen
 import com.kapilagro.sasyak.presentation.fuel.FuelRequestScreen
+import com.kapilagro.sasyak.presentation.fuel.FuelScreen
 import com.kapilagro.sasyak.presentation.home.HomeScreen
 import com.kapilagro.sasyak.presentation.home.HomeViewModel
 import com.kapilagro.sasyak.presentation.notifications.NotificationScreen
@@ -37,12 +38,15 @@ import com.kapilagro.sasyak.presentation.scanner.ScannerScreen
 import com.kapilagro.sasyak.presentation.scouting.ScoutingScreen
 import com.kapilagro.sasyak.presentation.scouting.ScoutingRequestScreen
 import com.kapilagro.sasyak.presentation.sowing.SowingRequestScreen
+import com.kapilagro.sasyak.presentation.sowing.SowingScreen
 import com.kapilagro.sasyak.presentation.spraying.SprayingRequestScreen
+import com.kapilagro.sasyak.presentation.spraying.SprayingScreen
 import com.kapilagro.sasyak.presentation.tasks.CreateTaskScreen
 import com.kapilagro.sasyak.presentation.tasks.TaskDetailScreen
 import com.kapilagro.sasyak.presentation.tasks.TaskListScreen
 import com.kapilagro.sasyak.presentation.weather.WeatherDetailScreen
 import com.kapilagro.sasyak.presentation.yield.YieldRequestScreen
+import com.kapilagro.sasyak.presentation.yield.YieldScreen
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -85,7 +89,18 @@ fun AppNavGraph(
             )
         }
 
-        // Fuel
+        // Fuel screens
+        composable(Screen.FuelScreen.route) {
+            FuelScreen(
+                onTaskCreated = {
+                    navController.navigate(FuelRequestScreen.route)
+                },
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
         composable(FuelRequestScreen.route) {
             FuelRequestScreen(
                 onBackClick = {
@@ -94,7 +109,18 @@ fun AppNavGraph(
             )
         }
 
-        // Sowing screen
+        // Sowing screens
+        composable(Screen.SowingScreen.route) {
+            SowingScreen(
+                onTaskCreated = {
+                    navController.navigate(Screen.SowingRequestScreen.route)
+                },
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
         composable(Screen.SowingRequestScreen.route) {
             SowingRequestScreen(
                 onTaskCreated = {
@@ -106,7 +132,18 @@ fun AppNavGraph(
             )
         }
 
-        // Spraying screen
+        // Spraying screens
+        composable(Screen.SprayingScreen.route) {
+            SprayingScreen(
+                onTaskCreated = {
+                    navController.navigate(Screen.SprayingRequestScreen.route)
+                },
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
         composable(Screen.SprayingRequestScreen.route) {
             SprayingRequestScreen(
                 onTaskCreated = {
@@ -118,7 +155,18 @@ fun AppNavGraph(
             )
         }
 
-        // Yield screen
+        // Yield screens
+        composable(Screen.YieldScreen.route) {
+            YieldScreen(
+                onTaskCreated = {
+                    navController.navigate(Screen.YieldRequestScreen.route)
+                },
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
         composable(Screen.YieldRequestScreen.route) {
             YieldRequestScreen(
                 onTaskCreated = {
@@ -129,6 +177,7 @@ fun AppNavGraph(
                 }
             )
         }
+
         // Weather screen
         composable(Screen.WeatherDetail.route) {
             // Get the HomeViewModel to access weather data
@@ -207,16 +256,16 @@ fun AppNavGraph(
                     navController.navigate(Screen.Scouting.route)
                 },
                 onFuelRequestClick = {
-                    navController.navigate(FuelRequestScreen.route)
+                    navController.navigate(Screen.FuelScreen.route)
                 },
                 onSowingTaskClick = {
-                    navController.navigate(Screen.SowingRequestScreen.route)
+                    navController.navigate(Screen.SowingScreen.route)
                 },
                 onSprayingTaskClick = {
-                    navController.navigate(Screen.SprayingRequestScreen.route)
+                    navController.navigate(Screen.SprayingScreen.route)
                 },
                 onYieldTaskClick = {
-                    navController.navigate(Screen.YieldRequestScreen.route)
+                    navController.navigate(Screen.YieldScreen.route)
                 }
             )
         }

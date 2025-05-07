@@ -1,4 +1,17 @@
 package com.kapilagro.sasyak.presentation.home
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+
+
+
 import android.Manifest
 import android.os.Build
 import androidx.annotation.RequiresApi
@@ -541,31 +554,11 @@ fun SupervisorHomeContent(
             modifier = Modifier.padding(vertical = 8.dp)
         )
 
-        TabRow(
-            selectedTabIndex = selectedTaskTab,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Tab(
-                selected = selectedTaskTab == 0,
-                onClick = { selectedTaskTab = 0 },
-                text = { Text("Submitted") }
-            )
-            Tab(
-                selected = selectedTaskTab == 1,
-                onClick = { selectedTaskTab = 1 },
-                text = { Text("Approved") }
-            )
-            Tab(
-                selected = selectedTaskTab == 2,
-                onClick = { selectedTaskTab = 2 },
-                text = { Text("Rejected") }
-            )
-            Tab(
-                selected = selectedTaskTab == 3,
-                onClick = { selectedTaskTab = 3 },
-                text = { Text("Assigned") }
-            )
-        }
+        SegmentedTaskControl(
+            selectedIndex = selectedTaskTab,
+            onSegmentSelected = { selectedTaskTab = it }
+        )
+
 
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -640,6 +633,51 @@ fun SupervisorHomeContent(
         }
     }
 }
+
+
+@Composable
+fun SegmentedTaskControl(
+    selectedIndex: Int,
+    onSegmentSelected: (Int) -> Unit
+) {
+    val segments = listOf("Submitted", "Approved", "Rejected", "Assigned")
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                shape = RoundedCornerShape(24.dp)
+            )
+            .padding(4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        segments.forEachIndexed { index, label ->
+            val isSelected = index == selectedIndex
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(
+                        if (isSelected) MaterialTheme.colorScheme.primary
+                        else Color.Transparent
+                    )
+                    .clickable { onSegmentSelected(index) }
+                    .padding(vertical = 8.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = label,
+                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary
+                    else MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+    }
+}
+
 
 @Composable
 fun DefaultHomeContent(
@@ -776,3 +814,6 @@ fun TasksList(
         }
     }
 }
+
+
+
