@@ -35,6 +35,7 @@ import com.kapilagro.sasyak.presentation.reports.ReportScreen
 import com.kapilagro.sasyak.presentation.scanner.ScanResultScreen
 import com.kapilagro.sasyak.presentation.scanner.ScannerScreen
 import com.kapilagro.sasyak.presentation.scouting.ScoutingScreen
+import com.kapilagro.sasyak.presentation.scouting.ScoutingRequestScreen
 import com.kapilagro.sasyak.presentation.sowing.SowingRequestScreen
 import com.kapilagro.sasyak.presentation.spraying.SprayingRequestScreen
 import com.kapilagro.sasyak.presentation.tasks.CreateTaskScreen
@@ -63,6 +64,18 @@ fun AppNavGraph(
         // Scouting screen
         composable(Screen.Scouting.route) {
             ScoutingScreen(
+                onTaskCreated = {
+                    navController.navigate(Screen.ScoutingRequestScreen.route)
+                },
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        // Scouting Request screen
+        composable(Screen.ScoutingRequestScreen.route) {
+            ScoutingRequestScreen(
                 onTaskCreated = {
                     navController.popBackStack()
                 },
@@ -104,7 +117,6 @@ fun AppNavGraph(
                 }
             )
         }
-
 
         // Yield screen
         composable(Screen.YieldRequestScreen.route) {
@@ -301,14 +313,13 @@ fun AppNavGraph(
             )
         }
 
-        // In your navigation setup (wherever you define your navigation)
-// When setting up the navigation to EditProfileScreen:
+        // Edit profile screen
         composable("edit_profile") {
             val profileViewModel: ProfileViewModel = hiltViewModel()
 
             EditProfileScreen(
                 onProfileUpdated = {
-                    profileViewModel.refreshProfile() // ✅ This will now work
+                    profileViewModel.refreshProfile()
                     navController.popBackStack()
                 },
                 onBackClick = {
@@ -316,7 +327,6 @@ fun AppNavGraph(
                 }
             )
         }
-
     }
 
     // Handle authentication state changes

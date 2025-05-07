@@ -29,6 +29,7 @@ interface ApiService {
         @Query("size") size: Int = 10
     ): Response<TaskListResponse>
 
+
     @GET("api/tasks/created")
     suspend fun getCreatedTasks(
         @Query("page") page: Int = 0,
