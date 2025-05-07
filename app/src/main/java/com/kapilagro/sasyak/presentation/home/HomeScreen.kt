@@ -563,7 +563,7 @@ fun SupervisorHomeContent(
             Tab(
                 selected = selectedTaskTab == 3,
                 onClick = { selectedTaskTab = 3 },
-                text = { Text("All") }
+                text = { Text("Assigned") }
             )
         }
 

@@ -6,6 +6,7 @@ import com.kapilagro.sasyak.data.api.ApiService
 import com.kapilagro.sasyak.data.api.OpenWeatherApiService
 import com.kapilagro.sasyak.data.api.interceptors.AuthInterceptor
 import com.kapilagro.sasyak.data.api.interceptors.NetworkConnectivityInterceptor
+import com.kapilagro.sasyak.data.api.interceptors.ResponseInterceptor
 import com.kapilagro.sasyak.data.api.interceptors.TokenAuthenticator
 import com.kapilagro.sasyak.domain.repositories.AuthRepository
 import dagger.Module
@@ -54,17 +55,29 @@ object NetworkModule {
         httpLoggingInterceptor: HttpLoggingInterceptor,
         networkConnectivityInterceptor: NetworkConnectivityInterceptor,
         authInterceptor: AuthInterceptor,
-        tokenAuthenticator: TokenAuthenticator
+        tokenAuthenticator: TokenAuthenticator,
+        responseInterceptor: ResponseInterceptor
     ): OkHttpClient {
         return OkHttpClient.Builder()
             .addInterceptor(httpLoggingInterceptor)
             .addInterceptor(networkConnectivityInterceptor)
             .addInterceptor(authInterceptor)
+            .addInterceptor(responseInterceptor)
             .authenticator(tokenAuthenticator) // Add the authenticator here
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
             .build()
+    }
+
+
+
+    @Singleton
+    @Provides
+    fun provideResponseInterceptor(
+        authRepository: dagger.Lazy<AuthRepository>
+    ): ResponseInterceptor {
+        return ResponseInterceptor(authRepository)
     }
 
 
