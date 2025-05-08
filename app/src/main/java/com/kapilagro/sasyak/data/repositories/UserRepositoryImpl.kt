@@ -5,6 +5,7 @@ import com.kapilagro.sasyak.data.api.mappers.toDomainModel
 import com.kapilagro.sasyak.data.api.models.requests.UpdateProfileRequest
 import com.kapilagro.sasyak.data.api.models.requests.UpdateTeamMemberRequest
 import com.kapilagro.sasyak.domain.models.ApiResponse
+import com.kapilagro.sasyak.domain.models.TeamMember
 import com.kapilagro.sasyak.domain.models.User
 import com.kapilagro.sasyak.domain.repositories.AuthRepository
 import com.kapilagro.sasyak.domain.repositories.UserRepository
@@ -116,12 +117,21 @@ class UserRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun getTeamMembers(): ApiResponse<List<User>> {
+    override suspend fun getTeamMembers(): ApiResponse<List<TeamMember>> {
         return try {
             val response = apiService.getTeamMembers()
-
             if (response.isSuccessful && response.body() != null) {
-                ApiResponse.Success(response.body()!!.employees.map { it.toDomainModel() })
+                ApiResponse.Success(response.body()!!.employees.map {
+                    TeamMember(
+                        id = it.id,
+                        name = it.name,
+                        email = it.email,
+                        role = it.role,
+                        profileImageUrl = it.profile,
+                        phoneNumber = it.phoneNumber,
+                        location = it.location
+                    )
+                })
             } else {
                 ApiResponse.Error(response.errorBody()?.string() ?: "Failed to get team members")
             }
@@ -130,12 +140,21 @@ class UserRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun getAllSupervisors(): ApiResponse<List<User>> {
+    override suspend fun getAllSupervisors(): ApiResponse<List<TeamMember>> {
         return try {
             val response = apiService.getAllSupervisors()
-
             if (response.isSuccessful && response.body() != null) {
-                ApiResponse.Success(response.body()!!.employees.map { it.toDomainModel() })
+                ApiResponse.Success(response.body()!!.employees.map {
+                    TeamMember(
+                        id = it.id,
+                        name = it.name,
+                        email = it.email,
+                        role = it.role,
+                        profileImageUrl = it.profile,
+                        phoneNumber = it.phoneNumber,
+                        location = it.location
+                    )
+                })
             } else {
                 ApiResponse.Error(response.errorBody()?.string() ?: "Failed to get supervisors")
             }
@@ -143,7 +162,6 @@ class UserRepositoryImpl @Inject constructor(
             ApiResponse.Error(e.message ?: "An unknown error occurred")
         }
     }
-
 //    override suspend fun getTeamMemberById(userId: Int): ApiResponse<User> {
 //        return try {
 //            val response = apiService.getTeamMemberById(userId)
@@ -181,4 +199,7 @@ class UserRepositoryImpl @Inject constructor(
             ApiResponse.Error(e.message ?: "An unknown error occurred")
         }
     }
+
+
+
 }
