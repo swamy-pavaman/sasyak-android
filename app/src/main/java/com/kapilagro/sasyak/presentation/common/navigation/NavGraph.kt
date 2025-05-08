@@ -173,6 +173,9 @@ fun AppNavGraph(
                 },
                 onBackClick = {
                     navController.popBackStack()
+                },
+                onTaskClick = {
+                    navController.popBackStack()
                 }
             )
         }

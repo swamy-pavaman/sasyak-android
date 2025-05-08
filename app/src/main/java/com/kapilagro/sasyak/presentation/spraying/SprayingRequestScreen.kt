@@ -2,6 +2,7 @@ package com.kapilagro.sasyak.presentation.spraying
 
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -9,14 +10,17 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.kapilagro.sasyak.domain.models.SprayingDetails
+import com.kapilagro.sasyak.presentation.common.components.SuccessDialog
 import com.kapilagro.sasyak.presentation.common.theme.*
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -27,33 +31,30 @@ import java.time.format.DateTimeFormatter
 fun SprayingRequestScreen(
     onTaskCreated: () -> Unit,
     onBackClick: () -> Unit,
-    viewModel: SprayingViewModel = hiltViewModel()
+    viewModel: SprayingListViewModel = hiltViewModel()
 ) {
     val createSprayingState by viewModel.createSprayingState.collectAsState()
 
     // Dialog state
     var showSuccessDialog by remember { mutableStateOf(false) }
+    var submittedEntry by remember { mutableStateOf<SprayingDetails?>(null) }
 
     // Form fields
     var sprayingDate by remember { mutableStateOf(LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))) }
     var cropName by remember { mutableStateOf("") }
     var cropNameExpanded by remember { mutableStateOf(false) }
-    var fieldId by remember { mutableStateOf("") }
-    var fieldIdExpanded by remember { mutableStateOf(false) }
-    var areaSize by remember { mutableStateOf("") }
-    var pesticideName by remember { mutableStateOf("") }
-    var pesticideNameExpanded by remember { mutableStateOf(false) }
-    var pesticideQuantity by remember { mutableStateOf("") }
-    var pesticideUnit by remember { mutableStateOf("L") }
-    var pesticideUnitExpanded by remember { mutableStateOf(false) }
-    var waterQuantity by remember { mutableStateOf("") }
-    var waterUnit by remember { mutableStateOf("L") }
-    var waterUnitExpanded by remember { mutableStateOf(false) }
-    var targetPests by remember { mutableStateOf("") }
+    var row by remember { mutableStateOf("") }
+    var rowExpanded by remember { mutableStateOf(false) }
+    var fieldArea by remember { mutableStateOf("") }
+    var chemicalName by remember { mutableStateOf("") }
+    var chemicalNameExpanded by remember { mutableStateOf(false) }
+    var dosage by remember { mutableStateOf("") }
+    var sprayingMethod by remember { mutableStateOf("") }
+    var sprayingMethodExpanded by remember { mutableStateOf(false) }
+    var targetPest by remember { mutableStateOf("") }
     var weatherCondition by remember { mutableStateOf("") }
-    var temperature by remember { mutableStateOf("") }
-    var windSpeed by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
+    var imageUploaded by remember { mutableStateOf(false) }
 
     val crops = listOf(
         "Wheat", "Rice", "Maize", "Barley", "Sorghum",
@@ -62,45 +63,55 @@ fun SprayingRequestScreen(
         "Sugarcane", "Groundnut", "Cotton", "Soybean", "Mustard"
     )
 
-    val fields = listOf("Field-001", "Field-002", "Field-003", "Field-004", "Field-005")
+    val rows = (1..20).map { it.toString() }
 
-    val pesticides = listOf(
-        "Deltamethrin", "Chlorpyrifos", "Cypermethrin", "Imidacloprid", "Glyphosate",
-        "Malathion", "Acetamiprid", "Fipronil", "Carbaryl", "Permethrin",
-        "Neem Oil", "Bacillus thuringiensis", "Azadirachtin", "Lambdacyhalothrin", "Spinosad"
+    val chemicals = listOf(
+        "Glyphosate", "2,4-D", "Atrazine", "Paraquat", "Pendimethalin",
+        "Chlorpyrifos", "Cypermethrin", "Lambda-cyhalothrin", "Carbofuran", "Imidacloprid",
+        "Mancozeb", "Copper Oxychloride", "Carbendazim", "Metalaxyl", "Thiram"
     )
 
-    val liquidUnits = listOf("mL", "L", "gal")
-    val volumeUnits = listOf("L", "gal")
+    val sprayingMethods = listOf(
+        "Backpack Sprayer", "Boom Sprayer", "Aerial Spraying", "Drip Application",
+        "Fogger", "Mist Blower", "Hand Sprayer", "Tractor Mounted Sprayer"
+    )
 
     // Handle task creation success
     LaunchedEffect(createSprayingState) {
-        if (createSprayingState is SprayingViewModel.CreateSprayingState.Success) {
-            showSuccessDialog = true
+        when (createSprayingState) {
+            is SprayingListViewModel.CreateSprayingState.Success -> {
+                showSuccessDialog = true
+            }
+            else -> {
+                // Handle other states if needed
+            }
         }
     }
 
     // Success Dialog
-    if (showSuccessDialog) {
-        AlertDialog(
-            onDismissRequest = {
+    if (showSuccessDialog && submittedEntry != null) {
+        val details = listOf(
+            "Date" to submittedEntry!!.sprayingDate,
+            "Crop Name" to submittedEntry!!.cropName,
+            "Row" to submittedEntry!!.row.toString(),
+            "Field Area" to (submittedEntry!!.fieldArea?.plus(" acres") ?: "Not specified"),
+            "Chemical" to submittedEntry!!.chemicalName,
+            "Dosage" to (submittedEntry!!.dosage ?: "Not specified"),
+            "Method" to submittedEntry!!.sprayingMethod,
+            "Target Pest" to (submittedEntry!!.targetPest ?: "Not specified"),
+            "Weather" to (submittedEntry!!.weatherCondition ?: "Not specified")
+        )
+
+        SuccessDialog(
+            title = "Spraying Report Sent!",
+            message = "Your manager will be notified when they take action on it.",
+            details = details,
+            description = description,
+            primaryButtonText = "OK",
+            onPrimaryButtonClick = {
                 showSuccessDialog = false
                 viewModel.clearCreateSprayingState()
                 onTaskCreated()
-            },
-            title = { Text("Success") },
-            text = { Text("Spraying task created successfully!") },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showSuccessDialog = false
-                        viewModel.clearCreateSprayingState()
-                        onTaskCreated()
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = AgroPrimary)
-                ) {
-                    Text("OK")
-                }
             }
         )
     }
@@ -108,7 +119,7 @@ fun SprayingRequestScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Spraying Request") },
+                title = { Text("Spraying") },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -177,19 +188,19 @@ fun SprayingRequestScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Field ID Dropdown
+            // Row Dropdown
             ExposedDropdownMenuBox(
-                expanded = fieldIdExpanded,
-                onExpandedChange = { fieldIdExpanded = it },
+                expanded = rowExpanded,
+                onExpandedChange = { rowExpanded = it },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 OutlinedTextField(
-                    value = fieldId,
+                    value = row,
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("Field ID *") },
+                    label = { Text("Row *") },
                     trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = fieldIdExpanded)
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = rowExpanded)
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -198,15 +209,15 @@ fun SprayingRequestScreen(
                 )
 
                 ExposedDropdownMenu(
-                    expanded = fieldIdExpanded,
-                    onDismissRequest = { fieldIdExpanded = false }
+                    expanded = rowExpanded,
+                    onDismissRequest = { rowExpanded = false }
                 ) {
-                    fields.forEach { field ->
+                    rows.forEach { rowNumber ->
                         DropdownMenuItem(
-                            text = { Text(field) },
+                            text = { Text(rowNumber) },
                             onClick = {
-                                fieldId = field
-                                fieldIdExpanded = false
+                                row = rowNumber
+                                rowExpanded = false
                             }
                         )
                     }
@@ -215,34 +226,33 @@ fun SprayingRequestScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Area Size
+            // Field Area
             OutlinedTextField(
-                value = areaSize,
-                onValueChange = { areaSize = it },
-                label = { Text("Area size (acres) *") },
+                value = fieldArea,
+                onValueChange = { fieldArea = it },
+                label = { Text("Field area (acres)") },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(8.dp),
-
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Pesticide Name Dropdown
+            // Chemical Name Dropdown
             ExposedDropdownMenuBox(
-                expanded = pesticideNameExpanded,
-                onExpandedChange = { pesticideNameExpanded = it },
+                expanded = chemicalNameExpanded,
+                onExpandedChange = { chemicalNameExpanded = it },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 OutlinedTextField(
-                    value = pesticideName,
+                    value = chemicalName,
                     onValueChange = { newValue ->
-                        pesticideName = newValue
-                        pesticideNameExpanded = true
+                        chemicalName = newValue
+                        chemicalNameExpanded = true
                     },
-                    label = { Text("Pesticide name *") },
+                    label = { Text("Chemical name *") },
                     trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = pesticideNameExpanded)
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = chemicalNameExpanded)
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -251,16 +261,16 @@ fun SprayingRequestScreen(
                 )
 
                 ExposedDropdownMenu(
-                    expanded = pesticideNameExpanded,
-                    onDismissRequest = { pesticideNameExpanded = false }
+                    expanded = chemicalNameExpanded,
+                    onDismissRequest = { chemicalNameExpanded = false }
                 ) {
-                    pesticides.filter { it.contains(pesticideName, ignoreCase = true) }
-                        .forEach { pesticide ->
+                    chemicals.filter { it.contains(chemicalName, ignoreCase = true) }
+                        .forEach { chemical ->
                             DropdownMenuItem(
-                                text = { Text(pesticide) },
+                                text = { Text(chemical) },
                                 onClick = {
-                                    pesticideName = pesticide
-                                    pesticideNameExpanded = false
+                                    chemicalName = chemical
+                                    chemicalNameExpanded = false
                                 }
                             )
                         }
@@ -269,117 +279,64 @@ fun SprayingRequestScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Pesticide Quantity and Unit in same row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                // Pesticide Quantity
-                OutlinedTextField(
-                    value = pesticideQuantity,
-                    onValueChange = { pesticideQuantity = it },
-                    label = { Text("Pesticide quantity *") },
-                    modifier = Modifier.weight(0.6f),
-                    shape = RoundedCornerShape(8.dp)
-                )
-
-                // Pesticide Unit Dropdown
-                ExposedDropdownMenuBox(
-                    expanded = pesticideUnitExpanded,
-                    onExpandedChange = { pesticideUnitExpanded = it },
-                    modifier = Modifier.weight(0.4f)
-                ) {
-                    OutlinedTextField(
-                        value = pesticideUnit,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Unit") },
-                        trailingIcon = {
-                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = pesticideUnitExpanded)
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .menuAnchor(),
-                        shape = RoundedCornerShape(8.dp)
-                    )
-
-                    ExposedDropdownMenu(
-                        expanded = pesticideUnitExpanded,
-                        onDismissRequest = { pesticideUnitExpanded = false }
-                    ) {
-                        liquidUnits.forEach { unit ->
-                            DropdownMenuItem(
-                                text = { Text(unit) },
-                                onClick = {
-                                    pesticideUnit = unit
-                                    pesticideUnitExpanded = false
-                                }
-                            )
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Water Quantity and Unit in same row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                // Water Quantity
-                OutlinedTextField(
-                    value = waterQuantity,
-                    onValueChange = { waterQuantity = it },
-                    label = { Text("Water quantity *") },
-                    modifier = Modifier.weight(0.6f),
-                    shape = RoundedCornerShape(8.dp)
-                )
-
-                // Water Unit Dropdown
-                ExposedDropdownMenuBox(
-                    expanded = waterUnitExpanded,
-                    onExpandedChange = { waterUnitExpanded = it },
-                    modifier = Modifier.weight(0.4f)
-                ) {
-                    OutlinedTextField(
-                        value = waterUnit,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Unit") },
-                        trailingIcon = {
-                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = waterUnitExpanded)
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .menuAnchor(),
-                        shape = RoundedCornerShape(8.dp)
-                    )
-
-                    ExposedDropdownMenu(
-                        expanded = waterUnitExpanded,
-                        onDismissRequest = { waterUnitExpanded = false }
-                    ) {
-                        volumeUnits.forEach { unit ->
-                            DropdownMenuItem(
-                                text = { Text(unit) },
-                                onClick = {
-                                    waterUnit = unit
-                                    waterUnitExpanded = false
-                                }
-                            )
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Target Pests
+            // Dosage
             OutlinedTextField(
-                value = targetPests,
-                onValueChange = { targetPests = it },
-                label = { Text("Target pests") },
+                value = dosage,
+                onValueChange = { dosage = it },
+                label = { Text("Dosage (ml/litre)") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Spraying Method Dropdown
+            ExposedDropdownMenuBox(
+                expanded = sprayingMethodExpanded,
+                onExpandedChange = { sprayingMethodExpanded = it },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    value = sprayingMethod,
+                    onValueChange = { newValue ->
+                        sprayingMethod = newValue
+                        sprayingMethodExpanded = true
+                    },
+                    label = { Text("Spraying method *") },
+                    trailingIcon = {
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = sprayingMethodExpanded)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(),
+                    shape = RoundedCornerShape(8.dp)
+                )
+
+                ExposedDropdownMenu(
+                    expanded = sprayingMethodExpanded,
+                    onDismissRequest = { sprayingMethodExpanded = false }
+                ) {
+                    sprayingMethods.filter { it.contains(sprayingMethod, ignoreCase = true) }
+                        .forEach { method ->
+                            DropdownMenuItem(
+                                text = { Text(method) },
+                                onClick = {
+                                    sprayingMethod = method
+                                    sprayingMethodExpanded = false
+                                }
+                            )
+                        }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Target Pest
+            OutlinedTextField(
+                value = targetPest,
+                onValueChange = { targetPest = it },
+                label = { Text("Target pest/disease") },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(8.dp)
             )
@@ -397,33 +354,7 @@ fun SprayingRequestScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Temperature and Wind Speed in same row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                // Temperature
-                OutlinedTextField(
-                    value = temperature,
-                    onValueChange = { temperature = it },
-                    label = { Text("Temperature (°C)") },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(8.dp)
-                )
-
-                // Wind Speed
-                OutlinedTextField(
-                    value = windSpeed,
-                    onValueChange = { windSpeed = it },
-                    label = { Text("Wind speed (km/h)") },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(8.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Upload Section
+            // Upload Section with clickable cards
             Text(
                 text = "Upload *",
                 style = MaterialTheme.typography.bodyLarge,
@@ -437,22 +368,40 @@ fun SprayingRequestScreen(
                 Card(
                     modifier = Modifier
                         .weight(1f)
-                        .height(100.dp),
+                        .height(100.dp)
+                        .clickable { imageUploaded = true },
                     shape = RoundedCornerShape(8.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (imageUploaded) Color(0xFFE0F7FA) else MaterialTheme.colorScheme.surfaceVariant
+                    )
                 ) {
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("Upload Field Image")
+                        if (imageUploaded) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Image Uploaded",
+                                    tint = Color(0xFF4CAF50),
+                                    modifier = Modifier.size(28.dp)
+                                )
+                                Text("Image Uploaded", color = Color(0xFF4CAF50))
+                            }
+                        } else {
+                            Text("Upload Spraying Image")
+                        }
                     }
                 }
 
                 Card(
                     modifier = Modifier
                         .weight(1f)
-                        .height(100.dp),
+                        .height(100.dp)
+                        .clickable { /* Handle video upload */ },
                     shape = RoundedCornerShape(8.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                 ) {
@@ -460,7 +409,7 @@ fun SprayingRequestScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("Upload Equipment Image")
+                        Text("Upload Spraying Video")
                     }
                 }
             }
@@ -472,7 +421,7 @@ fun SprayingRequestScreen(
                 value = description,
                 onValueChange = { description = it },
                 label = { Text("Description") },
-                placeholder = { Text("Enter any additional details about the spraying task") },
+                placeholder = { Text("Enter description of the spraying activity") },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(120.dp),
@@ -481,55 +430,50 @@ fun SprayingRequestScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            // Loading indicator
+            if (createSprayingState is SprayingListViewModel.CreateSprayingState.Loading) {
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = AgroPrimary)
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
             // Submit Button
             Button(
                 onClick = {
-                    if (cropName.isNotBlank() && fieldId.isNotBlank() &&
-                        areaSize.isNotBlank() && pesticideName.isNotBlank() &&
-                        pesticideQuantity.isNotBlank() && waterQuantity.isNotBlank()) {
+                    if (cropName.isNotBlank() && row.isNotBlank() && chemicalName.isNotBlank() && sprayingMethod.isNotBlank()) {
                         val sprayingDetails = SprayingDetails(
                             sprayingDate = sprayingDate,
                             cropName = cropName,
-                            fieldId = fieldId,
-                            areaSize = areaSize.toDoubleOrNull() ?: 0.0,
-                            pesticideName = pesticideName,
-                            pesticideQuantity = pesticideQuantity.toDoubleOrNull() ?: 0.0,
-                            pesticideUnit = pesticideUnit,
-                            waterQuantity = waterQuantity.toDoubleOrNull() ?: 0.0,
-                            waterUnit = waterUnit,
-                            targetPests = targetPests.ifBlank { null },
+                            row = row.toInt(),
+                            fieldArea = fieldArea.ifBlank { null },
+                            chemicalName = chemicalName,
+                            dosage = dosage.ifBlank { null },
+                            sprayingMethod = sprayingMethod,
+                            targetPest = targetPest.ifBlank { null },
                             weatherCondition = weatherCondition.ifBlank { null },
-                            temperature = temperature.ifBlank { null },
-                            windSpeed = windSpeed.ifBlank { null },
                             uploadedFiles = null // TODO: Handle file uploads
                         )
+                        submittedEntry = sprayingDetails
                         viewModel.createSprayingTask(sprayingDetails, description)
                     }
                 },
-                enabled = cropName.isNotBlank() && fieldId.isNotBlank() &&
-                        areaSize.isNotBlank() && pesticideName.isNotBlank() &&
-                        pesticideQuantity.isNotBlank() && waterQuantity.isNotBlank() &&
-                        createSprayingState !is SprayingViewModel.CreateSprayingState.Loading,
+                enabled = cropName.isNotBlank() && row.isNotBlank() && chemicalName.isNotBlank() &&
+                        sprayingMethod.isNotBlank() && imageUploaded &&
+                        createSprayingState !is SprayingListViewModel.CreateSprayingState.Loading,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = AgroPrimary)
             ) {
-                if (createSprayingState is SprayingViewModel.CreateSprayingState.Loading) {
-                    CircularProgressIndicator(
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.size(24.dp)
-                    )
-                } else {
-                    Text("Submit")
-                }
+                Text("Submit")
             }
 
             // Error message
-            if (createSprayingState is SprayingViewModel.CreateSprayingState.Error) {
+            if (createSprayingState is SprayingListViewModel.CreateSprayingState.Error) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = (createSprayingState as SprayingViewModel.CreateSprayingState.Error).message,
+                    text = (createSprayingState as SprayingListViewModel.CreateSprayingState.Error).message,
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodyMedium
                 )
