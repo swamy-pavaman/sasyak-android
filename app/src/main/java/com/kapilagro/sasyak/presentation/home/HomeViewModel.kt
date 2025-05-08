@@ -37,6 +37,9 @@ class HomeViewModel @Inject constructor(
 
     private val _tasksState = MutableStateFlow<TasksState>(TasksState.Loading)
     val tasksState: StateFlow<TasksState> = _tasksState.asStateFlow()
+    private val _teamMembersState = MutableStateFlow<TeamMembersState>(TeamMembersState.Loading)
+    val teamMembersState: StateFlow<TeamMembersState> = _teamMembersState.asStateFlow()
+
 
 
 
@@ -61,6 +64,31 @@ class HomeViewModel @Inject constructor(
                 loadTasksData()
             }
         }
+    }
+
+
+
+    fun loadTeamMembers() {
+        _teamMembersState.value = TeamMembersState.Loading
+        viewModelScope.launch(ioDispatcher) {
+            when (val response = userRepository.getTeamMembers()) {
+                is ApiResponse.Success -> {
+                    _teamMembersState.value = TeamMembersState.Success(response.data)
+                }
+                is ApiResponse.Error -> {
+                    _teamMembersState.value = TeamMembersState.Error(response.errorMessage)
+                }
+                is ApiResponse.Loading -> {
+                    _teamMembersState.value = TeamMembersState.Loading
+                }
+            }
+        }
+    }
+
+    sealed class TeamMembersState {
+        object Loading : TeamMembersState()
+        data class Success(val members: List<User>) : TeamMembersState()
+        data class Error(val message: String) : TeamMembersState()
     }
 
     fun loadUserData() {

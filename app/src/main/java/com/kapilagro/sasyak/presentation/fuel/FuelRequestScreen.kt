@@ -2,7 +2,6 @@ package com.kapilagro.sasyak.presentation.fuel
 
 import android.os.Build
 import androidx.annotation.RequiresApi
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -12,19 +11,17 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.kapilagro.sasyak.domain.models.FuelEntry
+import com.kapilagro.sasyak.domain.models.FuelDetails
 import com.kapilagro.sasyak.presentation.common.components.SuccessDialog
-import com.kapilagro.sasyak.presentation.common.theme.AgroPrimary
+import com.kapilagro.sasyak.presentation.common.theme.*
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -32,40 +29,59 @@ import java.time.format.DateTimeFormatter
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FuelRequestScreen(
+    onTaskCreated: () -> Unit,
     onBackClick: () -> Unit,
-    viewModel: FuelViewModel = hiltViewModel()
+    viewModel: FuelListViewModel = hiltViewModel()
 ) {
-    var date by remember { mutableStateOf(LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))) }
-    var openingStockLiters by remember { mutableStateOf("") }
-    var imageUploaded by remember { mutableStateOf(false) }
-    var vehicleType by remember { mutableStateOf("") }
-    var vehicleTypeExpanded by remember { mutableStateOf(false) }
-    var quantityNeeded by remember { mutableStateOf("") }
-    var purpose by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-    var driverName by remember { mutableStateOf("") }
-    var driverNameExpanded by remember { mutableStateOf(false) }
-    // New fields
+    val createFuelState by viewModel.createFuelState.collectAsState()
+
+    // Dialog state
+    var showSuccessDialog by remember { mutableStateOf(false) }
+    var submittedEntry by remember { mutableStateOf<FuelDetails?>(null) }
+
+    // Form fields
+    var fuelDate by remember { mutableStateOf(LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))) }
+    var vehicleName by remember { mutableStateOf("") }
+    var vehicleNameExpanded by remember { mutableStateOf(false) }
     var vehicleNumber by remember { mutableStateOf("") }
-    var odometerReading by remember { mutableStateOf("") }
-    var expectedDistance by remember { mutableStateOf("") }
     var fuelType by remember { mutableStateOf("") }
     var fuelTypeExpanded by remember { mutableStateOf(false) }
+    var quantity by remember { mutableStateOf("") }
+    var unit by remember { mutableStateOf("liters") }
+    var unitExpanded by remember { mutableStateOf(false) }
+    var costPerUnit by remember { mutableStateOf("") }
+    var totalCost by remember { mutableStateOf("") }
+    var driverName by remember { mutableStateOf("") }
+    var odometer by remember { mutableStateOf("") }
+    var purposeOfFuel by remember { mutableStateOf("") }
+    var refillLocation by remember { mutableStateOf("") }
+    var notes by remember { mutableStateOf("") }
+    var description by remember { mutableStateOf("") }
+    var imageUploaded by remember { mutableStateOf(false) }
 
-    var showSuccessDialog by remember { mutableStateOf(false) }
-    var submittedEntry by remember { mutableStateOf<FuelEntry?>(null) }
+    val vehicles = listOf(
+        "Tractor - John Deere",
+        "Tractor - Mahindra",
+        "Truck - Tata",
+        "Harvester",
+        "Water Pump",
+        "Generator",
+        "Sprayer",
+        "Pickup Truck",
+        "Farm Utility Vehicle"
+    )
 
-    // Observe the ViewModel state
-    val fuelRequestState by viewModel.createFuelRequestState.collectAsState()
+    val fuelTypes = listOf(
+        "Diesel", "Petrol", "CNG", "LPG", "Bio-diesel", "Electric"
+    )
 
-    // Process state changes
-    LaunchedEffect(fuelRequestState) {
-        when (fuelRequestState) {
-            is FuelViewModel.CreateFuelRequestState.Success -> {
+    val units = listOf("liters", "gallons", "kWh")
+
+    // Handle task creation success
+    LaunchedEffect(createFuelState) {
+        when (createFuelState) {
+            is FuelListViewModel.CreateFuelState.Success -> {
                 showSuccessDialog = true
-            }
-            is FuelViewModel.CreateFuelRequestState.Error -> {
-                // Handle error state (could show a snackbar or error dialog)
             }
             else -> {
                 // Handle other states if needed
@@ -73,40 +89,29 @@ fun FuelRequestScreen(
         }
     }
 
-    // Mock data for dropdowns
-    val vehicleTypes = listOf("Tractor", "Harvester", "Truck", "Bike", "Car", "Loader", "Tiller")
-    val driverNames = listOf(
-        "Rajesh Kumar", "Suresh Patel", "Amit Singh", "Vijay Sharma",
-        "Rahul Verma", "Ajay Yadav", "Sanjay Gupta", "Mahesh Joshi",
-        "Deepak Mishra", "Vinod Tiwari", "Ramesh Choudhary"
-    )
-    val fuelTypes = listOf("Diesel", "Petrol", "CNG", "Electric")
-
     // Success Dialog
     if (showSuccessDialog && submittedEntry != null) {
         val details = listOf(
-            "Date" to submittedEntry!!.date,
-            "Vehicle Number" to submittedEntry!!.vehicleNumber,
-            "Vehicle Type" to submittedEntry!!.vehicleType,
+            "Date" to submittedEntry!!.fuelDate,
+            "Vehicle" to submittedEntry!!.vehicleName,
+            "Vehicle Number" to (submittedEntry!!.vehicleNumber ?: "Not specified"),
             "Fuel Type" to submittedEntry!!.fuelType,
-            "Odometer Reading" to "${submittedEntry!!.odometerReading} km",
-            "Opening Stock" to "${submittedEntry!!.openingStock} liters",
-            "Quantity Needed" to "${submittedEntry!!.quantityIssued} liters",
-            "Expected Distance" to "${submittedEntry!!.expectedDistance} km",
-            "Purpose" to submittedEntry!!.purpose,
-            "Driver" to submittedEntry!!.driverName
+            "Quantity" to "${submittedEntry!!.quantity} ${submittedEntry!!.unit}",
+            "Cost" to if (submittedEntry!!.totalCost != null) "₹${submittedEntry!!.totalCost}" else "Not specified",
+            "Driver" to (submittedEntry!!.driverName ?: "Not specified"),
+            "Location" to (submittedEntry!!.refillLocation ?: "Not specified")
         )
 
         SuccessDialog(
-            title = "Request Sent!",
-            message = "Your manager will notify when they take action on it.",
+            title = "Fuel Entry Sent!",
+            message = "Your manager will be notified when they take action on it.",
             details = details,
-            description = submittedEntry!!.description,
+            description = description,
             primaryButtonText = "OK",
             onPrimaryButtonClick = {
                 showSuccessDialog = false
-                viewModel.clearCreateFuelRequestState()
-                // No auto navigation - only close the dialog
+                viewModel.clearCreateFuelState()
+                onTaskCreated()
             }
         )
     }
@@ -114,7 +119,7 @@ fun FuelRequestScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Fuel Request") },
+                title = { Text("Fuel Entry") },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -130,10 +135,10 @@ fun FuelRequestScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
-            // Date (Display only)
+            // Fuel Date (Display only)
             OutlinedTextField(
-                value = "Date: $date",
-                onValueChange = {},
+                value = "Fuel date: $fuelDate",
+                onValueChange = { },
                 enabled = false,
                 readOnly = true,
                 modifier = Modifier.fillMaxWidth(),
@@ -142,35 +147,39 @@ fun FuelRequestScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Vehicle Type Dropdown
+            // Vehicle Name Dropdown
             ExposedDropdownMenuBox(
-                expanded = vehicleTypeExpanded,
-                onExpandedChange = { vehicleTypeExpanded = it },
+                expanded = vehicleNameExpanded,
+                onExpandedChange = { vehicleNameExpanded = it },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 OutlinedTextField(
-                    value = vehicleType,
-                    onValueChange = { vehicleType = it },
-                    label = { Text("Type of Vehicle") },
+                    value = vehicleName,
+                    onValueChange = { newValue ->
+                        vehicleName = newValue
+                        vehicleNameExpanded = true
+                    },
+                    label = { Text("Vehicle name *") },
                     trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = vehicleTypeExpanded)
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = vehicleNameExpanded)
                     },
                     modifier = Modifier
                         .fillMaxWidth()
                         .menuAnchor(),
                     shape = RoundedCornerShape(8.dp)
                 )
+
                 ExposedDropdownMenu(
-                    expanded = vehicleTypeExpanded,
-                    onDismissRequest = { vehicleTypeExpanded = false }
+                    expanded = vehicleNameExpanded,
+                    onDismissRequest = { vehicleNameExpanded = false }
                 ) {
-                    vehicleTypes.filter { it.contains(vehicleType, ignoreCase = true) }
-                        .forEach { type ->
+                    vehicles.filter { it.contains(vehicleName, ignoreCase = true) }
+                        .forEach { vehicle ->
                             DropdownMenuItem(
-                                text = { Text(type) },
+                                text = { Text(vehicle) },
                                 onClick = {
-                                    vehicleType = type
-                                    vehicleTypeExpanded = false
+                                    vehicleName = vehicle
+                                    vehicleNameExpanded = false
                                 }
                             )
                         }
@@ -179,19 +188,18 @@ fun FuelRequestScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Vehicle Number (NEW)
+            // Vehicle Number
             OutlinedTextField(
                 value = vehicleNumber,
                 onValueChange = { vehicleNumber = it },
-                label = { Text("Vehicle Number") },
-                placeholder = { Text("Eg: MH12AB1234") },
+                label = { Text("Vehicle number") },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(8.dp)
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Fuel Type Dropdown (NEW)
+            // Fuel Type Dropdown
             ExposedDropdownMenuBox(
                 expanded = fuelTypeExpanded,
                 onExpandedChange = { fuelTypeExpanded = it },
@@ -199,8 +207,11 @@ fun FuelRequestScreen(
             ) {
                 OutlinedTextField(
                     value = fuelType,
-                    onValueChange = { fuelType = it },
-                    label = { Text("Fuel Type") },
+                    onValueChange = { newValue ->
+                        fuelType = newValue
+                        fuelTypeExpanded = true
+                    },
+                    label = { Text("Fuel type *") },
                     trailingIcon = {
                         ExposedDropdownMenuDefaults.TrailingIcon(expanded = fuelTypeExpanded)
                     },
@@ -209,6 +220,7 @@ fun FuelRequestScreen(
                         .menuAnchor(),
                     shape = RoundedCornerShape(8.dp)
                 )
+
                 ExposedDropdownMenu(
                     expanded = fuelTypeExpanded,
                     onDismissRequest = { fuelTypeExpanded = false }
@@ -228,178 +240,205 @@ fun FuelRequestScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Odometer Reading (combined with image upload)
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    text = "Vehicle Odometer Reading",
-                    style = MaterialTheme.typography.labelLarge
+            // Quantity and Unit
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedTextField(
+                    value = quantity,
+                    onValueChange = { quantity = it },
+                    label = { Text("Quantity *") },
+                    modifier = Modifier.weight(0.6f),
+                    shape = RoundedCornerShape(8.dp),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Image upload section
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(160.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .border(1.dp, Color.LightGray, RoundedCornerShape(8.dp))
-                        .clickable { imageUploaded = true },
-                    contentAlignment = Alignment.Center
+                ExposedDropdownMenuBox(
+                    expanded = unitExpanded,
+                    onExpandedChange = { unitExpanded = it },
+                    modifier = Modifier.weight(0.4f)
                 ) {
-                    if (imageUploaded) {
-                        Surface(
-                            color = Color(0xFFE0F7FA),
-                            modifier = Modifier.fillMaxSize()
-                        ) {
+                    OutlinedTextField(
+                        value = unit,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Unit") },
+                        trailingIcon = {
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = unitExpanded)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(),
+                        shape = RoundedCornerShape(8.dp)
+                    )
+
+                    ExposedDropdownMenu(
+                        expanded = unitExpanded,
+                        onDismissRequest = { unitExpanded = false }
+                    ) {
+                        units.forEach { unitOption ->
+                            DropdownMenuItem(
+                                text = { Text(unitOption) },
+                                onClick = {
+                                    unit = unitOption
+                                    unitExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Cost Fields
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedTextField(
+                    value = costPerUnit,
+                    onValueChange = {
+                        costPerUnit = it
+                        // Calculate total cost if both fields have values
+                        if (it.isNotBlank() && quantity.isNotBlank()) {
+                            try {
+                                val cost = it.toFloat()
+                                val qty = quantity.toFloat()
+                                totalCost = (cost * qty).toString()
+                            } catch (e: Exception) {
+                                // Handle parsing error
+                            }
+                        }
+                    },
+                    label = { Text("Cost per unit (₹)") },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(8.dp),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                )
+
+                OutlinedTextField(
+                    value = totalCost,
+                    onValueChange = { totalCost = it },
+                    label = { Text("Total cost (₹)") },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(8.dp),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Driver Name
+            OutlinedTextField(
+                value = driverName,
+                onValueChange = { driverName = it },
+                label = { Text("Driver name") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp)
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Odometer and Purpose
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedTextField(
+                    value = odometer,
+                    onValueChange = { odometer = it },
+                    label = { Text("Odometer (km)") },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(8.dp),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                )
+
+                OutlinedTextField(
+                    value = purposeOfFuel,
+                    onValueChange = { purposeOfFuel = it },
+                    label = { Text("Purpose") },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(8.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Refill Location
+            OutlinedTextField(
+                value = refillLocation,
+                onValueChange = { refillLocation = it },
+                label = { Text("Refill location") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp)
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Upload Section with clickable cards
+            Text(
+                text = "Upload *",
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Card(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(100.dp)
+                        .clickable { imageUploaded = true },
+                    shape = RoundedCornerShape(8.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (imageUploaded) Color(0xFFE0F7FA) else MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (imageUploaded) {
                             Column(
-                                modifier = Modifier.fillMaxSize(),
-                                verticalArrangement = Arrangement.Center,
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Check,
                                     contentDescription = "Image Uploaded",
                                     tint = Color(0xFF4CAF50),
-                                    modifier = Modifier.size(40.dp)
+                                    modifier = Modifier.size(28.dp)
                                 )
-                                Text("Odometer Reading Image Uploaded", color = Color(0xFF4CAF50))
+                                Text("Receipt Uploaded", color = Color(0xFF4CAF50))
                             }
-                        }
-                    } else {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.PhotoCamera,
-                                contentDescription = "Upload Reading Image",
-                                tint = Color.Gray,
-                                modifier = Modifier.size(48.dp)
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text("Upload Odometer Reading Image", color = Color.Gray)
+                        } else {
+                            Text("Upload Fuel Receipt")
                         }
                     }
                 }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Manual odometer input
-                OutlinedTextField(
-                    value = odometerReading,
-                    onValueChange = { odometerReading = it },
-                    label = { Text("Current Odometer Reading (km)") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp),
-
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Opening Stock
-            OutlinedTextField(
-                value = openingStockLiters,
-                onValueChange = { openingStockLiters = it },
-                label = { Text("Opening Stock (liters)") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Quantity Needed
-            OutlinedTextField(
-                value = quantityNeeded,
-                onValueChange = { quantityNeeded = it },
-                label = { Text("Quantity Needed (liters)") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp),
-
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Expected Distance (NEW)
-            OutlinedTextField(
-                value = expectedDistance,
-                onValueChange = { expectedDistance = it },
-                label = { Text("Expected Distance (km)") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp),
-
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Purpose
-            OutlinedTextField(
-                value = purpose,
-                onValueChange = { purpose = it },
-                label = { Text("Purpose") },
-                placeholder = { Text("Eg: Harvesting, Transportation") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp)
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Description
+            // Notes/Description
             OutlinedTextField(
                 value = description,
                 onValueChange = { description = it },
-                label = { Text("Description") },
+                label = { Text("Notes") },
+                placeholder = { Text("Enter any additional notes about this fuel entry") },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(120.dp),
                 shape = RoundedCornerShape(8.dp)
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Driver Name Dropdown
-            ExposedDropdownMenuBox(
-                expanded = driverNameExpanded,
-                onExpandedChange = { driverNameExpanded = it },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                OutlinedTextField(
-                    value = driverName,
-                    onValueChange = { driverName = it },
-                    label = { Text("Driver Name") },
-                    trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = driverNameExpanded)
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .menuAnchor(),
-                    shape = RoundedCornerShape(8.dp)
-                )
-                ExposedDropdownMenu(
-                    expanded = driverNameExpanded,
-                    onDismissRequest = { driverNameExpanded = false }
-                ) {
-                    driverNames.filter { it.contains(driverName, ignoreCase = true) }
-                        .forEach { name ->
-                            DropdownMenuItem(
-                                text = { Text(name) },
-                                onClick = {
-                                    driverName = name
-                                    driverNameExpanded = false
-                                }
-                            )
-                        }
-                }
-            }
-
             Spacer(modifier = Modifier.height(24.dp))
 
             // Loading indicator
-            if (fuelRequestState is FuelViewModel.CreateFuelRequestState.Loading) {
+            if (createFuelState is FuelListViewModel.CreateFuelState.Loading) {
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = AgroPrimary)
                 }
@@ -409,36 +448,46 @@ fun FuelRequestScreen(
             // Submit Button
             Button(
                 onClick = {
-                    val entry = FuelEntry(
-                        date = date,
-                        openingStock = openingStockLiters,
-                        vehicleType = vehicleType,
-                        quantityIssued = quantityNeeded,
-                        closingStock = "", // Not used in this version
-                        purpose = purpose,
-                        requestedBy = "", // Not used in this version
-                        driverName = driverName,
-                        description = description,
-                        vehicleNumber = vehicleNumber,
-                        odometerReading = odometerReading,
-                        expectedDistance = expectedDistance,
-                        fuelType = fuelType
-                    )
-                    submittedEntry = entry
-                    viewModel.createFuelRequest(entry, "Fuel request for $vehicleType - $purpose")
+                    if (vehicleName.isNotBlank() && fuelType.isNotBlank() && quantity.isNotBlank()) {
+                        val fuelDetails = FuelDetails(
+                            fuelDate = fuelDate,
+                            vehicleName = vehicleName,
+                            vehicleNumber = vehicleNumber.ifBlank { null },
+                            fuelType = fuelType,
+                            quantity = quantity,
+                            unit = unit,
+                            costPerUnit = costPerUnit.ifBlank { null },
+                            totalCost = totalCost.ifBlank { null },
+                            driverName = driverName.ifBlank { null },
+                            odometer = odometer.ifBlank { null },
+                            purposeOfFuel = purposeOfFuel.ifBlank { null },
+                            refillLocation = refillLocation.ifBlank { null },
+                            notes = notes.ifBlank { null },
+                            uploadedFiles = null // TODO: Handle file uploads
+                        )
+                        submittedEntry = fuelDetails
+                        viewModel.createFuelTask(fuelDetails, description)
+                    }
                 },
-                enabled = openingStockLiters.isNotBlank() && vehicleType.isNotBlank() &&
-                        quantityNeeded.isNotBlank() && purpose.isNotBlank() &&
-                        driverName.isNotBlank() && imageUploaded &&
-                        vehicleNumber.isNotBlank() && odometerReading.isNotBlank() &&
-                        expectedDistance.isNotBlank() && fuelType.isNotBlank() &&
-                        fuelRequestState != FuelViewModel.CreateFuelRequestState.Loading,
+                enabled = vehicleName.isNotBlank() && fuelType.isNotBlank() && quantity.isNotBlank() &&
+                        imageUploaded &&
+                        createFuelState !is FuelListViewModel.CreateFuelState.Loading,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = AgroPrimary)
             ) {
                 Text("Submit")
+            }
+
+            // Error message
+            if (createFuelState is FuelListViewModel.CreateFuelState.Error) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = (createFuelState as FuelListViewModel.CreateFuelState.Error).message,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium
+                )
             }
         }
     }
