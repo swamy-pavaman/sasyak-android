@@ -130,15 +130,23 @@ fun AppNavGraph(
                 },
                 onBackClick = {
                     navController.popBackStack()
+                },
+                onTaskClick = {
+                    navController.popBackStack()
                 }
+
             )
         }
 
         composable(FuelRequestScreen.route) {
             FuelRequestScreen(
+                onTaskCreated = {
+                    navController.navigate(SprayingRequestScreen.route)
+                },
                 onBackClick = {
                     navController.popBackStack()
                 }
+
             )
         }
 
@@ -149,6 +157,8 @@ fun AppNavGraph(
                     navController.navigate(Screen.SowingRequestScreen.route)
                 },
                 onBackClick = {
+                    navController.popBackStack()
+                }, onTaskClick = {
                     navController.popBackStack()
                 }
             )
@@ -198,6 +208,9 @@ fun AppNavGraph(
                     navController.navigate(YieldRequestScreen.route)
                 },
                 onBackClick = {
+                    navController.popBackStack()
+                },
+                onTaskClick = {
                     navController.popBackStack()
                 }
             )

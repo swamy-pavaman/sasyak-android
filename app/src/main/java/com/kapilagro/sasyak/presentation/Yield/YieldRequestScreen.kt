@@ -2,6 +2,7 @@ package com.kapilagro.sasyak.presentation.yield
 
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -9,14 +10,17 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.kapilagro.sasyak.domain.models.YieldDetails
+import com.kapilagro.sasyak.presentation.common.components.SuccessDialog
 import com.kapilagro.sasyak.presentation.common.theme.*
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -27,34 +31,32 @@ import java.time.format.DateTimeFormatter
 fun YieldRequestScreen(
     onTaskCreated: () -> Unit,
     onBackClick: () -> Unit,
-    viewModel: YieldViewModel = hiltViewModel()
+    viewModel: YieldListViewModel = hiltViewModel()
 ) {
     val createYieldState by viewModel.createYieldState.collectAsState()
 
     // Dialog state
     var showSuccessDialog by remember { mutableStateOf(false) }
+    var submittedEntry by remember { mutableStateOf<YieldDetails?>(null) }
 
     // Form fields
     var harvestDate by remember { mutableStateOf(LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))) }
     var cropName by remember { mutableStateOf("") }
     var cropNameExpanded by remember { mutableStateOf(false) }
-    var fieldId by remember { mutableStateOf("") }
-    var fieldIdExpanded by remember { mutableStateOf(false) }
-    var areaSize by remember { mutableStateOf("") }
-    var harvestedQuantity by remember { mutableStateOf("") }
-    var yieldUnit by remember { mutableStateOf("Tonnes") }
+    var row by remember { mutableStateOf("") }
+    var rowExpanded by remember { mutableStateOf(false) }
+    var fieldArea by remember { mutableStateOf("") }
+    var yieldQuantity by remember { mutableStateOf("") }
+    var yieldUnit by remember { mutableStateOf("kg") }
     var yieldUnitExpanded by remember { mutableStateOf(false) }
-    var grainMoisture by remember { mutableStateOf("") }
-    var grainQuality by remember { mutableStateOf("") }
-    var grainQualityExpanded by remember { mutableStateOf(false) }
+    var qualityGrade by remember { mutableStateOf("") }
+    var qualityGradeExpanded by remember { mutableStateOf(false) }
+    var moistureContent by remember { mutableStateOf("") }
     var harvestMethod by remember { mutableStateOf("") }
     var harvestMethodExpanded by remember { mutableStateOf(false) }
-    var laborHours by remember { mutableStateOf("") }
-    var fuelUsed by remember { mutableStateOf("") }
-    var fuelUnit by remember { mutableStateOf("L") }
-    var fuelUnitExpanded by remember { mutableStateOf(false) }
-    var weatherCondition by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
+    var description by remember { mutableStateOf("") }
+    var imageUploaded by remember { mutableStateOf(false) }
 
     val crops = listOf(
         "Wheat", "Rice", "Maize", "Barley", "Sorghum",
@@ -63,40 +65,51 @@ fun YieldRequestScreen(
         "Sugarcane", "Groundnut", "Cotton", "Soybean", "Mustard"
     )
 
-    val fields = listOf("Field-001", "Field-002", "Field-003", "Field-004", "Field-005")
-    val yieldUnits = listOf("Kg", "Quintals", "Tonnes", "Bushels", "lb")
-    val fuelUnits = listOf("L", "gal")
-    val grainQualities = listOf("Premium", "Grade A", "Grade B", "Standard", "Below Standard")
-    val harvestMethods = listOf("Combine Harvester", "Manual", "Semi-mechanized", "Custom Harvester")
+    val rows = (1..20).map { it.toString() }
+
+    val units = listOf("kg", "tonnes", "quintals", "bags")
+
+    val grades = listOf("A", "B", "C", "Premium", "Standard", "Low")
+
+    val harvestMethods = listOf(
+        "Manual", "Combine Harvester", "Mechanical", "Semi-mechanical"
+    )
 
     // Handle task creation success
     LaunchedEffect(createYieldState) {
-        if (createYieldState is YieldViewModel.CreateYieldState.Success) {
-            showSuccessDialog = true
+        when (createYieldState) {
+            is YieldListViewModel.CreateYieldState.Success -> {
+                showSuccessDialog = true
+            }
+            else -> {
+                // Handle other states if needed
+            }
         }
     }
 
     // Success Dialog
-    if (showSuccessDialog) {
-        AlertDialog(
-            onDismissRequest = {
+    if (showSuccessDialog && submittedEntry != null) {
+        val details = listOf(
+            "Date" to submittedEntry!!.harvestDate,
+            "Crop Name" to submittedEntry!!.cropName,
+            "Row" to submittedEntry!!.row.toString(),
+            "Field Area" to (submittedEntry!!.fieldArea?.plus(" acres") ?: "Not specified"),
+            "Yield" to "${submittedEntry!!.yieldQuantity} ${submittedEntry!!.yieldUnit}",
+            "Quality" to (submittedEntry!!.qualityGrade ?: "Not specified"),
+            "Moisture" to (submittedEntry!!.moistureContent?.plus("%") ?: "Not specified"),
+            "Method" to (submittedEntry!!.harvestMethod ?: "Not specified")
+        )
+
+        SuccessDialog(
+            title = "Yield Report Sent!",
+            message = "Your manager will be notified when they take action on it.",
+            details = details,
+            description = description,
+            primaryButtonText = "OK",
+            onPrimaryButtonClick = {
                 showSuccessDialog = false
                 viewModel.clearCreateYieldState()
                 onTaskCreated()
-            },
-            title = { Text("Success") },
-            text = { Text("Yield record created successfully!") },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showSuccessDialog = false
-                        viewModel.clearCreateYieldState()
-                        onTaskCreated()
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = AgroPrimary)
-                ) {
-                    Text("OK")
-                }
             }
         )
     }
@@ -173,19 +186,19 @@ fun YieldRequestScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Field ID Dropdown
+            // Row Dropdown
             ExposedDropdownMenuBox(
-                expanded = fieldIdExpanded,
-                onExpandedChange = { fieldIdExpanded = it },
+                expanded = rowExpanded,
+                onExpandedChange = { rowExpanded = it },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 OutlinedTextField(
-                    value = fieldId,
+                    value = row,
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("Field ID *") },
+                    label = { Text("Row *") },
                     trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = fieldIdExpanded)
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = rowExpanded)
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -194,15 +207,15 @@ fun YieldRequestScreen(
                 )
 
                 ExposedDropdownMenu(
-                    expanded = fieldIdExpanded,
-                    onDismissRequest = { fieldIdExpanded = false }
+                    expanded = rowExpanded,
+                    onDismissRequest = { rowExpanded = false }
                 ) {
-                    fields.forEach { field ->
+                    rows.forEach { rowNumber ->
                         DropdownMenuItem(
-                            text = { Text(field) },
+                            text = { Text(rowNumber) },
                             onClick = {
-                                fieldId = field
-                                fieldIdExpanded = false
+                                row = rowNumber
+                                rowExpanded = false
                             }
                         )
                     }
@@ -211,36 +224,32 @@ fun YieldRequestScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Area Size
+            // Field Area
             OutlinedTextField(
-                value = areaSize,
-                onValueChange = { areaSize = it },
-                label = { Text("Area size (acres) *") },
+                value = fieldArea,
+                onValueChange = { fieldArea = it },
+                label = { Text("Field area (acres)") },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(8.dp),
-
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Harvested Quantity and Unit in same row
+            // Yield Quantity and Unit
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Harvested Quantity
                 OutlinedTextField(
-                    value = harvestedQuantity,
-                    onValueChange = { harvestedQuantity = it },
-                    label = { Text("Harvested quantity *") },
+                    value = yieldQuantity,
+                    onValueChange = { yieldQuantity = it },
+                    label = { Text("Yield quantity *") },
                     modifier = Modifier.weight(0.6f),
                     shape = RoundedCornerShape(8.dp),
-
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                 )
 
-                // Yield Unit Dropdown
                 ExposedDropdownMenuBox(
                     expanded = yieldUnitExpanded,
                     onExpandedChange = { yieldUnitExpanded = it },
@@ -250,7 +259,7 @@ fun YieldRequestScreen(
                         value = yieldUnit,
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Unit") },
+                        label = { Text("Unit *") },
                         trailingIcon = {
                             ExposedDropdownMenuDefaults.TrailingIcon(expanded = yieldUnitExpanded)
                         },
@@ -264,7 +273,7 @@ fun YieldRequestScreen(
                         expanded = yieldUnitExpanded,
                         onDismissRequest = { yieldUnitExpanded = false }
                     ) {
-                        yieldUnits.forEach { unit ->
+                        units.forEach { unit ->
                             DropdownMenuItem(
                                 text = { Text(unit) },
                                 onClick = {
@@ -279,31 +288,21 @@ fun YieldRequestScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Grain Moisture
-            OutlinedTextField(
-                value = grainMoisture,
-                onValueChange = { grainMoisture = it },
-                label = { Text("Grain moisture (%)") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp),
-
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Grain Quality Dropdown
+            // Quality Grade Dropdown
             ExposedDropdownMenuBox(
-                expanded = grainQualityExpanded,
-                onExpandedChange = { grainQualityExpanded = it },
+                expanded = qualityGradeExpanded,
+                onExpandedChange = { qualityGradeExpanded = it },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 OutlinedTextField(
-                    value = grainQuality,
-                    onValueChange = { grainQuality = it },
-                    label = { Text("Grain quality") },
+                    value = qualityGrade,
+                    onValueChange = { newValue ->
+                        qualityGrade = newValue
+                        qualityGradeExpanded = true
+                    },
+                    label = { Text("Quality grade") },
                     trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = grainQualityExpanded)
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = qualityGradeExpanded)
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -312,20 +311,33 @@ fun YieldRequestScreen(
                 )
 
                 ExposedDropdownMenu(
-                    expanded = grainQualityExpanded,
-                    onDismissRequest = { grainQualityExpanded = false }
+                    expanded = qualityGradeExpanded,
+                    onDismissRequest = { qualityGradeExpanded = false }
                 ) {
-                    grainQualities.forEach { quality ->
-                        DropdownMenuItem(
-                            text = { Text(quality) },
-                            onClick = {
-                                grainQuality = quality
-                                grainQualityExpanded = false
-                            }
-                        )
-                    }
+                    grades.filter { it.contains(qualityGrade, ignoreCase = true) }
+                        .forEach { grade ->
+                            DropdownMenuItem(
+                                text = { Text(grade) },
+                                onClick = {
+                                    qualityGrade = grade
+                                    qualityGradeExpanded = false
+                                }
+                            )
+                        }
                 }
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Moisture Content
+            OutlinedTextField(
+                value = moistureContent,
+                onValueChange = { moistureContent = it },
+                label = { Text("Moisture content (%)") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -337,7 +349,10 @@ fun YieldRequestScreen(
             ) {
                 OutlinedTextField(
                     value = harvestMethod,
-                    onValueChange = { harvestMethod = it },
+                    onValueChange = { newValue ->
+                        harvestMethod = newValue
+                        harvestMethodExpanded = true
+                    },
                     label = { Text("Harvest method") },
                     trailingIcon = {
                         ExposedDropdownMenuDefaults.TrailingIcon(expanded = harvestMethodExpanded)
@@ -352,100 +367,22 @@ fun YieldRequestScreen(
                     expanded = harvestMethodExpanded,
                     onDismissRequest = { harvestMethodExpanded = false }
                 ) {
-                    harvestMethods.forEach { method ->
-                        DropdownMenuItem(
-                            text = { Text(method) },
-                            onClick = {
-                                harvestMethod = method
-                                harvestMethodExpanded = false
-                            }
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Labor Hours
-            OutlinedTextField(
-                value = laborHours,
-                onValueChange = { laborHours = it },
-                label = { Text("Labor hours") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp),
-
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Fuel Used and Unit in same row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                // Fuel Used
-                OutlinedTextField(
-                    value = fuelUsed,
-                    onValueChange = { fuelUsed = it },
-                    label = { Text("Fuel used") },
-                    modifier = Modifier.weight(0.6f),
-                    shape = RoundedCornerShape(8.dp),
-
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                )
-
-                // Fuel Unit Dropdown
-                ExposedDropdownMenuBox(
-                    expanded = fuelUnitExpanded,
-                    onExpandedChange = { fuelUnitExpanded = it },
-                    modifier = Modifier.weight(0.4f)
-                ) {
-                    OutlinedTextField(
-                        value = fuelUnit,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Unit") },
-                        trailingIcon = {
-                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = fuelUnitExpanded)
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .menuAnchor(),
-                        shape = RoundedCornerShape(8.dp)
-                    )
-
-                    ExposedDropdownMenu(
-                        expanded = fuelUnitExpanded,
-                        onDismissRequest = { fuelUnitExpanded = false }
-                    ) {
-                        fuelUnits.forEach { unit ->
+                    harvestMethods.filter { it.contains(harvestMethod, ignoreCase = true) }
+                        .forEach { method ->
                             DropdownMenuItem(
-                                text = { Text(unit) },
+                                text = { Text(method) },
                                 onClick = {
-                                    fuelUnit = unit
-                                    fuelUnitExpanded = false
+                                    harvestMethod = method
+                                    harvestMethodExpanded = false
                                 }
                             )
                         }
-                    }
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Weather Condition
-            OutlinedTextField(
-                value = weatherCondition,
-                onValueChange = { weatherCondition = it },
-                label = { Text("Weather condition") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp)
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Upload Section
+            // Upload Section with clickable cards
             Text(
                 text = "Upload *",
                 style = MaterialTheme.typography.bodyLarge,
@@ -459,22 +396,40 @@ fun YieldRequestScreen(
                 Card(
                     modifier = Modifier
                         .weight(1f)
-                        .height(100.dp),
+                        .height(100.dp)
+                        .clickable { imageUploaded = true },
                     shape = RoundedCornerShape(8.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (imageUploaded) Color(0xFFE0F7FA) else MaterialTheme.colorScheme.surfaceVariant
+                    )
                 ) {
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("Upload Harvest Image")
+                        if (imageUploaded) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Image Uploaded",
+                                    tint = Color(0xFF4CAF50),
+                                    modifier = Modifier.size(28.dp)
+                                )
+                                Text("Image Uploaded", color = Color(0xFF4CAF50))
+                            }
+                        } else {
+                            Text("Upload Harvest Image")
+                        }
                     }
                 }
 
                 Card(
                     modifier = Modifier
                         .weight(1f)
-                        .height(100.dp),
+                        .height(100.dp)
+                        .clickable { /* Handle video upload */ },
                     shape = RoundedCornerShape(8.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                 ) {
@@ -482,19 +437,19 @@ fun YieldRequestScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("Upload Grain Sample Image")
+                        Text("Upload Harvest Video")
                     }
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Notes
+            // Notes/Description
             OutlinedTextField(
-                value = notes,
-                onValueChange = { notes = it },
-                label = { Text("Notes") },
-                placeholder = { Text("Enter any additional details about the harvest") },
+                value = description,
+                onValueChange = { description = it },
+                label = { Text("Notes/Description") },
+                placeholder = { Text("Enter details about the harvest, quality, and any observations") },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(120.dp),
@@ -503,54 +458,51 @@ fun YieldRequestScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            // Loading indicator
+            if (createYieldState is YieldListViewModel.CreateYieldState.Loading) {
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = AgroPrimary)
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
             // Submit Button
             Button(
                 onClick = {
-                    if (cropName.isNotBlank() && fieldId.isNotBlank() &&
-                        areaSize.isNotBlank() && harvestedQuantity.isNotBlank()) {
+                    if (cropName.isNotBlank() && row.isNotBlank() && yieldQuantity.isNotBlank() && yieldUnit.isNotBlank()) {
                         val yieldDetails = YieldDetails(
                             harvestDate = harvestDate,
                             cropName = cropName,
-                            fieldId = fieldId,
-                            areaSize = areaSize.toDoubleOrNull() ?: 0.0,
-                            harvestedQuantity = harvestedQuantity.toDoubleOrNull() ?: 0.0,
+                            row = row.toInt(),
+                            fieldArea = fieldArea.ifBlank { null },
+                            yieldQuantity = yieldQuantity,
                             yieldUnit = yieldUnit,
-                            grainMoisture = grainMoisture.ifBlank { null },
-                            grainQuality = grainQuality.ifBlank { null },
+                            qualityGrade = qualityGrade.ifBlank { null },
+                            moistureContent = moistureContent.ifBlank { null },
                             harvestMethod = harvestMethod.ifBlank { null },
-                            laborHours = laborHours.toDoubleOrNull(),
-                            fuelUsed = fuelUsed.toDoubleOrNull(),
-                            fuelUnit = if (fuelUsed.isBlank()) null else fuelUnit,
-                            weatherCondition = weatherCondition.ifBlank { null },
                             notes = notes.ifBlank { null },
                             uploadedFiles = null // TODO: Handle file uploads
                         )
-                        viewModel.createYieldTask(yieldDetails, notes)
+                        submittedEntry = yieldDetails
+                        viewModel.createYieldTask(yieldDetails, description)
                     }
                 },
-                enabled = cropName.isNotBlank() && fieldId.isNotBlank() &&
-                        areaSize.isNotBlank() && harvestedQuantity.isNotBlank() &&
-                        createYieldState !is YieldViewModel.CreateYieldState.Loading,
+                enabled = cropName.isNotBlank() && row.isNotBlank() && yieldQuantity.isNotBlank() &&
+                        yieldUnit.isNotBlank() && imageUploaded &&
+                        createYieldState !is YieldListViewModel.CreateYieldState.Loading,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = AgroPrimary)
             ) {
-                if (createYieldState is YieldViewModel.CreateYieldState.Loading) {
-                    CircularProgressIndicator(
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.size(24.dp)
-                    )
-                } else {
-                    Text("Submit")
-                }
+                Text("Submit")
             }
 
             // Error message
-            if (createYieldState is YieldViewModel.CreateYieldState.Error) {
+            if (createYieldState is YieldListViewModel.CreateYieldState.Error) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = (createYieldState as YieldViewModel.CreateYieldState.Error).message,
+                    text = (createYieldState as YieldListViewModel.CreateYieldState.Error).message,
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodyMedium
                 )
