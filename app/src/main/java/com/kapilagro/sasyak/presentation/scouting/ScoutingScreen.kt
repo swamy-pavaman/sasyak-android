@@ -46,16 +46,12 @@ fun ScoutingScreen(
     val tasksState by viewModel.tasksState.collectAsState()
     val isRefreshing by viewModel.refreshing.collectAsState()
     val listState = rememberLazyListState()
-
-    // Selected tab for filtering
     var selectedTaskTab by remember { mutableStateOf(0) }
 
-    // Load tasks on first composition
     LaunchedEffect(Unit) {
         viewModel.loadScoutingTasks()
     }
 
-    // Pagination trigger
     LaunchedEffect(listState) {
         snapshotFlow {
             val layoutInfo = listState.layoutInfo
@@ -77,37 +73,35 @@ fun ScoutingScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            CenterAlignedTopAppBar(
                 title = { Text("Scouting") },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = ScoutingIcon,
-                    titleContentColor = Color.White,
-                    navigationIconContentColor = Color.White
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
+            ExtendedFloatingActionButton(
                 onClick = { onTaskCreated() },
-                containerColor = AgroPrimary
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                icon = {
                     Icon(
                         imageVector = Icons.Default.Add,
                         contentDescription = "Add Scouting"
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                },
+                text = {
                     Text("New Scouting")
                 }
-            }
+            )
         }
     ) { paddingValues ->
         Column(
@@ -116,7 +110,6 @@ fun ScoutingScreen(
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp)
         ) {
-            // Task title and count
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -129,24 +122,22 @@ fun ScoutingScreen(
                     style = MaterialTheme.typography.titleLarge
                 )
 
-                // Show task count when available
                 if (tasksState is ScoutingListViewModel.TasksState.Success) {
                     val taskCount = (tasksState as ScoutingListViewModel.TasksState.Success).tasks.size
                     Surface(
-                        color = ScoutingContainer,
+                        color = MaterialTheme.colorScheme.secondaryContainer,
                         shape = RoundedCornerShape(16.dp)
                     ) {
                         Text(
                             text = "$taskCount Tasks",
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                             style = MaterialTheme.typography.labelMedium,
-                            color = ScoutingIcon
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
                         )
                     }
                 }
             }
 
-            // Segmented control for filtering
             SegmentedTaskControl(
                 selectedIndex = selectedTaskTab,
                 onSegmentSelected = { selectedTaskTab = it }
@@ -154,7 +145,6 @@ fun ScoutingScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Task list with SwipeRefresh
             SwipeRefresh(
                 state = rememberSwipeRefreshState(isRefreshing),
                 onRefresh = { viewModel.refreshTasks() },
@@ -166,7 +156,7 @@ fun ScoutingScreen(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center
                         ) {
-                            CircularProgressIndicator(color = ScoutingIcon)
+                            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                         }
                     }
 
@@ -174,24 +164,20 @@ fun ScoutingScreen(
                         val allTasks = (tasksState as ScoutingListViewModel.TasksState.Success).tasks
                         val isLastPage = (tasksState as ScoutingListViewModel.TasksState.Success).isLastPage
 
-                        // Filter tasks based on the selected tab
                         val filteredTasks = when (selectedTaskTab) {
-//                            0 -> allTasks.filter { it.status.equals("assigned", ignoreCase = true) }
                             0 -> allTasks.filter { it.status.equals("approved", ignoreCase = true) }
                             1 -> allTasks.filter { it.status.equals("rejected", ignoreCase = true) }
-                            2 -> allTasks // All tasks
+                            2 -> allTasks
                             else -> allTasks
                         }
 
                         if (filteredTasks.isEmpty()) {
-                            // Show empty state
                             EmptyStateForTasks(selectedTaskTab)
                         } else {
-                            // Show task list
                             LazyColumn(
                                 state = listState,
                                 modifier = Modifier.fillMaxSize(),
-                                contentPadding = PaddingValues(bottom = 80.dp) // Space for FAB
+                                contentPadding = PaddingValues(bottom = 80.dp)
                             ) {
                                 items(filteredTasks) { task ->
                                     TaskCard(
@@ -200,7 +186,6 @@ fun ScoutingScreen(
                                     )
                                 }
 
-                                // Add a footer when loading more items
                                 if (!isLastPage) {
                                     item {
                                         Box(
@@ -211,7 +196,7 @@ fun ScoutingScreen(
                                         ) {
                                             CircularProgressIndicator(
                                                 modifier = Modifier.size(36.dp),
-                                                color = ScoutingIcon
+                                                color = MaterialTheme.colorScheme.primary
                                             )
                                         }
                                     }
@@ -248,14 +233,13 @@ fun EmptyStateForTasks(selectedTab: Int) {
             Icon(
                 imageVector = Icons.Default.Search,
                 contentDescription = null,
-                tint = ScoutingIcon.copy(alpha = 0.5f),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                 modifier = Modifier.size(80.dp)
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
             val message = when (selectedTab) {
-//                0 -> "No assigned scouting tasks"
                 0 -> "No approved scouting tasks"
                 1 -> "No rejected scouting tasks"
                 else -> "No scouting tasks found"
@@ -284,8 +268,7 @@ fun SegmentedTaskControl(
     selectedIndex: Int,
     onSegmentSelected: (Int) -> Unit
 ) {
-//    val segments = listOf("assigned", "Approved", "Rejected", "All")
-    val segments = listOf( "Approved", "Rejected", "All")
+    val segments = listOf("Approved", "Rejected", "All")
 
     Row(
         modifier = Modifier
@@ -304,7 +287,7 @@ fun SegmentedTaskControl(
                     .weight(1f)
                     .clip(RoundedCornerShape(20.dp))
                     .background(
-                        if (isSelected) ScoutingIcon
+                        if (isSelected) MaterialTheme.colorScheme.primary
                         else Color.Transparent
                     )
                     .clickable { onSegmentSelected(index) }
@@ -313,7 +296,7 @@ fun SegmentedTaskControl(
             ) {
                 Text(
                     text = label,
-                    color = if (isSelected) Color.White
+                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary
                     else MaterialTheme.colorScheme.onSurface,
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center
@@ -322,3 +305,5 @@ fun SegmentedTaskControl(
         }
     }
 }
+
+
