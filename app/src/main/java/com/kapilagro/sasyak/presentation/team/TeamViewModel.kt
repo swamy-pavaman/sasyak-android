@@ -3,6 +3,7 @@ package com.kapilagro.sasyak.presentation.team
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kapilagro.sasyak.domain.models.ApiResponse
+import com.kapilagro.sasyak.domain.models.TeamMember
 import com.kapilagro.sasyak.domain.models.User
 import com.kapilagro.sasyak.domain.repositories.UserRepository
 import com.kapilagro.sasyak.presentation.team.TeamViewModel.TeamState.*
@@ -43,7 +44,7 @@ class TeamViewModel @Inject constructor(
 
     sealed class TeamState {
         object Loading : TeamState()
-        data class Success(val teamMembers: List<User>) : TeamState()
+        data class Success(val teamMembers: List<TeamMember>) : TeamState()
         data class Error(val message: String) : TeamState()
     }
 }
