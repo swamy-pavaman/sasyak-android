@@ -54,6 +54,7 @@ fun HomeScreen(
     onSowingTaskClick: () -> Unit,
     onSprayingTaskClick: () -> Unit,
     onYieldTaskClick: () -> Unit,
+    onTeamClick:()->Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val userState by viewModel.userState.collectAsState()
@@ -228,7 +229,8 @@ fun HomeScreen(
                     ManagerHomeContent(
                         onTaskClick = onTaskClick,
                         tasksState = tasksState,
-                        loadTasksData = { viewModel.loadTasksData() }
+                        loadTasksData = { viewModel.loadTasksData() },
+                        onTeamClick=onTeamClick
                     )
                 }
                 "SUPERVISOR" -> {
@@ -263,7 +265,8 @@ fun HomeScreen(
 fun ManagerHomeContent(
     onTaskClick: (String) -> Unit,
     tasksState: HomeViewModel.TasksState,
-    loadTasksData: () -> Unit
+    loadTasksData: () -> Unit,
+    onTeamClick: ()-> Unit,
 ) {
     // Manager-specific quick actions
     Text(
@@ -284,7 +287,7 @@ fun ManagerHomeContent(
             label = "Team",
             backgroundColor = TeamIcon,
             containerColor = TeamContainer,
-            onClick = { /* Handle team management */ }
+            onClick = onTeamClick
         )
 
         QuickActionButton(

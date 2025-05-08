@@ -44,6 +44,8 @@ import com.kapilagro.sasyak.presentation.spraying.SprayingScreen
 import com.kapilagro.sasyak.presentation.tasks.CreateTaskScreen
 import com.kapilagro.sasyak.presentation.tasks.TaskDetailScreen
 import com.kapilagro.sasyak.presentation.tasks.TaskListScreen
+import com.kapilagro.sasyak.presentation.team.TeamMemberDetailScreen
+import com.kapilagro.sasyak.presentation.team.TeamScreen
 import com.kapilagro.sasyak.presentation.weather.WeatherDetailScreen
 import com.kapilagro.sasyak.presentation.yield.YieldRequestScreen
 import com.kapilagro.sasyak.presentation.yield.YieldScreen
@@ -76,6 +78,34 @@ fun AppNavGraph(
                 }
             )
         }
+
+        // Team screens
+        composable(Screen.Team.route) {
+            TeamScreen(
+                onBackClick = {
+                    navController.popBackStack()
+                },
+                onTeamMemberClick = { teamMemberId ->
+                    navController.navigate(Screen.TeamMemberDetail.createRoute(teamMemberId.toString()))
+                }
+            )
+        }
+
+        composable(
+            route = Screen.TeamMemberDetail.route,
+            arguments = listOf(
+                navArgument("teamMemberId") { type = NavType.IntType }
+            )
+        ) { backStackEntry ->
+            val teamMemberId = backStackEntry.arguments?.getInt("teamMemberId") ?: -1
+            TeamMemberDetailScreen(
+                teamMemberId = teamMemberId,
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
 
         // Scouting Request screen
         composable(Screen.ScoutingRequestScreen.route) {
@@ -262,7 +292,11 @@ fun AppNavGraph(
                     navController.navigate(Screen.SowingScreen.route)
                 },
                 onSprayingTaskClick = {
-                    navController.navigate(Screen.SprayingScreen.route)
+                    navController.navigate(SprayingRequestScreen.route)
+                },
+                onTeamClick={
+                    navController.navigate(Screen.Team.route)
+                
                 },
                 onYieldTaskClick = {
                     navController.navigate(Screen.YieldScreen.route)
@@ -377,6 +411,9 @@ fun AppNavGraph(
             )
         }
     }
+
+    // Add these to the NavHost in the AppNavGraph.kt file
+
 
     // Handle authentication state changes
     LaunchedEffect(authState) {
