@@ -6,7 +6,7 @@ data class Task(
     val id: Int,
     val title: String,
     val description: String,
-    val status: String, // "pending", "approved", "rejected", "implemented"
+    val status: String, //  "approved", "rejected", "implemented", "submitted"
     val taskType: String, // "scouting", "spraying", "sowing", "fuel", "yield"
     val createdBy: String,
     val assignedTo: String?,

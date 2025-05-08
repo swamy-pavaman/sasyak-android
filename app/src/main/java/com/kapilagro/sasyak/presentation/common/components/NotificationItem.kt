@@ -19,6 +19,8 @@ import com.kapilagro.sasyak.domain.models.Notification
 import com.kapilagro.sasyak.presentation.common.theme.Green500
 import com.kapilagro.sasyak.presentation.common.theme.StatusApproved
 import com.kapilagro.sasyak.presentation.common.theme.StatusRejected
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 @Composable
 fun NotificationItem(
@@ -84,8 +86,4 @@ fun NotificationItem(
         }
     }
 }
-internal fun formatDateTime(dateTimeString: String): String {
-    // Placeholder implementation
-    // In a real app, parse the date string and format it
-    return dateTimeString
-}
+

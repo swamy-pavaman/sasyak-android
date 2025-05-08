@@ -8,6 +8,8 @@ import retrofit2.Response
 import retrofit2.http.*
 
 interface ApiService {
+
+
     @POST("api/auth/login")
     suspend fun login(@Body loginRequest: LoginRequest): Response<AuthResponse>
 
@@ -113,4 +115,11 @@ interface ApiService {
     // Global search endpoint
     @GET("api/search")
     suspend fun searchGlobal(@Query("query") query: String): Response<SearchResultsResponse>
+
+    @GET("api/tasks/type/{taskType}")
+    suspend fun getTasksByType(
+        @Path("taskType") taskType: String,
+        @Query("page") page: Int = 0,
+        @Query("size") size: Int = 10
+    ): Response<TaskListResponse>
 }

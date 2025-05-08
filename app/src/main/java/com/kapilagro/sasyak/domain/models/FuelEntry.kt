@@ -20,7 +20,7 @@ data class FuelEntry(
     val odometerImageUrl: String? = null,
     val requestedBy: String? = null,
     val approvedBy: String? = null,
-    val status: String = "PENDING", // PENDING, APPROVED, REJECTED
+    val status: String = "SUBMITTED", // PENDING, APPROVED, REJECTED
     val closingStock: String? = null,
     val createdAt: String? = null,
     val updatedAt: String? = null

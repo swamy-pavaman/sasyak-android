@@ -37,6 +37,7 @@ import com.kapilagro.sasyak.presentation.scanner.ScanResultScreen
 import com.kapilagro.sasyak.presentation.scanner.ScannerScreen
 import com.kapilagro.sasyak.presentation.scouting.ScoutingScreen
 import com.kapilagro.sasyak.presentation.scouting.ScoutingRequestScreen
+import com.kapilagro.sasyak.presentation.scouting.ScoutingTaskDetailScreen
 import com.kapilagro.sasyak.presentation.sowing.SowingRequestScreen
 import com.kapilagro.sasyak.presentation.sowing.SowingScreen
 import com.kapilagro.sasyak.presentation.spraying.SprayingRequestScreen
@@ -75,7 +76,9 @@ fun AppNavGraph(
                 },
                 onBackClick = {
                     navController.popBackStack()
-                }
+                },
+                onTaskClick = TODO(),
+                viewModel = TODO()
             )
         }
 
@@ -166,7 +169,7 @@ fun AppNavGraph(
         composable(Screen.SprayingScreen.route) {
             SprayingScreen(
                 onTaskCreated = {
-                    navController.navigate(Screen.SprayingRequestScreen.route)
+                    navController.navigate(SprayingRequestScreen.route)
                 },
                 onBackClick = {
                     navController.popBackStack()
@@ -174,7 +177,7 @@ fun AppNavGraph(
             )
         }
 
-        composable(Screen.SprayingRequestScreen.route) {
+        composable(SprayingRequestScreen.route) {
             SprayingRequestScreen(
                 onTaskCreated = {
                     navController.popBackStack()
@@ -189,7 +192,7 @@ fun AppNavGraph(
         composable(Screen.YieldScreen.route) {
             YieldScreen(
                 onTaskCreated = {
-                    navController.navigate(Screen.YieldRequestScreen.route)
+                    navController.navigate(YieldRequestScreen.route)
                 },
                 onBackClick = {
                     navController.popBackStack()
@@ -197,7 +200,7 @@ fun AppNavGraph(
             )
         }
 
-        composable(Screen.YieldRequestScreen.route) {
+        composable(YieldRequestScreen.route) {
             YieldRequestScreen(
                 onTaskCreated = {
                     navController.popBackStack()
@@ -292,7 +295,7 @@ fun AppNavGraph(
                     navController.navigate(Screen.SowingScreen.route)
                 },
                 onSprayingTaskClick = {
-                    navController.navigate(SprayingRequestScreen.route)
+                    navController.navigate(Screen.SprayingScreen.route)
                 },
                 onTeamClick={
                     navController.navigate(Screen.Team.route)
@@ -313,6 +316,38 @@ fun AppNavGraph(
                 onTaskClick = { taskId ->
                     navController.navigate(Screen.TaskDetail.createRoute(taskId.toString()))
                 },onBackClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        // Add these within the AppNavGraph composable in NavGraph.kt
+
+        composable(Screen.Scouting.route) {
+            ScoutingScreen(
+                onTaskCreated = {
+                    navController.navigate(Screen.ScoutingRequestScreen.route)
+                },
+                onTaskClick = { taskId ->
+                    navController.navigate("scouting_task_detail/$taskId")
+                },
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+// Add this new route
+        composable(
+            route = "scouting_task_detail/{taskId}",
+            arguments = listOf(
+                navArgument("taskId") { type = NavType.IntType }
+            )
+        ) { backStackEntry ->
+            val taskId = backStackEntry.arguments?.getInt("taskId") ?: -1
+            ScoutingTaskDetailScreen(
+                taskId = taskId,
+                onBackClick = {
                     navController.popBackStack()
                 }
             )

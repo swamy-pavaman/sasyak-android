@@ -21,6 +21,8 @@ kotlin-serialization = "1.6.3"
 kotlin-serialization-plugin = "1.9.20"
 
 
+
+
 [plugins]
 android-application = { id = "com.android.application", version = "8.3.0" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version = "1.9.20" }
@@ -34,6 +36,7 @@ kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", versi
 
 
 [libraries]
+accompanist-swiperefresh = { module = "com.google.accompanist:accompanist-swiperefresh", version.ref = "accompanist" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlin-serialization" }
 
 androidx-material = { module = "androidx.compose.material:material", version.ref = "material" }
