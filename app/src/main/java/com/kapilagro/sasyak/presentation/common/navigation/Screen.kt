@@ -32,6 +32,11 @@ sealed class Screen(val route: String, val title: String, @DrawableRes val icon:
     object FuelRequestScreen : Screen("fuel_request_screen", "Fuel Request")
     object YieldRequestScreen : Screen("yield_request", "Yield Request")
 
+    // Add these to the Screen sealed class in the common/navigation/Screen.kt file
+    object Team : Screen("team", "Team Members")
+    object TeamMemberDetail : Screen("team_member_detail/{teamMemberId}", "Team Member Detail") {
+        fun createRoute(teamMemberId: String) = "team_member_detail/$teamMemberId"
+    }
 
 
 
