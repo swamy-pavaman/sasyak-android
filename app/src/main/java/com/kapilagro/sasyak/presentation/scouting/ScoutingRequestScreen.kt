@@ -31,7 +31,7 @@ import java.time.format.DateTimeFormatter
 fun ScoutingRequestScreen(
     onTaskCreated: () -> Unit,
     onBackClick: () -> Unit,
-    viewModel: ScoutingViewModel = hiltViewModel()
+    viewModel: ScoutingListViewModel = hiltViewModel()
 ) {
     val createScoutingState by viewModel.createScoutingState.collectAsState()
 
@@ -66,7 +66,7 @@ fun ScoutingRequestScreen(
     // Handle task creation success
     LaunchedEffect(createScoutingState) {
         when (createScoutingState) {
-            is ScoutingViewModel.CreateScoutingState.Success -> {
+            is ScoutingListViewModel.CreateScoutingState.Success -> {
                 showSuccessDialog = true
             }
             else -> {
@@ -377,7 +377,7 @@ fun ScoutingRequestScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             // Loading indicator
-            if (createScoutingState is ScoutingViewModel.CreateScoutingState.Loading) {
+            if (createScoutingState is ScoutingListViewModel.CreateScoutingState.Loading) {
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = AgroPrimary)
                 }
@@ -405,7 +405,7 @@ fun ScoutingRequestScreen(
                 },
                 enabled = cropName.isNotBlank() && row.isNotBlank() && treeNo.isNotBlank() &&
                         imageUploaded && // Added upload validation
-                        createScoutingState !is ScoutingViewModel.CreateScoutingState.Loading,
+                        createScoutingState !is ScoutingListViewModel.CreateScoutingState.Loading,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
@@ -415,10 +415,10 @@ fun ScoutingRequestScreen(
             }
 
             // Error message
-            if (createScoutingState is ScoutingViewModel.CreateScoutingState.Error) {
+            if (createScoutingState is ScoutingListViewModel.CreateScoutingState.Error) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = (createScoutingState as ScoutingViewModel.CreateScoutingState.Error).message,
+                    text = (createScoutingState as ScoutingListViewModel.CreateScoutingState.Error).message,
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodyMedium
                 )

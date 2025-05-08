@@ -39,4 +39,10 @@ interface TaskDao {
 
     @Query("DELETE FROM tasks")
     suspend fun deleteAllTasks()
+
+    @Query("SELECT * FROM tasks WHERE taskType = :taskType LIMIT :limit OFFSET :offset")
+    fun getTasksByType(taskType: String, limit: Int, offset: Int): Flow<List<TaskEntity>>
+
+    @Query("SELECT COUNT(*) FROM tasks WHERE taskType = :taskType")
+    fun getTaskCountByType(taskType: String): Int
 }

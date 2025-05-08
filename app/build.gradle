@@ -106,6 +106,7 @@ dependencies {
     implementation(libs.camera.lifecycle)
     implementation(libs.camera.view)
 
+    implementation(libs.accompanist.swiperefresh)
     implementation(libs.coil.compose)
 
     testImplementation(libs.junit)

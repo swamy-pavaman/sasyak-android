@@ -19,4 +19,5 @@ interface TaskRepository {
     suspend fun updateTaskStatus(taskId: Int, status: String, comment: String?): ApiResponse<Task>
     suspend fun updateTaskImplementation(taskId: Int, implementationJson: String): ApiResponse<Task>
     suspend fun getTaskReport(): ApiResponse<TaskReport>
+    suspend fun getTasksByType(taskType: String, page: Int = 0, size: Int = 10): ApiResponse<Pair<List<Task>, Int>>
 }

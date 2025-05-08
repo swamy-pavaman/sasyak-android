@@ -23,9 +23,9 @@ fun ApiAuthResponse.toDomainModel(): DomainAuthResponse {
         accessToken = accessToken,
         refreshToken = refreshToken,
         email = email,
-        name = name,
-        userId = userId,
-        role = role
+        name = name?:"user",
+        userId = userId?:0,
+        role = role?:"supervisor"
     )
 }
 
