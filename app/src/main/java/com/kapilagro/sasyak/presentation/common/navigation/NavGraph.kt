@@ -26,6 +26,7 @@ import com.kapilagro.sasyak.presentation.common.navigation.Screen.SprayingReques
 import com.kapilagro.sasyak.presentation.common.navigation.Screen.YieldRequestScreen
 import com.kapilagro.sasyak.presentation.fuel.FuelRequestScreen
 import com.kapilagro.sasyak.presentation.fuel.FuelScreen
+import com.kapilagro.sasyak.presentation.fuel.FuelTaskDetailScreen
 import com.kapilagro.sasyak.presentation.home.HomeScreen
 import com.kapilagro.sasyak.presentation.home.HomeViewModel
 import com.kapilagro.sasyak.presentation.notifications.NotificationScreen
@@ -368,6 +369,9 @@ fun AppNavGraph(
                 }
             )
         }
+
+
+
 
         composable(Screen.Profile.route) {
             ProfileScreen(
