@@ -10,8 +10,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
-
-
 import android.Manifest
 import android.os.Build
 import androidx.annotation.RequiresApi
@@ -482,7 +480,8 @@ fun SupervisorHomeContent(
     onFuelRequestClick: () -> Unit,
     onSowingTaskClick: () -> Unit,
     onSprayingTaskClick: () -> Unit,
-    onYieldTaskClick: () -> Unit
+    onYieldTaskClick: () -> Unit,
+    viewModel: HomeViewModel = hiltViewModel()
 ) {
     // Supervisor-specific quick actions
     Text(
@@ -555,6 +554,16 @@ fun SupervisorHomeContent(
     // UPDATED: Supervisor Task Sections with Status Tabs
     var selectedTaskTab by remember { mutableStateOf(0) }
 
+    // Load the appropriate tasks when tab changes
+    LaunchedEffect(selectedTaskTab) {
+        when (selectedTaskTab) {
+            0 -> viewModel.loadTasksByStatus("submitted")
+            1 -> viewModel.loadTasksByStatus("approved")
+            2 -> viewModel.loadTasksByStatus("rejected")
+            3 -> viewModel.loadAssignedTasks() // Now calls the correct method
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -571,24 +580,13 @@ fun SupervisorHomeContent(
             onSegmentSelected = { selectedTaskTab = it }
         )
 
-
         Spacer(modifier = Modifier.height(8.dp))
 
         // Task list based on selected tab
-        // In a real implementation, you would filter tasks based on their status
         when (tasksState) {
             is HomeViewModel.TasksState.Success -> {
                 val tasks = (tasksState as HomeViewModel.TasksState.Success).tasks
-                // This is a placeholder - in your implementation, you would filter by status
-                val filteredTasks = when (selectedTaskTab) {
-                    0 -> tasks.filter { /* task.status == "SUBMITTED" */ true }
-                    1 -> tasks.filter { /* task.status == "APPROVED" */ true }
-                    2 -> tasks.filter { /* task.status == "REJECTED" */ true }
-                    3 -> tasks
-                    else -> tasks
-                }
-
-                if (filteredTasks.isEmpty()) {
+                if (tasks.isEmpty()) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -599,16 +597,20 @@ fun SupervisorHomeContent(
                             0 -> "No submitted tasks"
                             1 -> "No approved tasks"
                             2 -> "No rejected tasks"
+                            3 -> "No assigned tasks"
                             else -> "No tasks available"
                         }
                         Text(statusMessage, style = MaterialTheme.typography.bodyLarge)
                     }
                 } else {
-                    filteredTasks.forEach { task ->
-                        TaskCard(
-                            task = task,
-                            onClick = { onTaskClick(task.id.toString()) }
-                        )
+                    Column {
+                        tasks.forEach { task ->
+                            TaskCard(
+                                task = task,
+                                onClick = { onTaskClick(task.id.toString()) }
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
                     }
                 }
             }
@@ -631,21 +633,29 @@ fun SupervisorHomeContent(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = "Failed to load tasks",
+                            text = (tasksState as HomeViewModel.TasksState.Error).message,
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.error
                         )
                         Spacer(modifier = Modifier.height(8.dp))
-                        Button(onClick = loadTasksData) {
+                        Button(onClick = {
+                            // Retry based on current tab
+                            when (selectedTaskTab) {
+                                0 -> viewModel.loadTasksByStatus("submitted")
+                                1 -> viewModel.loadTasksByStatus("approved")
+                                2 -> viewModel.loadTasksByStatus("rejected")
+                                3 -> viewModel.loadAssignedTasks() // Updated to call loadAssignedTasks
+                            }
+                        }) {
                             Text("Retry")
                         }
+
                     }
                 }
             }
         }
     }
 }
-
 
 @Composable
 fun SegmentedTaskControl(
@@ -689,6 +699,8 @@ fun SegmentedTaskControl(
         }
     }
 }
+
+
 
 
 @Composable

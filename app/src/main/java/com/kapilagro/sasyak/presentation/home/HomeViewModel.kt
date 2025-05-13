@@ -108,6 +108,33 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+
+
+
+
+
+
+
+
+    // Function to load assigned tasks
+    fun loadAssignedTasks() {
+        _tasksState.value = TasksState.Loading
+        viewModelScope.launch(ioDispatcher) {
+            when (val response = taskRepository.getAssignedTasks()) {
+                is ApiResponse.Success -> {
+                    // Extract just the list of tasks from the pair
+                    _tasksState.value = TasksState.Success(response.data.first)
+                }
+                is ApiResponse.Error -> {
+                    _tasksState.value = TasksState.Error(response.errorMessage)
+                }
+                is ApiResponse.Loading -> {
+                    _tasksState.value = TasksState.Loading
+                }
+            }
+        }
+    }
+
     // In HomeViewModel.kt, update the loadWeatherData function:
 
     fun loadWeatherData() {
@@ -127,11 +154,55 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+
+
+    sealed class UserState {
+        object Loading : UserState()
+        data class Success(val user: User) : UserState()
+        data class Error(val message: String) : UserState()
+    }
+
+    sealed class WeatherState {
+        object Loading : WeatherState()
+        data class Success(val weatherInfo: WeatherInfo) : WeatherState()
+        data class Error(val message: String) : WeatherState()
+    }
+
+    sealed class TasksState {
+        object Loading : TasksState()
+        data class Success(val tasks: List<Task>) : TasksState()
+        data class Error(val message: String) : TasksState()
+    }
+
+
+    fun loadTasksByStatus(status: String) {
+        _tasksState.value = TasksState.Loading
+        viewModelScope.launch(ioDispatcher) {
+            try {
+                val response = taskRepository.getTasksByStatus(status, 0, 10)
+
+                when (response) {
+                    is ApiResponse.Success -> {
+                        _tasksState.value = TasksState.Success(response.data.first)
+                    }
+                    is ApiResponse.Error -> {
+                        _tasksState.value = TasksState.Error(response.errorMessage)
+                    }
+                    is ApiResponse.Loading -> {
+                        _tasksState.value = TasksState.Loading
+                    }
+                }
+            } catch (e: Exception) {
+                _tasksState.value = TasksState.Error("Error loading tasks: ${e.message}")
+            }
+        }
+    }
+
+    // Keep existing loadTasksData function
     fun loadTasksData() {
         _tasksState.value = TasksState.Loading
         viewModelScope.launch(ioDispatcher) {
             val currentRole = userRole.value
-
 
             val response = if (currentRole == "MANAGER") {
                 // For managers, get tasks created by them
@@ -155,21 +226,4 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    sealed class UserState {
-        object Loading : UserState()
-        data class Success(val user: User) : UserState()
-        data class Error(val message: String) : UserState()
-    }
-
-    sealed class WeatherState {
-        object Loading : WeatherState()
-        data class Success(val weatherInfo: WeatherInfo) : WeatherState()
-        data class Error(val message: String) : WeatherState()
-    }
-
-    sealed class TasksState {
-        object Loading : TasksState()
-        data class Success(val tasks: List<Task>) : TasksState()
-        data class Error(val message: String) : TasksState()
-    }
 }
