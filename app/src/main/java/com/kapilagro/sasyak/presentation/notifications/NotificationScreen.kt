@@ -1,14 +1,16 @@
 package com.kapilagro.sasyak.presentation.notifications
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.MarkEmailRead
-import androidx.compose.material.icons.outlined.Air
 import androidx.compose.material.icons.outlined.NotificationAdd
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
@@ -17,11 +19,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.kapilagro.sasyak.domain.models.Notification
-import com.kapilagro.sasyak.presentation.common.components.NotificationItem
 import com.kapilagro.sasyak.presentation.common.components.EmptyStateView
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
@@ -29,7 +30,6 @@ import com.kapilagro.sasyak.presentation.common.components.EmptyStateView
 fun NotificationScreen(
     onTaskClick: (Int) -> Unit,
     onBackClick: () -> Unit,
-
     viewModel: NotificationViewModel = hiltViewModel()
 ) {
     val notificationsState by viewModel.notificationsState.collectAsState()
@@ -45,6 +45,7 @@ fun NotificationScreen(
         }
     )
 
+    // Reset refreshing after loading is complete
     LaunchedEffect(notificationsState) {
         if (notificationsState !is NotificationViewModel.NotificationsState.Loading) {
             isRefreshing = false
@@ -60,9 +61,7 @@ fun NotificationScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
-
                 actions = {
-                    // Only show mark all as read if there are unread notifications
                     if (notificationsState is NotificationViewModel.NotificationsState.Success &&
                         (notificationsState as NotificationViewModel.NotificationsState.Success).notifications.any { !it.isRead }
                     ) {
@@ -83,21 +82,20 @@ fun NotificationScreen(
                 .padding(paddingValues)
                 .pullRefresh(pullRefreshState)
         ) {
-            when (notificationsState) {
+            when (val state = notificationsState) {
                 is NotificationViewModel.NotificationsState.Success -> {
-                    val notifications = (notificationsState as NotificationViewModel.NotificationsState.Success).notifications
-                    if (notifications.isEmpty())Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        EmptyStateView(
-                            title = "No notifications yet",
-                            message = "New notifications will appear here",
-                            icon = Icons.Outlined.NotificationAdd,
-                            modifier = Modifier
-//                                .fillMaxSize()
-//                                .padding(16.dp)
-                        )
+                    val notifications = state.notifications
+                    if (notifications.isEmpty()) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            EmptyStateView(
+                                title = "No notifications yet",
+                                message = "New notifications will appear here",
+                                icon = Icons.Outlined.NotificationAdd
+                            )
+                        }
                     } else {
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
@@ -108,22 +106,19 @@ fun NotificationScreen(
                                 NotificationItem(
                                     notification = notification,
                                     onClick = {
-                                        // Mark as read when clicked
                                         viewModel.markNotificationAsRead(notification.id)
-
-                                        // If notification has taskId, navigate to task detail
-                                        notification.taskId?.let { taskId ->
-                                            onTaskClick(taskId)
-                                        }
+                                        notification.taskId?.let { onTaskClick(it) }
                                     }
                                 )
                             }
 
-                            // Add bottom spacing
-                            item { Spacer(modifier = Modifier.height(16.dp)) }
+                            item {
+                                Spacer(modifier = Modifier.height(16.dp))
+                            }
                         }
                     }
                 }
+
                 is NotificationViewModel.NotificationsState.Loading -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
@@ -132,6 +127,7 @@ fun NotificationScreen(
                         CircularProgressIndicator()
                     }
                 }
+
                 is NotificationViewModel.NotificationsState.Error -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
@@ -160,6 +156,74 @@ fun NotificationScreen(
                 state = pullRefreshState,
                 modifier = Modifier.align(Alignment.TopCenter)
             )
+        }
+    }
+}
+
+@Composable
+fun NotificationItem(
+    notification: Notification,
+    onClick: () -> Unit
+) {
+    val cardBorderColor = if (!notification.isRead) {
+        MaterialTheme.colorScheme.primary
+    } else {
+        MaterialTheme.colorScheme.surfaceVariant
+    }
+
+    val backgroundColor = if (!notification.isRead) {
+        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.1f)
+    } else {
+        MaterialTheme.colorScheme.surface
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(8.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = backgroundColor
+        ),
+        border = BorderStroke(
+            width = if (!notification.isRead) 1.dp else 0.dp,
+            color = cardBorderColor
+        )
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Unread indicator
+            if (!notification.isRead) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .background(
+                            color = MaterialTheme.colorScheme.primary,
+                            shape = CircleShape
+                        )
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+            }
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = notification.title ?: "No Title",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = if (!notification.isRead) FontWeight.Bold else FontWeight.Normal
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = notification.message ?: "No Message",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = if (!notification.isRead) FontWeight.Medium else FontWeight.Normal,
+                    color = if (!notification.isRead)
+                        MaterialTheme.colorScheme.onSurface
+                    else
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
