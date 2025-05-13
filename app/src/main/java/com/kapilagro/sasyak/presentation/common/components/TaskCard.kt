@@ -1,15 +1,18 @@
 package com.kapilagro.sasyak.presentation.common.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccessTime
+import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -19,20 +22,31 @@ import com.kapilagro.sasyak.presentation.common.theme.*
 import java.text.SimpleDateFormat
 import java.util.*
 
-
-
 /**
  * Formats a date-time string into a readable format
  *
  * @param dateTimeString The date-time string in ISO format (yyyy-MM-dd'T'HH:mm:ss)
- * @return Formatted date-time string (e.g., "May 8, 2025 • 10:30 AM")
+ * @return Formatted date-time string (e.g., "Today, 10:30 AM" or "May 10, 11:20 AM")
  */
 fun formatDateTime(dateTimeString: String): String {
     return try {
         val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
-        val outputFormat = SimpleDateFormat("MMM d, yyyy • h:mm a", Locale.getDefault())
-        val date = inputFormat.parse(dateTimeString)
-        date?.let { outputFormat.format(it) } ?: "N/A"
+        val date = inputFormat.parse(dateTimeString) ?: return "N/A"
+
+        val today = Calendar.getInstance()
+        val dateCalendar = Calendar.getInstance().apply { time = date }
+
+        val isToday = today.get(Calendar.YEAR) == dateCalendar.get(Calendar.YEAR) &&
+                today.get(Calendar.DAY_OF_YEAR) == dateCalendar.get(Calendar.DAY_OF_YEAR)
+
+        val timeFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
+        val dateFormat = SimpleDateFormat("MMM d", Locale.getDefault())
+
+        return if (isToday) {
+            "Today, ${timeFormat.format(date)}"
+        } else {
+            "${dateFormat.format(date)}, ${timeFormat.format(date)}"
+        }
     } catch (e: Exception) {
         "N/A"
     }
@@ -47,17 +61,17 @@ fun TaskCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        shape = RoundedCornerShape(16.dp),
+            .padding(vertical = 6.dp),
+        shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(
             defaultElevation = 2.dp,
             pressedElevation = 4.dp,
-            focusedElevation = 3.dp
+            hoveredElevation = 3.dp
         ),
         colors = CardDefaults.cardColors(
-            containerColor = Card,
-            contentColor = Foreground
+            containerColor = White
         ),
+        border = BorderStroke(0.5.dp, Border),
         onClick = onClick
     ) {
         Column(
@@ -65,16 +79,17 @@ fun TaskCard(
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            // Header with task title and icon
+            // Title row with status icon
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Only show the task title without taskType
                 Text(
                     text = task.title,
                     style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.SemiBold,
                         color = AgroDark
                     ),
                     maxLines = 1,
@@ -82,42 +97,55 @@ fun TaskCard(
                     modifier = Modifier.weight(1f)
                 )
 
-                // Task type chip moved next to title for better visual hierarchy
-                TaskTypeChip(taskType = task.taskType)
-            }
+                // Status indicator icon
+                val statusIcon = when (task.status?.lowercase()) {
+                    "pending" -> Icons.Outlined.Schedule
+                    "approved" -> Icons.Outlined.CheckCircle
+                    "rejected" -> Icons.Outlined.Close
+                    else -> Icons.Outlined.Schedule
+                }
 
-            Spacer(modifier = Modifier.height(12.dp))
+                val statusColor = when (task.status?.lowercase()) {
+                    "pending" -> StatusPending
+                    "approved" -> StatusApproved
+                    "rejected" -> StatusRejected
+                    else -> StatusPending
+                }
 
-            // Status indicator bar
-            StatusIndicator(status = task.status ?: "pending")
+                Icon(
+                    imageVector = statusIcon,
+                    contentDescription = "Task status: ${task.status}",
+                    tint = statusColor,
+                    modifier = Modifier.padding(start = 8.dp)
+                )
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Description with subtle background
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp)),
-                color = AgroMuted
-            ) {
-                Text(
-                    text = task.description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Foreground,
-                    modifier = Modifier.padding(8.dp),
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis
+                Icon(
+                    imageVector = Icons.Outlined.ChevronRight,
+                    contentDescription = "View details",
+                    tint = Border,
+                    modifier = Modifier.padding(start = 4.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            // Description
+            Text(
+                text = task.description,
+                style = MaterialTheme.typography.bodyMedium,
+                color = AgroMutedForeground,
+                modifier = Modifier.padding(top = 4.dp),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
 
-            // Footer with date and action icon
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Bottom row with date and task type
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Date with icon
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Outlined.AccessTime,
@@ -135,21 +163,8 @@ fun TaskCard(
                     )
                 }
 
-                // View details button with primary color
-                IconButton(
-                    onClick = onClick,
-                    modifier = Modifier.size(32.dp),
-                    colors = IconButtonDefaults.iconButtonColors(
-                        containerColor = AgroLight,
-                        contentColor = AgroPrimary
-                    )
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.ChevronRight,
-                        contentDescription = "View details",
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
+                // Task type chip on the right
+                TaskTypeChip(taskType = task.taskType)
             }
         }
     }
@@ -169,48 +184,13 @@ fun TaskTypeChip(taskType: String) {
     Surface(
         shape = RoundedCornerShape(16.dp),
         color = backgroundColor,
-        modifier = Modifier.height(28.dp)
+        modifier = Modifier.height(24.dp)
     ) {
         Text(
             text = taskType.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() },
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.labelSmall,
             color = textColor,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-        )
-    }
-}
-
-@Composable
-fun StatusIndicator(status: String) {
-    val (color, text) = when (status.lowercase()) {
-        "pending" -> Pair(StatusPending, "Pending")
-        "approved" -> Pair(StatusApproved, "Approved")
-        "rejected" -> Pair(StatusRejected, "Rejected")
-        else -> Pair(Color.Gray, status.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() })
-    }
-
-    Surface(
-        shape = RoundedCornerShape(8.dp),
-        color = color.copy(alpha = 0.2f),
-        modifier = Modifier.height(26.dp)
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-        ) {
-            Surface(
-                shape = RoundedCornerShape(4.dp),
-                color = color,
-                modifier = Modifier.size(8.dp)
-            ) {}
-
-            Spacer(modifier = Modifier.width(6.dp))
-
-            Text(
-                text = text,
-                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
-                color = color
-            )
-        }
+        )
     }
 }

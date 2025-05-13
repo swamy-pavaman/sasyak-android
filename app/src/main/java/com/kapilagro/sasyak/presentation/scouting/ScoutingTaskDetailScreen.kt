@@ -521,6 +521,7 @@ fun ScoutingTaskDetailScreen(
                                                 ) {
                                                     Text(
                                                         text = advice.managerName?:"managername",
+
                                                         style = MaterialTheme.typography.titleSmall,
                                                         fontWeight = FontWeight.Bold,
                                                         color = Purple700
