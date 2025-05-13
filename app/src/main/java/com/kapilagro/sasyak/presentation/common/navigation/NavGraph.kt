@@ -26,6 +26,7 @@ import com.kapilagro.sasyak.presentation.common.navigation.Screen.SprayingReques
 import com.kapilagro.sasyak.presentation.common.navigation.Screen.YieldRequestScreen
 import com.kapilagro.sasyak.presentation.fuel.FuelRequestScreen
 import com.kapilagro.sasyak.presentation.fuel.FuelScreen
+import com.kapilagro.sasyak.presentation.fuel.FuelTaskDetailScreen
 import com.kapilagro.sasyak.presentation.home.HomeScreen
 import com.kapilagro.sasyak.presentation.home.HomeViewModel
 import com.kapilagro.sasyak.presentation.notifications.NotificationScreen
@@ -42,6 +43,7 @@ import com.kapilagro.sasyak.presentation.sowing.SowingRequestScreen
 import com.kapilagro.sasyak.presentation.sowing.SowingScreen
 import com.kapilagro.sasyak.presentation.spraying.SprayingRequestScreen
 import com.kapilagro.sasyak.presentation.spraying.SprayingScreen
+import com.kapilagro.sasyak.presentation.spraying.SprayingTaskDetailScreen
 import com.kapilagro.sasyak.presentation.tasks.CreateTaskScreen
 import com.kapilagro.sasyak.presentation.tasks.TaskDetailScreen
 import com.kapilagro.sasyak.presentation.tasks.TaskListScreen
@@ -50,6 +52,7 @@ import com.kapilagro.sasyak.presentation.team.TeamScreen
 import com.kapilagro.sasyak.presentation.weather.WeatherDetailScreen
 import com.kapilagro.sasyak.presentation.yield.YieldRequestScreen
 import com.kapilagro.sasyak.presentation.yield.YieldScreen
+import com.kapilagro.sasyak.presentation.yield.YieldTaskDetailScreen
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -138,18 +141,17 @@ fun AppNavGraph(
             )
         }
 
-        composable(FuelRequestScreen.route) {
+
+        composable(Screen.FuelRequestScreen.route) {
             FuelRequestScreen(
                 onTaskCreated = {
-                    navController.navigate(SprayingRequestScreen.route)
+                    navController.popBackStack()
                 },
                 onBackClick = {
                     navController.popBackStack()
                 }
-
             )
         }
-
         // Sowing screens
         composable(Screen.SowingScreen.route) {
             SowingScreen(
@@ -190,7 +192,7 @@ fun AppNavGraph(
             )
         }
 
-        composable(SprayingRequestScreen.route) {
+        composable(Screen.SprayingRequestScreen.route) {
             SprayingRequestScreen(
                 onTaskCreated = {
                     navController.popBackStack()
@@ -216,7 +218,8 @@ fun AppNavGraph(
             )
         }
 
-        composable(YieldRequestScreen.route) {
+        // Request/creation screens
+        composable(Screen.YieldRequestScreen.route) {
             YieldRequestScreen(
                 onTaskCreated = {
                     navController.popBackStack()
@@ -353,6 +356,63 @@ fun AppNavGraph(
             )
         }
 
+
+        // Main screens
+        composable(Screen.Yield.route) {
+            YieldScreen(
+                onTaskCreated = {
+                    navController.navigate(Screen.YieldRequestScreen.route)
+                },
+                onTaskClick = { taskId ->
+                    navController.navigate("yield_task_detail/$taskId")
+                },
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable(Screen.Fuel.route) {
+            FuelScreen(
+                onTaskCreated = {
+                    navController.navigate(Screen.FuelRequestScreen.route)
+                },
+                onTaskClick = { taskId ->
+                    navController.navigate("fuel_task_detail/$taskId")
+                },
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
+        composable(Screen.Spraying.route) {
+            SprayingScreen(
+                onTaskCreated = {
+                    navController.navigate(Screen.SprayingRequestScreen.route)
+                },
+                onTaskClick = { taskId ->
+                    navController.navigate("spraying_task_detail/$taskId")
+                },
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
+        composable(Screen.Scouting.route) {
+            ScoutingScreen(
+                onTaskCreated = {
+                    navController.navigate(Screen.ScoutingRequestScreen.route)
+                },
+                onTaskClick = { taskId ->
+                    navController.navigate("scouting_task_detail/$taskId")
+                },
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+
 // Add this new route
         composable(
             route = "scouting_task_detail/{taskId}",
@@ -368,6 +428,68 @@ fun AppNavGraph(
                 }
             )
         }
+
+        // Detail screens
+        composable(
+            route = "yield_task_detail/{taskId}",
+            arguments = listOf(
+                navArgument("taskId") { type = NavType.IntType }
+            )
+        ) { backStackEntry ->
+            val taskId = backStackEntry.arguments?.getInt("taskId") ?: -1
+            YieldTaskDetailScreen(
+                taskId = taskId,
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable(
+            route = "fuel_task_detail/{taskId}",
+            arguments = listOf(
+                navArgument("taskId") { type = NavType.IntType }
+            )
+        ) { backStackEntry ->
+            val taskId = backStackEntry.arguments?.getInt("taskId") ?: -1
+            FuelTaskDetailScreen(
+                taskId = taskId,
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable(
+            route = "spraying_task_detail/{taskId}",
+            arguments = listOf(
+                navArgument("taskId") { type = NavType.IntType }
+            )
+        ) { backStackEntry ->
+            val taskId = backStackEntry.arguments?.getInt("taskId") ?: -1
+            SprayingTaskDetailScreen(
+                taskId = taskId,
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable(
+            route = "scouting_task_detail/{taskId}",
+            arguments = listOf(
+                navArgument("taskId") { type = NavType.IntType }
+            )
+        ) { backStackEntry ->
+            val taskId = backStackEntry.arguments?.getInt("taskId") ?: -1
+            ScoutingTaskDetailScreen(
+                taskId = taskId,
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
 
         composable(Screen.Profile.route) {
             ProfileScreen(

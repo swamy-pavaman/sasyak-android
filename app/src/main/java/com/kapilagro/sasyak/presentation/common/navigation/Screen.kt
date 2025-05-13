@@ -17,6 +17,16 @@ sealed class Screen(val route: String, val title: String, @DrawableRes val icon:
     object Splash : Screen("splash", "Splash")
     object Login : Screen("login", "Login")
 
+
+
+    object Yield : Screen("yield","Yeild")
+
+    object Fuel : Screen("fuel","Fuel")
+    object Sowing : Screen("sowing","Sowing")
+
+    object Spraying : Screen("spraying","Spraying")
+
+
     // Main screens with bottom navigation
     object Home : Screen("home", "Home", R.drawable.ic_home)
     object Reports : Screen("reports", "Reports", R.drawable.ic_baseline_analytics_24) // TODO change to report icon
