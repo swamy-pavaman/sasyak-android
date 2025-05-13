@@ -483,7 +483,7 @@ fun FuelTaskDetailScreen(
                                             horizontalArrangement = Arrangement.SpaceBetween
                                         ) {
                                             Text(
-                                                text = advice.managerName.toString(),
+                                                text = advice.managerName?:"managername",
                                                 style = MaterialTheme.typography.titleSmall,
                                                 fontWeight = FontWeight.Bold
                                             )
