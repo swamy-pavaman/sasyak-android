@@ -1,6 +1,7 @@
 package com.kapilagro.sasyak.presentation.tasks
 
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -16,6 +17,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -200,8 +202,8 @@ fun TaskDetailScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Task-specific details section
-                    TaskDetailsSection(task)
+                    // Task-specific details section - SIMPLIFIED VERSION
+                    SimplifiedTaskDetailsSection(task)
 
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -404,7 +406,7 @@ fun TaskDetailScreen(
                         }
                     } else {
                         advices.forEach { advice ->
-                            AdviceItem(advice = advice)
+                            SimpleAdviceItem(advice = advice)
                             Spacer(modifier = Modifier.height(8.dp))
                         }
                     }
@@ -506,18 +508,10 @@ fun DetailItem(label: String, value: String) {
     }
 }
 
-// TaskAdvice data class definition for use in this file
-data class TaskAdvice(
-    val id: Int,
-    val taskId: Int,
-    val adviceText: String,
-    val createdBy: String,
-    val createdAt: String
-)
-
+// Simplified advice item that works with the API format
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun AdviceItem(advice: TaskAdvice) {
+fun SimpleAdviceItem(advice: TaskAdvice) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp)
@@ -530,7 +524,7 @@ fun AdviceItem(advice: TaskAdvice) {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = advice.adviceText,
+                    text = advice.managerName ?: "Unknown",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -551,8 +545,9 @@ fun AdviceItem(advice: TaskAdvice) {
     }
 }
 
+// Extremely simplified details section with clear visualization
 @Composable
-fun TaskDetailsSection(task: Task) {
+fun SimplifiedTaskDetailsSection(task: Task) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp)
@@ -568,213 +563,121 @@ fun TaskDetailsSection(task: Task) {
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Parse the detailsJson
-            val details = try {
-                task.detailsJson?.let { JSONObject(it) }
-            } catch (e: Exception) {
-                null
-            }
-
-            when (task.taskType.uppercase()) {
-                "SCOUTING" -> {
-                    // Display scouting-specific fields
-                    details?.let {
-                        DetailItem("Row", it.optString("Row", ""))
-                        DetailItem("Tree No", it.optString("Tree No", ""))
-                        DetailItem("Crop Name", it.optString("Crop Name", ""))
-                        DetailItem("Scouting Date", it.optString("Scouting Date", ""))
-                        DetailItem("Name of Disease", it.optString("Name of Disease", ""))
-                        DetailItem("Number of Fruits Seen", it.optString("Number of Fruits Seen", ""))
-                        DetailItem("Number of Flowers Seen", it.optString("Number of Flowers Seen", ""))
-                        DetailItem("Number of Fruits Dropped", it.optString("Number of Fruits Dropped", ""))
-                    }
-                }
-                "IRRIGATION" -> {
-                    // Display irrigation-specific fields
-                    details?.let {
-                        DetailItem("Block", it.optString("Block", ""))
-                        DetailItem("Row", it.optString("Row", ""))
-                        DetailItem("Water Source", it.optString("Water Source", ""))
-                        DetailItem("Duration (hours)", it.optString("Duration", ""))
-                        DetailItem("Water Volume (L)", it.optString("Water Volume", ""))
-                    }
-                }
-                "HARVESTING" -> {
-                    // Display harvesting-specific fields
-                    details?.let {
-                        DetailItem("Block", it.optString("Block", ""))
-                        DetailItem("Crop", it.optString("Crop", ""))
-                        DetailItem("Quantity (kg)", it.optString("Quantity", ""))
-                        DetailItem("Quality Grade", it.optString("Quality Grade", ""))
-                        DetailItem("Harvest Date", it.optString("Harvest Date", ""))
-                    }
-                }
-                "SPRAYING" -> {
-                    // Display spraying-specific fields
-                    details?.let {
-                        DetailItem("Block", it.optString("Block", ""))
-                        DetailItem("Chemical Name", it.optString("Chemical Name", ""))
-                        DetailItem("Application Rate", it.optString("Application Rate", ""))
-                        DetailItem("Target Pest/Disease", it.optString("Target", ""))
-                        DetailItem("Area Covered", it.optString("Area Covered", ""))
-                        DetailItem("Weather Conditions", it.optString("Weather", ""))
-                    }
-                }
-                "FERTILIZATION" -> {
-                    // Display fertilization-specific fields
-                    details?.let {
-                        DetailItem("Block", it.optString("Block", ""))
-                        DetailItem("Fertilizer Name", it.optString("Fertilizer Name", ""))
-                        DetailItem("Application Rate", it.optString("Application Rate", ""))
-                        DetailItem("Method", it.optString("Method", ""))
-                        DetailItem("Area Covered", it.optString("Area Covered", ""))
-                        DetailItem("Soil Condition", it.optString("Soil Condition", ""))
-                    }
-                }
-                "PRUNING" -> {
-                    // Display pruning-specific fields
-                    details?.let {
-                        DetailItem("Block", it.optString("Block", ""))
-                        DetailItem("Row", it.optString("Row", ""))
-                        DetailItem("Tree Count", it.optString("Tree Count", ""))
-                        DetailItem("Pruning Type", it.optString("Pruning Type", ""))
-                        DetailItem("Pruning Intensity", it.optString("Pruning Intensity", ""))
-                    }
-                }
-                "PLANTING" -> {
-                    // Display planting-specific fields
-                    details?.let {
-                        DetailItem("Block", it.optString("Block", ""))
-                        DetailItem("Row", it.optString("Row", ""))
-                        DetailItem("Crop", it.optString("Crop", ""))
-                        DetailItem("Variety", it.optString("Variety", ""))
-                        DetailItem("Number of Plants", it.optString("Number of Plants", ""))
-                        DetailItem("Spacing", it.optString("Spacing", ""))
-                    }
-                }
-                else -> {
-                    // Generic details display for any other type
-                    details?.let {
-                        val keys = it.keys()
-                        while (keys.hasNext()) {
-                            val key = keys.next()
-                            DetailItem(key, it.optString(key, ""))
-                        }
-                    }
+            // Direct display of raw JSON for debugging
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFEEF2F5))
+            ) {
+                Column(Modifier.padding(8.dp)) {
+                    Text(
+                        text = "Raw JSON Data",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = task.detailsJson ?: "No details available",
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
             }
 
-            // Display images if any
-            val images = try {
-                task.imagesJson?.let { json ->
-                    val jsonArray = JSONArray(json)
-                    List(jsonArray.length()) { i -> jsonArray.getString(i) }
-                }
-            } catch (e: Exception) {
-                null
-            }
+            Spacer(modifier = Modifier.height(16.dp))
 
-            if (images != null && images.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(16.dp))
+            // Manually parse and display fields from the task
+            if (task.taskType.uppercase() == "SCOUTING") {
+                DisplayScoutingFields(task.detailsJson)
+            } else {
                 Text(
-                    text = "Images",
-                    style = MaterialTheme.typography.titleSmall,
+                    text = "Details for ${task.taskType}",
+                    style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Display image count as a placeholder
-                Text(
-                    text = "${images.size} image(s) attached",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                // Generic field display
+                val details = try {
+                    task.detailsJson?.let { JSONObject(it) }
+                } catch (e: Exception) {
+                    null
+                }
 
-                // Here you could implement the actual image display
-                // For example, a LazyRow of images with clickable behavior to open full screen
-
-                /* Example of image display implementation:
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(images.size) { index ->
-                        // Image component would go here
-                        Box(
-                            modifier = Modifier
-                                .size(80.dp)
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(MaterialTheme.colorScheme.surfaceVariant)
-                        )
+                if (details != null) {
+                    val keys = details.keys()
+                    while (keys.hasNext()) {
+                        val key = keys.next()
+                        val value = details.optString(key, "")
+                        DetailItem(key.replaceFirstChar { it.uppercase() }, value)
                     }
-                }
-                */
-            }
-
-            // Display location if available
-            details?.optString("Location")?.let { location ->
-                if (location.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "Location",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Display location information
-                    Text(
-                        text = location,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-
-                    // Here you could add a map preview if needed
-                }
-            }
-
-            // Display any additional notes if present
-            details?.optString("Notes")?.let { notes ->
-                if (notes.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "Additional Notes",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = notes,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+                } else {
+                    Text("No details available")
                 }
             }
         }
     }
 }
 
-// Helper function to format date time
+// Special function just for scouting fields with direct display
+@Composable
+fun DisplayScoutingFields(detailsJson: String?) {
+    Text(
+        text = "Scouting Details",
+        style = MaterialTheme.typography.bodyMedium,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.primary
+    )
+
+    Spacer(modifier = Modifier.height(8.dp))
+
+    val json = try {
+        detailsJson?.let { JSONObject(it) }
+    } catch (e: Exception) {
+        Log.e("ScoutingFields", "Error parsing JSON: ${e.message}")
+        null
+    }
+
+    json?.let {
+        DetailItem("Row", it.optString("row", ""))
+        DetailItem("Tree Number", it.optString("treeNo", ""))
+        DetailItem("Crop Name", it.optString("cropName", ""))
+        DetailItem("Scouting Date", it.optString("scoutingDate", ""))
+        DetailItem("Disease Name", it.optString("nameOfDisease", ""))
+        DetailItem("Fruits Seen", it.optString("noOfFruitSeen", ""))
+        DetailItem("Flowers Seen", it.optString("noOfFlowersSeen", ""))
+        DetailItem("Fruits Dropped", it.optString("noOfFruitsDropped", ""))
+    } ?: Text(
+        text = "Error loading scouting details",
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.error
+    )
+}
+
+// Helper function to format date time - SIMPLIFIED
 @RequiresApi(Build.VERSION_CODES.O)
 private fun formatDateTime(dateTime: String): String {
     return try {
-        val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")
-        val dt = LocalDateTime.parse(dateTime, formatter)
-        val outputFormatter = DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm")
-        dt.format(outputFormatter)
+        // Handle different date formats safely
+        val dt = if (dateTime.contains(".")) {
+            val trimmed = dateTime.split(".")[0]
+            LocalDateTime.parse(trimmed)
+        } else {
+            LocalDateTime.parse(dateTime)
+        }
+
+        dt.format(DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm"))
     } catch (e: Exception) {
-        dateTime // Return original string if parsing fails
+        dateTime // Return original if parsing fails
     }
 }
 
-// Helper function to parse implementation JSON
+// Helper function to parse implementation JSON - SIMPLIFIED
 private fun getImplementationFromJson(implementationJson: String?): String? {
+    if (implementationJson == null || implementationJson == "{}" || implementationJson.isEmpty()) {
+        return null
+    }
+
     return try {
-        implementationJson?.let {
-            val jsonObject = JSONObject(it)
-            jsonObject.optString("text", null)
-        }
+        JSONObject(implementationJson).optString("text")
     } catch (e: Exception) {
         null
     }

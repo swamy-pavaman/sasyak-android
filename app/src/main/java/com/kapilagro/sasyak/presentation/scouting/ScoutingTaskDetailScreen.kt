@@ -520,7 +520,8 @@ fun ScoutingTaskDetailScreen(
                                                     horizontalArrangement = Arrangement.SpaceBetween
                                                 ) {
                                                     Text(
-                                                        text = advice.managerName,
+                                                        text = advice.managerName?:"managername",
+
                                                         style = MaterialTheme.typography.titleSmall,
                                                         fontWeight = FontWeight.Bold,
                                                         color = Purple700
