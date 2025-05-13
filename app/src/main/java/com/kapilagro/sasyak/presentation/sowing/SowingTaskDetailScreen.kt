@@ -482,7 +482,7 @@ fun SowingTaskDetailScreen(
                                             horizontalArrangement = Arrangement.SpaceBetween
                                         ) {
                                             Text(
-                                                text = advice.managerName,
+                                                text = advice.managerName.toString(),
                                                 style = MaterialTheme.typography.titleSmall,
                                                 fontWeight = FontWeight.Bold
                                             )
