@@ -8,26 +8,35 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.TrendingDown
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.*
-import androidx.compose.material.icons.outlined.TrendingDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.kapilagro.sasyak.domain.models.ScoutingDetails
 import com.kapilagro.sasyak.presentation.common.components.StatusIndicator
 import com.kapilagro.sasyak.presentation.common.components.TaskTypeChip
-import com.kapilagro.sasyak.presentation.common.theme.ScoutingContainer
-import com.kapilagro.sasyak.presentation.common.theme.ScoutingIcon
 import com.kapilagro.sasyak.presentation.tasks.TaskViewModel
 import kotlinx.serialization.json.Json
+
+// Define the colors from the resource file
+val Purple200 = Color(0xFFBB86FC)
+val Purple500 = Color(0xFF6200EE)
+val Purple700 = Color(0xFF3700B3)
+val Teal200 = Color(0xFF03DAC5)
+val Teal700 = Color(0xFF018786)
+val Black = Color(0xFF000000)
+val White = Color(0xFFFFFFFF)
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
@@ -35,7 +44,7 @@ import kotlinx.serialization.json.Json
 fun ScoutingTaskDetailScreen(
     taskId: Int,
     onBackClick: () -> Unit,
-    viewModel: TaskViewModel = hiltViewModel() // Reuse the TaskViewModel
+    viewModel: TaskViewModel = hiltViewModel()
 ) {
     val taskDetailState by viewModel.taskDetailState.collectAsState()
     val updateTaskState by viewModel.updateTaskState.collectAsState()
@@ -57,7 +66,7 @@ fun ScoutingTaskDetailScreen(
         }
     }
 
-    // Approval/Rejection Dialogs
+    // Approval Dialog
     if (showApproveDialog) {
         AlertDialog(
             onDismissRequest = { showApproveDialog = false },
@@ -75,7 +84,7 @@ fun ScoutingTaskDetailScreen(
                 }
             },
             confirmButton = {
-                TextButton(
+                Button(
                     onClick = {
                         viewModel.updateTaskStatus(taskId, "approved", comment.takeIf { it.isNotBlank() })
                         showApproveDialog = false
@@ -95,6 +104,7 @@ fun ScoutingTaskDetailScreen(
         )
     }
 
+    // Rejection Dialog
     if (showRejectDialog) {
         AlertDialog(
             onDismissRequest = { showRejectDialog = false },
@@ -112,7 +122,7 @@ fun ScoutingTaskDetailScreen(
                 }
             },
             confirmButton = {
-                TextButton(
+                Button(
                     onClick = {
                         if (comment.isNotBlank()) {
                             viewModel.updateTaskStatus(taskId, "rejected", comment)
@@ -145,9 +155,9 @@ fun ScoutingTaskDetailScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = ScoutingIcon,
-                    titleContentColor = Color.White,
-                    navigationIconContentColor = Color.White
+                    containerColor = Purple700,
+                    titleContentColor = White,
+                    navigationIconContentColor = White
                 )
             )
         }
@@ -175,36 +185,45 @@ fun ScoutingTaskDetailScreen(
                         .padding(16.dp)
                 ) {
                     // Task header with status
-                    Row(
+                    Card(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Scouting Report",
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold
+                        colors = CardDefaults.cardColors(
+                            containerColor = White
+                        ),
+                        elevation = CardDefaults.cardElevation(
+                            defaultElevation = 2.dp
                         )
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Scouting Report",
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Purple700
+                                )
 
-                        StatusIndicator(status = task.status)
+                                StatusIndicator(status = task.status)
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            // Task type
+                            TaskTypeChip(taskType = task.taskType)
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            // Task description
+                            Text(
+                                text = task.description,
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                        }
                     }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Task type
-                    TaskTypeChip(taskType = task.taskType)
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Task description
-                    Text(
-                        text = task.description,
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Divider()
 
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -213,9 +232,11 @@ fun ScoutingTaskDetailScreen(
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             colors = CardDefaults.cardColors(
-                                containerColor = ScoutingContainer.copy(alpha = 0.3f)
+                                containerColor = White
                             ),
-                            shape = RoundedCornerShape(16.dp)
+                            elevation = CardDefaults.cardElevation(
+                                defaultElevation = 2.dp
+                            )
                         ) {
                             Column(
                                 modifier = Modifier.padding(16.dp)
@@ -224,9 +245,11 @@ fun ScoutingTaskDetailScreen(
                                     text = "Scouting Details",
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
-                                    color = ScoutingIcon
+                                    color = Purple700
                                 )
 
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Divider(color = Purple200)
                                 Spacer(modifier = Modifier.height(16.dp))
 
                                 // Scouting date
@@ -253,19 +276,22 @@ fun ScoutingTaskDetailScreen(
                                 // Fruits and Flowers
                                 if (!scoutingDetails.noOfFruitSeen.isNullOrEmpty() ||
                                     !scoutingDetails.noOfFlowersSeen.isNullOrEmpty()) {
-                                    Divider(modifier = Modifier.padding(vertical = 8.dp))
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Divider(color = Purple200)
+                                    Spacer(modifier = Modifier.height(16.dp))
 
                                     Text(
                                         text = "Plant Condition",
                                         style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.SemiBold
+                                        fontWeight = FontWeight.Bold,
+                                        color = Purple700
                                     )
 
                                     Spacer(modifier = Modifier.height(8.dp))
 
                                     if (!scoutingDetails.noOfFruitSeen.isNullOrEmpty()) {
                                         DetailRow(
-                                            icon = Icons.AutoMirrored.Outlined.TrendingDown, //TODO change it to apple icon later
+                                            icon = Icons.Outlined.Spa,
                                             label = "Fruits Seen",
                                             value = scoutingDetails.noOfFruitSeen
                                         )
@@ -281,7 +307,7 @@ fun ScoutingTaskDetailScreen(
 
                                     if (!scoutingDetails.noOfFruitsDropped.isNullOrEmpty()) {
                                         DetailRow(
-                                            icon = Icons.AutoMirrored.Outlined.TrendingDown,
+                                            icon = Icons.Filled.ArrowDownward,
                                             label = "Fruits Dropped",
                                             value = scoutingDetails.noOfFruitsDropped
                                         )
@@ -290,12 +316,15 @@ fun ScoutingTaskDetailScreen(
 
                                 // Disease information (if available)
                                 if (!scoutingDetails.nameOfDisease.isNullOrEmpty()) {
-                                    Divider(modifier = Modifier.padding(vertical = 8.dp))
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Divider(color = Purple200)
+                                    Spacer(modifier = Modifier.height(16.dp))
 
                                     Text(
                                         text = "Disease Information",
                                         style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.SemiBold
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.Red
                                     )
 
                                     Spacer(modifier = Modifier.height(8.dp))
@@ -304,159 +333,216 @@ fun ScoutingTaskDetailScreen(
                                         icon = Icons.Outlined.BugReport,
                                         label = "Disease",
                                         value = scoutingDetails.nameOfDisease,
-                                        valueColor = MaterialTheme.colorScheme.error
+                                        valueColor = Color.Red
                                     )
                                 }
                             }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
                     // Task metadata
-                    Row(
+                    Card(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        colors = CardDefaults.cardColors(
+                            containerColor = White
+                        ),
+                        elevation = CardDefaults.cardElevation(
+                            defaultElevation = 2.dp
+                        )
                     ) {
-                        Column {
+                        Column(modifier = Modifier.padding(16.dp)) {
                             Text(
-                                text = "Created by",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                text = "Task Information",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = Purple700
                             )
-                            Text(
-                                text = task.createdBy,
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
 
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text(
-                                text = "Created on",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                text = task.createdAt?:"created",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                    }
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Divider(color = Purple200)
+                            Spacer(modifier = Modifier.height(12.dp))
 
-                    if (task.assignedTo != null) {
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column {
-                                Text(
-                                    text = "Assigned to",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Text(
-                                    text = task.assignedTo,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Medium
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    // Task actions based on status
-                    if (task.status.equals("pending", ignoreCase = true)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceEvenly
-                        ) {
-                            Button(
-                                onClick = { showApproveDialog = true },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.primary
-                                ),
-                                modifier = Modifier.weight(1f)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Check,
-                                    contentDescription = null
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Approve")
+                                Column {
+                                    Text(
+                                        text = "Created by",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = Purple500
+                                    )
+                                    Text(
+                                        text = task.createdBy,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Text(
+                                        text = "Created on",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = Purple500
+                                    )
+                                    Text(
+                                        text = task.createdAt ?: "created",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
                             }
 
-                            Spacer(modifier = Modifier.width(16.dp))
+                            if (task.assignedTo != null) {
+                                Spacer(modifier = Modifier.height(8.dp))
 
-                            Button(
-                                onClick = { showRejectDialog = true },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.error
-                                ),
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Close,
-                                    contentDescription = null
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Reject")
+                                Row(
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(
+                                        text = "Assigned to: ",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = Purple500
+                                    )
+                                    Text(
+                                        text = task.assignedTo,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
                             }
                         }
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
 
+                    // Task actions based on status
+                    if (task.status.equals("pending", ignoreCase = true)) {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = White
+                            ),
+                            elevation = CardDefaults.cardElevation(
+                                defaultElevation = 2.dp
+                            )
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text(
+                                    text = "Actions",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Purple700
+                                )
+
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceEvenly
+                                ) {
+                                    Button(
+                                        onClick = { showApproveDialog = true },
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = Teal700
+                                        ),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Filled.Check,
+                                            contentDescription = null
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text("Approve")
+                                    }
+
+                                    Spacer(modifier = Modifier.width(16.dp))
+
+                                    Button(
+                                        onClick = { showRejectDialog = true },
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = Color.Red
+                                        ),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Filled.Close,
+                                            contentDescription = null
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text("Reject")
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     // Task advice section if there are any
                     if (advices.isNotEmpty()) {
-                        Divider()
-
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        Text(
-                            text = "Manager Advice",
-                            style = MaterialTheme.typography.titleLarge
-                        )
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = White
+                            ),
+                            elevation = CardDefaults.cardElevation(
+                                defaultElevation = 2.dp
+                            )
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text(
+                                    text = "Manager Advice",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Purple700
+                                )
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Divider(color = Purple200)
+                                Spacer(modifier = Modifier.height(8.dp))
 
-                        Column {
-                            advices.forEach { advice ->
-                                Card(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 8.dp),
-                                    colors = CardDefaults.cardColors(
-                                        containerColor = MaterialTheme.colorScheme.surfaceVariant
-                                    )
-                                ) {
-                                    Column(modifier = Modifier.padding(16.dp)) {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween
+                                Column {
+                                    advices.forEach { advice ->
+                                        Card(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(vertical = 8.dp),
+                                            colors = CardDefaults.cardColors(
+                                                containerColor = Purple200.copy(alpha = 0.2f)
+                                            )
                                         ) {
-                                            Text(
-                                                text = advice.managerName,
-                                                style = MaterialTheme.typography.titleSmall,
-                                                fontWeight = FontWeight.Bold
-                                            )
+                                            Column(modifier = Modifier.padding(16.dp)) {
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.SpaceBetween
+                                                ) {
+                                                    Text(
+                                                        text = advice.managerName,
+                                                        style = MaterialTheme.typography.titleSmall,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = Purple700
+                                                    )
 
-                                            Text(
-                                                text = advice.createdAt,
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
+                                                    Text(
+                                                        text = advice.createdAt,
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = Purple500
+                                                    )
+                                                }
+
+                                                Spacer(modifier = Modifier.height(4.dp))
+                                                Divider(color = Purple200)
+                                                Spacer(modifier = Modifier.height(8.dp))
+
+                                                Text(
+                                                    text = advice.adviceText,
+                                                    style = MaterialTheme.typography.bodyMedium
+                                                )
+                                            }
                                         }
-
-                                        Spacer(modifier = Modifier.height(8.dp))
-
-                                        Text(
-                                            text = advice.adviceText,
-                                            style = MaterialTheme.typography.bodyMedium
-                                        )
                                     }
                                 }
                             }
@@ -471,7 +557,7 @@ fun ScoutingTaskDetailScreen(
                         .padding(paddingValues),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator(color = ScoutingIcon)
+                    CircularProgressIndicator(color = Purple500)
                 }
             }
             is TaskViewModel.TaskDetailState.Error -> {
@@ -485,16 +571,27 @@ fun ScoutingTaskDetailScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier.padding(16.dp)
                     ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Error,
+                            contentDescription = "Error",
+                            tint = Color.Red,
+                            modifier = Modifier.size(48.dp)
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
                         Text(
                             text = "Failed to load task details",
                             style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.error
+                            color = Color.Red
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
                         Button(
                             onClick = { viewModel.loadTaskDetail(taskId) },
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = ScoutingIcon
+                                containerColor = Purple500
                             )
                         ) {
                             Text("Retry")
@@ -511,7 +608,7 @@ fun DetailRow(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
     value: String,
-    valueColor: Color = MaterialTheme.colorScheme.onSurface
+    valueColor: Color = Black
 ) {
     Row(
         modifier = Modifier
@@ -522,25 +619,23 @@ fun DetailRow(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = ScoutingIcon,
+            tint = Purple500,
             modifier = Modifier.size(20.dp)
         )
 
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(12.dp))
 
         Text(
             text = label,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = Purple700,
             modifier = Modifier.width(100.dp)
         )
 
         Text(
             text = value,
             style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium,
             color = valueColor
         )
     }
 }
-

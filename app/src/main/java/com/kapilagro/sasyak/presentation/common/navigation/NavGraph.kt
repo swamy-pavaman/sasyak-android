@@ -322,6 +322,13 @@ fun AppNavGraph(
                 },
                 onYieldTaskClick = {
                     navController.navigate(Screen.YieldScreen.route)
+                },
+                onReportsClick = {
+                    navController.navigate(Screen.Reports.route)
+                },        onAdviceClick = {
+                    // You'll need to implement this screen or functionality
+                    // For now, we'll leave it as a TODO
+                    // TODO: Implement Advice screen navigation
                 }
             )
         }
