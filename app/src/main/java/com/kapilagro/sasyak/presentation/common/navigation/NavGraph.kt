@@ -41,6 +41,7 @@ import com.kapilagro.sasyak.presentation.scouting.ScoutingRequestScreen
 import com.kapilagro.sasyak.presentation.scouting.ScoutingTaskDetailScreen
 import com.kapilagro.sasyak.presentation.sowing.SowingRequestScreen
 import com.kapilagro.sasyak.presentation.sowing.SowingScreen
+import com.kapilagro.sasyak.presentation.sowing.SowingTaskDetailScreen
 import com.kapilagro.sasyak.presentation.spraying.SprayingRequestScreen
 import com.kapilagro.sasyak.presentation.spraying.SprayingScreen
 import com.kapilagro.sasyak.presentation.spraying.SprayingTaskDetailScreen
@@ -158,13 +159,17 @@ fun AppNavGraph(
                 onTaskCreated = {
                     navController.navigate(Screen.SowingRequestScreen.route)
                 },
+                onTaskClick = { taskId ->
+                    navController.navigate("sowing_task_detail/$taskId")
+                },
                 onBackClick = {
                     navController.popBackStack()
-                }, onTaskClick = {
-                    navController.popBackStack()
                 }
-            )
+
+                )
         }
+
+
 
         composable(Screen.SowingRequestScreen.route) {
             SowingRequestScreen(
@@ -357,6 +362,22 @@ fun AppNavGraph(
                 onTaskClick = { taskId ->
                     navController.navigate("scouting_task_detail/$taskId")
                 },
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        // Add this new route
+        composable(
+            route = "sowing_task_detail/{taskId}",
+            arguments = listOf(
+                navArgument("taskId") { type = NavType.IntType }
+            )
+        ) { backStackEntry ->
+            val taskId = backStackEntry.arguments?.getInt("taskId") ?: -1
+            SowingTaskDetailScreen(
+                taskId = taskId,
                 onBackClick = {
                     navController.popBackStack()
                 }
