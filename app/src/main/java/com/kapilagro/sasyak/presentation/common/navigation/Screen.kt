@@ -22,6 +22,7 @@ sealed class Screen(val route: String, val title: String, @DrawableRes val icon:
     object Yield : Screen("yield","Yeild")
 
     object Fuel : Screen("fuel","Fuel")
+    object Sowing : Screen("sowing","Sowing")
 
     object Spraying : Screen("spraying","Spraying")
 
