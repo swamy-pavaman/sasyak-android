@@ -8,19 +8,21 @@ import com.kapilagro.sasyak.domain.models.Task
 import com.kapilagro.sasyak.domain.models.TaskAdvice
 import com.kapilagro.sasyak.domain.repositories.TaskAdviceRepository
 import com.kapilagro.sasyak.domain.repositories.TaskRepository
-
+import com.kapilagro.sasyak.domain.repositories.AuthRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 import javax.inject.Inject
 
 @HiltViewModel
 class TaskViewModel @Inject constructor(
     private val taskRepository: TaskRepository,
     private val taskAdviceRepository: TaskAdviceRepository,
+    private val authRepository: AuthRepository,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) : ViewModel() {
 
@@ -38,6 +40,19 @@ class TaskViewModel @Inject constructor(
 
     private val _selectedTab = MutableStateFlow(TaskTab.PENDING)
     val selectedTab: StateFlow<TaskTab> = _selectedTab.asStateFlow()
+
+    // User role state flow
+    private val _userRole = MutableStateFlow<String?>(null)
+    val userRole: StateFlow<String?> = _userRole.asStateFlow()
+
+    // Method to get the current user's role
+    fun getCurrentUserRole() {
+        viewModelScope.launch {
+            authRepository.getUserRole().collect { role ->
+                _userRole.value = role
+            }
+        }
+    }
 
     fun onTabSelected(tab: TaskTab) {
         _selectedTab.value = tab
@@ -147,9 +162,15 @@ class TaskViewModel @Inject constructor(
         }
     }
 
-    fun updateTaskImplementation(taskId: Int, implementationJson: String) {
+    fun addTaskImplementation(taskId: Int, implementationText: String) {
         _updateTaskState.value = UpdateTaskState.Loading
         viewModelScope.launch(ioDispatcher) {
+            // Create implementation JSON object
+            val implementationJson = JSONObject().apply {
+                put("text", implementationText)
+                put("timestamp", System.currentTimeMillis())
+            }.toString()
+
             when (val response = taskRepository.updateTaskImplementation(taskId, implementationJson)) {
                 is ApiResponse.Success -> {
                     _updateTaskState.value = UpdateTaskState.Success(response.data)
