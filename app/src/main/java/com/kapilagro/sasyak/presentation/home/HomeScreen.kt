@@ -53,6 +53,10 @@ fun HomeScreen(
     onSprayingTaskClick: () -> Unit,
     onYieldTaskClick: () -> Unit,
     onTeamClick:()->Unit,
+
+
+    onReportsClick: () -> Unit,    // Added for Reports navigation
+    onAdviceClick: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val userState by viewModel.userState.collectAsState()
@@ -228,7 +232,10 @@ fun HomeScreen(
                         onTaskClick = onTaskClick,
                         tasksState = tasksState,
                         loadTasksData = { viewModel.loadTasksData() },
-                        onTeamClick=onTeamClick
+                        onTeamClick=onTeamClick,
+                        onReportsClick = onReportsClick,
+                        onAdviceClick = onAdviceClick     // Pass the new callbacks
+
                     )
                 }
                 "SUPERVISOR" -> {
@@ -265,6 +272,8 @@ fun ManagerHomeContent(
     tasksState: HomeViewModel.TasksState,
     loadTasksData: () -> Unit,
     onTeamClick: ()-> Unit,
+    onReportsClick: () -> Unit,  // Added for Reports navigation
+    onAdviceClick: () -> Unit,   // Added for Advice navigation
 ) {
     // Manager-specific quick actions
     Text(
@@ -293,23 +302,23 @@ fun ManagerHomeContent(
             label = "Reports",
             backgroundColor = ReportsIcon,
             containerColor = ReportsContainer,
-            onClick = { /* Handle reports */ }
+            onClick = onReportsClick
         )
 
-        QuickActionButton(
-            icon = Icons.AutoMirrored.Outlined.Assignment,
-            label = "Tasks",
-            backgroundColor = TasksIcon,
-            containerColor = TasksContainer,
-            onClick = { /* Handle tasks */ }
-        )
+//        QuickActionButton(
+//            icon = Icons.AutoMirrored.Outlined.Assignment,
+//            label = "Tasks",
+//            backgroundColor = TasksIcon,
+//            containerColor = TasksContainer,
+//            onClick = { /* Handle tasks */ }
+//        )
 
         QuickActionButton(
             icon = Icons.Outlined.Healing,
             label = "Advice",
             backgroundColor = AdviceIcon,
             containerColor = AdviceContainer,
-            onClick = { /* Handle advice */ }
+            onClick = onAdviceClick
         )
     }
 
