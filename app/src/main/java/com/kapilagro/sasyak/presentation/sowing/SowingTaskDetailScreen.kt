@@ -278,11 +278,12 @@ fun SowingTaskDetailScreen(
                                 // Seed Quantity
                                 if (!sowingDetails.seedQuantity.isNullOrEmpty() && !sowingDetails.seedUnit.isNullOrEmpty()) {
                                     DetailRow(
+                                        icon = Icons.Outlined.ShoppingCart,
+
                                         //   icon = Icons.Outlined,
                                         label = "Quantity",
-                                        value = "${sowingDetails.seedQuantity} ${sowingDetails.seedUnit}",
-                                        icon = TODO(),
-                                        valueColor = TODO()
+                                        value = "${sowingDetails.seedQuantity} ${sowingDetails.seedUnit}"
+
                                     )
                                 }
 
