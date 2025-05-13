@@ -1,12 +1,15 @@
 package com.kapilagro.sasyak.presentation.tasks
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -16,26 +19,26 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.kapilagro.sasyak.domain.models.TaskAdvice
 import com.kapilagro.sasyak.domain.models.Task
+import com.kapilagro.sasyak.domain.models.TaskAdvice
 import com.kapilagro.sasyak.presentation.common.components.StatusIndicator
 import com.kapilagro.sasyak.presentation.common.components.TaskTypeChip
-import com.kapilagro.sasyak.presentation.home.HomeViewModel
+import org.json.JSONArray
 import org.json.JSONObject
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TaskDetailScreen(
     taskId: Int,
     onBackClick: () -> Unit,
-    viewModel: TaskViewModel = hiltViewModel(),
-    homeViewModel: HomeViewModel = hiltViewModel(),
+    viewModel: TaskViewModel = hiltViewModel()
 ) {
     val taskDetailState by viewModel.taskDetailState.collectAsState()
     val updateTaskState by viewModel.updateTaskState.collectAsState()
-    val userRole by homeViewModel.userRole.collectAsState() // will check later
+    val userRole by viewModel.userRole.collectAsState()
 
     var showApproveDialog by remember { mutableStateOf(false) }
     var showRejectDialog by remember { mutableStateOf(false) }
@@ -45,7 +48,7 @@ fun TaskDetailScreen(
     // Load task detail
     LaunchedEffect(taskId) {
         viewModel.loadTaskDetail(taskId)
-        userRole
+        viewModel.getCurrentUserRole()
     }
 
     // Handle update success
@@ -140,7 +143,7 @@ fun TaskDetailScreen(
                 title = { Text("Task Details") },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 }
             )
@@ -231,7 +234,7 @@ fun TaskDetailScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
-                                text = formatDateTime(task.createdAt.toString()),
+                                text = formatDateTime(task.createdAt ?: ""),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Medium
                             )
@@ -263,7 +266,7 @@ fun TaskDetailScreen(
 
                     // Display role-based actions
                     when (userRole) {
-                        UserRole.MANAGER -> {
+                        "MANAGER" -> {
                             // Manager can approve/reject tasks and provide advice
                             if (task.status.equals("submitted", ignoreCase = true)) {
                                 Row(
@@ -304,9 +307,9 @@ fun TaskDetailScreen(
                                 }
                             }
                         }
-                        UserRole.SUPERVISOR -> {
+                        "SUPERVISOR" -> {
                             // Supervisor can implement approved tasks
-                            if (task.status.equals("approved", ignoreCase = true) && task.implementation.isNullOrEmpty()) {
+                            if (task.status.equals("approved", ignoreCase = true) && getImplementationFromJson(task.implementationJson).isNullOrEmpty()) {
                                 Column {
                                     OutlinedTextField(
                                         value = implementationInput,
@@ -345,7 +348,8 @@ fun TaskDetailScreen(
                     }
 
                     // Display implementation if exists
-                    if (!task.implementation.isNullOrEmpty()) {
+                    val implementation = getImplementationFromJson(task.implementationJson)
+                    if (!implementation.isNullOrEmpty()) {
                         Spacer(modifier = Modifier.height(24.dp))
 
                         Text(
@@ -366,7 +370,7 @@ fun TaskDetailScreen(
                                 modifier = Modifier.padding(16.dp)
                             ) {
                                 Text(
-                                    text = task.implementation ?: "",
+                                    text = implementation,
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                             }
@@ -406,7 +410,7 @@ fun TaskDetailScreen(
                     }
 
                     // Add advice input for managers
-                    if (userRole == UserRole.MANAGER) {
+                    if (userRole == "MANAGER") {
                         Spacer(modifier = Modifier.height(16.dp))
 
                         var newAdvice by remember { mutableStateOf("") }
@@ -433,7 +437,7 @@ fun TaskDetailScreen(
                             modifier = Modifier.align(Alignment.End)
                         ) {
                             Icon(
-                                imageVector = Icons.Outlined.Send,
+                                imageVector = Icons.AutoMirrored.Outlined.Send,
                                 contentDescription = null
                             )
                             Spacer(modifier = Modifier.width(8.dp))
@@ -502,6 +506,16 @@ fun DetailItem(label: String, value: String) {
     }
 }
 
+// TaskAdvice data class definition for use in this file
+data class TaskAdvice(
+    val id: Int,
+    val taskId: Int,
+    val adviceText: String,
+    val createdBy: String,
+    val createdAt: String
+)
+
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun AdviceItem(advice: TaskAdvice) {
     Card(
@@ -516,7 +530,7 @@ fun AdviceItem(advice: TaskAdvice) {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = advice.createdBy,
+                    text = advice.adviceText,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -530,7 +544,7 @@ fun AdviceItem(advice: TaskAdvice) {
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = advice.content,
+                text = advice.adviceText,
                 style = MaterialTheme.typography.bodyMedium
             )
         }
@@ -554,93 +568,113 @@ fun TaskDetailsSection(task: Task) {
 
             Spacer(modifier = Modifier.height(8.dp))
 
+            // Parse the detailsJson
+            val details = try {
+                task.detailsJson?.let { JSONObject(it) }
+            } catch (e: Exception) {
+                null
+            }
+
             when (task.taskType.uppercase()) {
                 "SCOUTING" -> {
                     // Display scouting-specific fields
-                    task.details?.let { details ->
-                        DetailItem("Row", details["Row"]?.toString() ?: "")
-                        DetailItem("Tree No", details["Tree No"]?.toString() ?: "")
-                        DetailItem("Crop Name", details["Crop Name"]?.toString() ?: "")
-                        DetailItem("Scouting Date", details["Scouting Date"]?.toString() ?: "")
-                        DetailItem("Name of Disease", details["Name of Disease"]?.toString() ?: "")
-                        DetailItem("Number of Fruits Seen", details["Number of Fruits Seen"]?.toString() ?: "")
-                        DetailItem("Number of Flowers Seen", details["Number of Flowers Seen"]?.toString() ?: "")
-                        DetailItem("Number of Fruits Dropped", details["Number of Fruits Dropped"]?.toString() ?: "")
+                    details?.let {
+                        DetailItem("Row", it.optString("Row", ""))
+                        DetailItem("Tree No", it.optString("Tree No", ""))
+                        DetailItem("Crop Name", it.optString("Crop Name", ""))
+                        DetailItem("Scouting Date", it.optString("Scouting Date", ""))
+                        DetailItem("Name of Disease", it.optString("Name of Disease", ""))
+                        DetailItem("Number of Fruits Seen", it.optString("Number of Fruits Seen", ""))
+                        DetailItem("Number of Flowers Seen", it.optString("Number of Flowers Seen", ""))
+                        DetailItem("Number of Fruits Dropped", it.optString("Number of Fruits Dropped", ""))
                     }
                 }
                 "IRRIGATION" -> {
                     // Display irrigation-specific fields
-                    task.details?.let { details ->
-                        DetailItem("Block", details["Block"]?.toString() ?: "")
-                        DetailItem("Row", details["Row"]?.toString() ?: "")
-                        DetailItem("Water Source", details["Water Source"]?.toString() ?: "")
-                        DetailItem("Duration (hours)", details["Duration"]?.toString() ?: "")
-                        DetailItem("Water Volume (L)", details["Water Volume"]?.toString() ?: "")
+                    details?.let {
+                        DetailItem("Block", it.optString("Block", ""))
+                        DetailItem("Row", it.optString("Row", ""))
+                        DetailItem("Water Source", it.optString("Water Source", ""))
+                        DetailItem("Duration (hours)", it.optString("Duration", ""))
+                        DetailItem("Water Volume (L)", it.optString("Water Volume", ""))
                     }
                 }
                 "HARVESTING" -> {
                     // Display harvesting-specific fields
-                    task.details?.let { details ->
-                        DetailItem("Block", details["Block"]?.toString() ?: "")
-                        DetailItem("Crop", details["Crop"]?.toString() ?: "")
-                        DetailItem("Quantity (kg)", details["Quantity"]?.toString() ?: "")
-                        DetailItem("Quality Grade", details["Quality Grade"]?.toString() ?: "")
-                        DetailItem("Harvest Date", details["Harvest Date"]?.toString() ?: "")
+                    details?.let {
+                        DetailItem("Block", it.optString("Block", ""))
+                        DetailItem("Crop", it.optString("Crop", ""))
+                        DetailItem("Quantity (kg)", it.optString("Quantity", ""))
+                        DetailItem("Quality Grade", it.optString("Quality Grade", ""))
+                        DetailItem("Harvest Date", it.optString("Harvest Date", ""))
                     }
                 }
                 "SPRAYING" -> {
                     // Display spraying-specific fields
-                    task.details?.let { details ->
-                        DetailItem("Block", details["Block"]?.toString() ?: "")
-                        DetailItem("Chemical Name", details["Chemical Name"]?.toString() ?: "")
-                        DetailItem("Application Rate", details["Application Rate"]?.toString() ?: "")
-                        DetailItem("Target Pest/Disease", details["Target"]?.toString() ?: "")
-                        DetailItem("Area Covered", details["Area Covered"]?.toString() ?: "")
-                        DetailItem("Weather Conditions", details["Weather"]?.toString() ?: "")
+                    details?.let {
+                        DetailItem("Block", it.optString("Block", ""))
+                        DetailItem("Chemical Name", it.optString("Chemical Name", ""))
+                        DetailItem("Application Rate", it.optString("Application Rate", ""))
+                        DetailItem("Target Pest/Disease", it.optString("Target", ""))
+                        DetailItem("Area Covered", it.optString("Area Covered", ""))
+                        DetailItem("Weather Conditions", it.optString("Weather", ""))
                     }
                 }
                 "FERTILIZATION" -> {
                     // Display fertilization-specific fields
-                    task.details?.let { details ->
-                        DetailItem("Block", details["Block"]?.toString() ?: "")
-                        DetailItem("Fertilizer Name", details["Fertilizer Name"]?.toString() ?: "")
-                        DetailItem("Application Rate", details["Application Rate"]?.toString() ?: "")
-                        DetailItem("Method", details["Method"]?.toString() ?: "")
-                        DetailItem("Area Covered", details["Area Covered"]?.toString() ?: "")
-                        DetailItem("Soil Condition", details["Soil Condition"]?.toString() ?: "")
+                    details?.let {
+                        DetailItem("Block", it.optString("Block", ""))
+                        DetailItem("Fertilizer Name", it.optString("Fertilizer Name", ""))
+                        DetailItem("Application Rate", it.optString("Application Rate", ""))
+                        DetailItem("Method", it.optString("Method", ""))
+                        DetailItem("Area Covered", it.optString("Area Covered", ""))
+                        DetailItem("Soil Condition", it.optString("Soil Condition", ""))
                     }
                 }
                 "PRUNING" -> {
                     // Display pruning-specific fields
-                    task.details?.let { details ->
-                        DetailItem("Block", details["Block"]?.toString() ?: "")
-                        DetailItem("Row", details["Row"]?.toString() ?: "")
-                        DetailItem("Tree Count", details["Tree Count"]?.toString() ?: "")
-                        DetailItem("Pruning Type", details["Pruning Type"]?.toString() ?: "")
-                        DetailItem("Pruning Intensity", details["Pruning Intensity"]?.toString() ?: "")
+                    details?.let {
+                        DetailItem("Block", it.optString("Block", ""))
+                        DetailItem("Row", it.optString("Row", ""))
+                        DetailItem("Tree Count", it.optString("Tree Count", ""))
+                        DetailItem("Pruning Type", it.optString("Pruning Type", ""))
+                        DetailItem("Pruning Intensity", it.optString("Pruning Intensity", ""))
                     }
                 }
                 "PLANTING" -> {
                     // Display planting-specific fields
-                    task.details?.let { details ->
-                        DetailItem("Block", details["Block"]?.toString() ?: "")
-                        DetailItem("Row", details["Row"]?.toString() ?: "")
-                        DetailItem("Crop", details["Crop"]?.toString() ?: "")
-                        DetailItem("Variety", details["Variety"]?.toString() ?: "")
-                        DetailItem("Number of Plants", details["Number of Plants"]?.toString() ?: "")
-                        DetailItem("Spacing", details["Spacing"]?.toString() ?: "")
+                    details?.let {
+                        DetailItem("Block", it.optString("Block", ""))
+                        DetailItem("Row", it.optString("Row", ""))
+                        DetailItem("Crop", it.optString("Crop", ""))
+                        DetailItem("Variety", it.optString("Variety", ""))
+                        DetailItem("Number of Plants", it.optString("Number of Plants", ""))
+                        DetailItem("Spacing", it.optString("Spacing", ""))
                     }
                 }
                 else -> {
                     // Generic details display for any other type
-                    task.details?.forEach { (key, value) ->
-                        DetailItem(key, value.toString())
+                    details?.let {
+                        val keys = it.keys()
+                        while (keys.hasNext()) {
+                            val key = keys.next()
+                            DetailItem(key, it.optString(key, ""))
+                        }
                     }
                 }
             }
 
             // Display images if any
-            if (!task.images.isNullOrEmpty()) {
+            val images = try {
+                task.imagesJson?.let { json ->
+                    val jsonArray = JSONArray(json)
+                    List(jsonArray.length()) { i -> jsonArray.getString(i) }
+                }
+            } catch (e: Exception) {
+                null
+            }
+
+            if (images != null && images.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
                     text = "Images",
@@ -652,7 +686,7 @@ fun TaskDetailsSection(task: Task) {
 
                 // Display image count as a placeholder
                 Text(
-                    text = "${task.images?.size ?: 0} image(s) attached",
+                    text = "${images.size} image(s) attached",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -664,7 +698,7 @@ fun TaskDetailsSection(task: Task) {
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(task.images?.size ?: 0) { index ->
+                    items(images.size) { index ->
                         // Image component would go here
                         Box(
                             modifier = Modifier
@@ -678,8 +712,8 @@ fun TaskDetailsSection(task: Task) {
             }
 
             // Display location if available
-            task.details?.get("Location")?.let { location ->
-                if (location.toString().isNotEmpty()) {
+            details?.optString("Location")?.let { location ->
+                if (location.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
                         text = "Location",
@@ -691,7 +725,7 @@ fun TaskDetailsSection(task: Task) {
 
                     // Display location information
                     Text(
-                        text = location.toString(),
+                        text = location,
                         style = MaterialTheme.typography.bodyMedium
                     )
 
@@ -700,8 +734,8 @@ fun TaskDetailsSection(task: Task) {
             }
 
             // Display any additional notes if present
-            task.details?.get("Notes")?.let { notes ->
-                if (notes.toString().isNotEmpty()) {
+            details?.optString("Notes")?.let { notes ->
+                if (notes.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
                         text = "Additional Notes",
@@ -712,7 +746,7 @@ fun TaskDetailsSection(task: Task) {
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
-                        text = notes.toString(),
+                        text = notes,
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
@@ -722,6 +756,7 @@ fun TaskDetailsSection(task: Task) {
 }
 
 // Helper function to format date time
+@RequiresApi(Build.VERSION_CODES.O)
 private fun formatDateTime(dateTime: String): String {
     return try {
         val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")
@@ -733,10 +768,14 @@ private fun formatDateTime(dateTime: String): String {
     }
 }
 
-// User role enum (should be defined elsewhere but included here for completeness)
-enum class UserRole {
-    MANAGER,
-    SUPERVISOR,
-    WORKER,
-    UNKNOWN
+// Helper function to parse implementation JSON
+private fun getImplementationFromJson(implementationJson: String?): String? {
+    return try {
+        implementationJson?.let {
+            val jsonObject = JSONObject(it)
+            jsonObject.optString("text", null)
+        }
+    } catch (e: Exception) {
+        null
+    }
 }
