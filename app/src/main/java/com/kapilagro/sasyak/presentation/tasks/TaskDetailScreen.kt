@@ -66,6 +66,7 @@ fun TaskDetailScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Task Review") },
+
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")

@@ -541,7 +541,11 @@ fun AppNavGraph(
                 },
                 onCreateTaskClick = {
                     navController.navigate(Screen.CreateTask.route)
+                },
+                onBackClick = {
+                    navController.popBackStack()
                 }
+
             )
         }
 
