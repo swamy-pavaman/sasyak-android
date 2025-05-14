@@ -557,10 +557,10 @@ fun SupervisorHomeContent(
     // Load the appropriate tasks when tab changes
     LaunchedEffect(selectedTaskTab) {
         when (selectedTaskTab) {
-            0 -> viewModel.loadTasksByStatus("submitted")
-            1 -> viewModel.loadTasksByStatus("approved")
-            2 -> viewModel.loadTasksByStatus("rejected")
-            3 -> viewModel.loadAssignedTasks() // Now calls the correct method
+            0 -> viewModel.loadHotTasksByStatus("submitted")
+            1 -> viewModel.loadHotTasksByStatus("approved")
+            2 -> viewModel.loadHotTasksByStatus("rejected")
+            3 -> viewModel.loadHotAssignedTasks() // Now calls the correct method
         }
     }
 

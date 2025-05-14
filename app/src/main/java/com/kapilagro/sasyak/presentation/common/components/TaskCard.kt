@@ -184,7 +184,7 @@ fun TaskTypeChip(taskType: String) {
     Surface(
         shape = RoundedCornerShape(16.dp),
         color = backgroundColor,
-        modifier = Modifier.height(24.dp)
+        modifier = Modifier.height(30.dp)
     ) {
         Text(
             text = taskType.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() },
