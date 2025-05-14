@@ -165,10 +165,11 @@ fun NotificationItem(
     notification: Notification,
     onClick: () -> Unit
 ) {
+    // Light border for read notifications, primary color border for unread notifications
     val cardBorderColor = if (!notification.isRead) {
         MaterialTheme.colorScheme.primary
     } else {
-        MaterialTheme.colorScheme.surfaceVariant
+        MaterialTheme.colorScheme.outline // More visible border for read notifications
     }
 
     val backgroundColor = if (!notification.isRead) {
@@ -186,7 +187,7 @@ fun NotificationItem(
             containerColor = backgroundColor
         ),
         border = BorderStroke(
-            width = if (!notification.isRead) 1.dp else 0.dp,
+            width = if (!notification.isRead) 1.dp else 0.8.dp, // Slightly thicker border for both
             color = cardBorderColor
         )
     ) {
