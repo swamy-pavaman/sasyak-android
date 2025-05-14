@@ -18,10 +18,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.kapilagro.sasyak.presentation.common.theme.AgroPrimary
-
 @Composable
 fun SuccessDialog(
     title: String,
@@ -34,16 +34,13 @@ fun SuccessDialog(
     onSecondaryButtonClick: (() -> Unit)? = null,
     onDismissRequest: () -> Unit = onPrimaryButtonClick
 ) {
-    // One-time animation for checkmark
     val scale by animateFloatAsState(
         targetValue = 1f,
         animationSpec = tween(800, easing = LinearEasing),
         label = "scaleAnimation"
     )
 
-    Dialog(
-        onDismissRequest = onDismissRequest
-    ) {
+    Dialog(onDismissRequest = onDismissRequest) {
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -87,7 +84,10 @@ fun SuccessDialog(
                 Text(
                     text = title,
                     style = MaterialTheme.typography.headlineSmall,
-                    color = AgroPrimary
+                    color = AgroPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.fillMaxWidth()
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -95,13 +95,15 @@ fun SuccessDialog(
                 Text(
                     text = message,
                     textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.fillMaxWidth()
                 )
 
                 if (details.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Details Section
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         color = Color(0xFFE0F7FA),
@@ -120,12 +122,18 @@ fun SuccessDialog(
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
                                     text = "Description:",
-                                    style = MaterialTheme.typography.bodyMedium
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.fillMaxWidth()
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                                     text = description,
-                                    style = MaterialTheme.typography.bodyMedium
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    maxLines = 3,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.fillMaxWidth()
                                 )
                             }
                         }
@@ -141,7 +149,11 @@ fun SuccessDialog(
                         .height(48.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = AgroPrimary)
                 ) {
-                    Text(primaryButtonText)
+                    Text(
+                        text = primaryButtonText,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
 
                 if (secondaryButtonText != null && onSecondaryButtonClick != null) {
@@ -152,7 +164,11 @@ fun SuccessDialog(
                             .fillMaxWidth()
                             .height(48.dp)
                     ) {
-                        Text(secondaryButtonText)
+                        Text(
+                            text = secondaryButtonText,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
                 }
             }
@@ -170,12 +186,19 @@ fun DetailRow(label: String, value: String) {
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodyMedium
+            style = MaterialTheme.typography.bodyMedium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
         )
+        Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = value,
             style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
         )
     }
 }
