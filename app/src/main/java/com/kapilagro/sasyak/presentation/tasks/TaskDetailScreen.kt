@@ -142,7 +142,7 @@ fun TaskDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Task Details") },
+                    title = { Text("Task Details") },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -270,7 +270,14 @@ fun TaskDetailScreen(
                     when (userRole) {
                         "MANAGER" -> {
                             // Manager can approve/reject tasks and provide advice
-                            if (task.status.equals("submitted", ignoreCase = true)) {
+                            if (task.status.equals("submitted", ignoreCase = true)|| task.status.equals("pending", ignoreCase = true)) {
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                // Using our new TaskActionButtons component
+                                com.kapilagro.sasyak.presentation.tasks.components.TaskActionButtons(
+                                    onApproveClick = { showApproveDialog = true },
+                                    onRejectClick = { showRejectDialog = true }
+                                )
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceEvenly

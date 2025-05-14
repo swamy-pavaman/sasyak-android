@@ -17,12 +17,14 @@ import com.kapilagro.sasyak.presentation.common.components.TaskCard
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
+import com.kapilagro.sasyak.presentation.tasks.components.TaskTabRow
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
 fun TaskListScreen(
     onTaskClick: (Int) -> Unit,
     onCreateTaskClick: () -> Unit,
+    onBackClick: () -> Unit,
     viewModel: TaskViewModel = hiltViewModel()
 ) {
     val selectedTab by viewModel.selectedTab.collectAsState()
@@ -49,7 +51,7 @@ fun TaskListScreen(
             TopAppBar(
                 title = { Text("Tasks") },
                 navigationIcon = {
-                    IconButton(onClick = { /* Go back */ }) {
+                    IconButton(onClick = onBackClick) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 }
@@ -72,29 +74,20 @@ fun TaskListScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            TabRow(
-                selectedTabIndex = when (selectedTab) {
-                    TaskViewModel.TaskTab.PENDING -> 0
-                    TaskViewModel.TaskTab.APPROVED -> 1
-                    TaskViewModel.TaskTab.REJECTED -> 2
-                }
-            ) {
-                Tab(
-                    selected = selectedTab == TaskViewModel.TaskTab.PENDING,
-                    onClick = { viewModel.onTabSelected(TaskViewModel.TaskTab.PENDING) },
-                    text = { Text("Pending") }
-                )
-                Tab(
-                    selected = selectedTab == TaskViewModel.TaskTab.APPROVED,
-                    onClick = { viewModel.onTabSelected(TaskViewModel.TaskTab.APPROVED) },
-                    text = { Text("Approved") }
-                )
-                Tab(
-                    selected = selectedTab == TaskViewModel.TaskTab.REJECTED,
-                    onClick = { viewModel.onTabSelected(TaskViewModel.TaskTab.REJECTED) },
-                    text = { Text("Rejected") }
-                )
-            }
+            // Using our custom TaskTabRow instead of the Material3 TabRow
+            TaskTabRow(
+                selectedTab = selectedTab,
+                onTabSelected = { viewModel.onTabSelected(it) },
+                pendingCount = (taskListState as? TaskViewModel.TaskListState.Success)?.let {
+                    it.tasks.count { task -> task.status.equals("pending", ignoreCase = true) }
+                } ?: 0,
+                approvedCount = (taskListState as? TaskViewModel.TaskListState.Success)?.let {
+                    it.tasks.count { task -> task.status.equals("approved", ignoreCase = true) }
+                } ?: 0,
+                rejectedCount = (taskListState as? TaskViewModel.TaskListState.Success)?.let {
+                    it.tasks.count { task -> task.status.equals("rejected", ignoreCase = true) }
+                } ?: 0
+            )
 
             Box(
                 modifier = Modifier
@@ -132,7 +125,12 @@ fun TaskListScreen(
                             }
                         } else {
                             LazyColumn(
-                                contentPadding = PaddingValues(bottom = 16.dp)
+                                contentPadding = PaddingValues(
+                                    start = 16.dp,
+                                    end = 16.dp,
+                                    bottom = 16.dp
+                                ),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 items(tasks) { task ->
                                     TaskCard(
