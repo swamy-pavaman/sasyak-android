@@ -44,6 +44,20 @@ val FuelContainer = Color(0xFFFFF8E6)    // Light orange/yellow background
 val YieldIcon = Color(0xFFEC407A)       // Pink
 val YieldContainer = Color(0xFFFCE4EC)   // Light pink background
 
+
+// Submitted Status Colors
+val SubmittedContainer = Color(0xFFEFF6FF)
+val SubmittedText = Color(0xFF1D4ED8)
+
+// Approved Status Colors
+val ApprovedContainer = Color(0xFFE6F9F0)
+val ApprovedText = Color(0xFF047857)
+
+// Rejected Status Colors
+val RejectedContainer = Color(0xFFFDECEA)
+val RejectedText = Color(0xFFB91C1C)
+
+
 // Manager Quick Action Colors
 val TeamIcon = Color(0xFF4285F4)        // Blue
 val TeamContainer = Color(0xFFECF3FE)    // Light blue background
@@ -57,3 +71,4 @@ val AdviceContainer = Color(0xFFFFF8E6)  // Light orange/yellow background
 // Additional dark mode colors
 val BackgroundDark = Color(0xFF121212)
 val SurfaceDark = Color(0xFF1E1E1E)
+

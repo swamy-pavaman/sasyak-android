@@ -22,10 +22,29 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.kapilagro.sasyak.domain.models.TaskAdvice
 import com.kapilagro.sasyak.presentation.common.components.TaskTypeChip
+import com.kapilagro.sasyak.presentation.common.theme.AgroMuted
+import com.kapilagro.sasyak.presentation.common.theme.AgroMutedForeground
+import com.kapilagro.sasyak.presentation.common.theme.ApprovedContainer
+import com.kapilagro.sasyak.presentation.common.theme.ApprovedText
+import com.kapilagro.sasyak.presentation.common.theme.FuelContainer
+import com.kapilagro.sasyak.presentation.common.theme.FuelIcon
+import com.kapilagro.sasyak.presentation.common.theme.RejectedContainer
+import com.kapilagro.sasyak.presentation.common.theme.RejectedText
+import com.kapilagro.sasyak.presentation.common.theme.ScoutingContainer
+import com.kapilagro.sasyak.presentation.common.theme.ScoutingIcon
+import com.kapilagro.sasyak.presentation.common.theme.SowingContainer
+import com.kapilagro.sasyak.presentation.common.theme.SowingIcon
+import com.kapilagro.sasyak.presentation.common.theme.SprayingContainer
+import com.kapilagro.sasyak.presentation.common.theme.SprayingIcon
+import com.kapilagro.sasyak.presentation.common.theme.SubmittedContainer
+import com.kapilagro.sasyak.presentation.common.theme.SubmittedText
+import com.kapilagro.sasyak.presentation.common.theme.YieldContainer
+import com.kapilagro.sasyak.presentation.common.theme.YieldIcon
 import kotlinx.coroutines.delay
 import org.json.JSONObject
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
@@ -95,7 +114,7 @@ fun TaskDetailScreen(
 //                        fontWeight = FontWeight.Bold
 //                    )
 
-                    Spacer(modifier = Modifier.height(8.dp))
+//                    Spacer(modifier = Modifier.height(8.dp))
 
                     // Task type chips
                     Row(
@@ -103,6 +122,8 @@ fun TaskDetailScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         TaskTypeChip(taskType = task.taskType)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        TaskStatusChip(taskStaus=task.status)
                         Spacer(modifier = Modifier.width(8.dp))
                         // Add a second chip for crop type if available
                         val cropName = getCropNameFromJson(task.detailsJson)
@@ -518,6 +539,29 @@ fun TaskDetailScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+fun TaskStatusChip(taskStaus: String) {
+    val (backgroundColor, textColor) = when (taskStaus.lowercase()) {
+        "submitted" -> Pair(SubmittedContainer, SubmittedText)
+        "approved" -> Pair(ApprovedContainer, ApprovedText)
+        "rejected" -> Pair(RejectedContainer, RejectedText)
+        else -> Pair(AgroMuted, AgroMutedForeground)
+    }
+
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = backgroundColor,
+        modifier = Modifier.height(30.dp)
+    ) {
+        Text(
+            text = taskStaus.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() },
+            style = MaterialTheme.typography.labelSmall,
+            color = textColor,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+        )
     }
 }
 
