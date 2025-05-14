@@ -29,6 +29,9 @@ class HomeViewModel @Inject constructor(
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) : ViewModel() {
 
+    private val _newTasksState = MutableStateFlow<TasksState>(TasksState.Loading)
+    val newTasksState: StateFlow<TasksState> =_newTasksState.asStateFlow()
+
     private val _userState = MutableStateFlow<UserState>(UserState.Loading)
     val userState: StateFlow<UserState> = _userState.asStateFlow()
 
@@ -67,6 +70,47 @@ class HomeViewModel @Inject constructor(
     }
 
 
+    fun loadHotNewTasks(){
+        _newTasksState.value = TasksState.Loading
+        viewModelScope.launch(ioDispatcher){
+            try {
+                val response = taskRepository.getTasksByStatus("submitted",0,3)
+                when(response){
+                    is ApiResponse.Success ->{
+                        _newTasksState.value = TasksState.Success(response.data.first)
+                    }
+                    is ApiResponse.Error -> {
+                        _newTasksState.value = TasksState.Error(response.errorMessage)
+                    }
+                    is ApiResponse.Loading -> {
+                        _newTasksState.value = TasksState.Loading
+                    }
+
+                }
+            }
+            catch (e: Exception){
+                _newTasksState.value = TasksState.Error("Error loading new tasks: ${e.message}")
+            }
+        }
+    }
+
+    fun loadHotMyTasks() {
+        _tasksState.value = TasksState.Loading
+        viewModelScope.launch(ioDispatcher) {
+            val response = taskRepository.getCreatedTasks(0, 3) // Fetch 3 tasks
+            when (response) {
+                is ApiResponse.Success -> {
+                    _tasksState.value = TasksState.Success(response.data.first)
+                }
+                is ApiResponse.Error -> {
+                    _tasksState.value = TasksState.Error(response.errorMessage)
+                }
+                is ApiResponse.Loading -> {
+                    _tasksState.value = TasksState.Loading
+                }
+            }
+        }
+    }
 
 //    fun loadTeamMembers() {
 //        _teamMembersState.value = TeamMembersState.Loading
