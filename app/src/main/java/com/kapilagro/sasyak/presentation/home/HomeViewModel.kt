@@ -135,6 +135,24 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    fun loadHotAssignedTasks() {
+        _tasksState.value = TasksState.Loading
+        viewModelScope.launch(ioDispatcher) {
+            when (val response = taskRepository.getAssignedTasks(0,3)) {
+                is ApiResponse.Success -> {
+                    // Extract just the list of tasks from the pair
+                    _tasksState.value = TasksState.Success(response.data.first)
+                }
+                is ApiResponse.Error -> {
+                    _tasksState.value = TasksState.Error(response.errorMessage)
+                }
+                is ApiResponse.Loading -> {
+                    _tasksState.value = TasksState.Loading
+                }
+            }
+        }
+    }
+
     // In HomeViewModel.kt, update the loadWeatherData function:
 
     fun loadWeatherData() {
@@ -181,6 +199,28 @@ class HomeViewModel @Inject constructor(
             try {
                 val response = taskRepository.getTasksByStatus(status, 0, 10)
 
+                when (response) {
+                    is ApiResponse.Success -> {
+                        _tasksState.value = TasksState.Success(response.data.first)
+                    }
+                    is ApiResponse.Error -> {
+                        _tasksState.value = TasksState.Error(response.errorMessage)
+                    }
+                    is ApiResponse.Loading -> {
+                        _tasksState.value = TasksState.Loading
+                    }
+                }
+            } catch (e: Exception) {
+                _tasksState.value = TasksState.Error("Error loading tasks: ${e.message}")
+            }
+        }
+    }
+
+    fun loadHotTasksByStatus(status: String) {
+        _tasksState.value = TasksState.Loading
+        viewModelScope.launch(ioDispatcher) {
+            try {
+                val response = taskRepository.getTasksByStatus(status, 0, 3)
                 when (response) {
                     is ApiResponse.Success -> {
                         _tasksState.value = TasksState.Success(response.data.first)
