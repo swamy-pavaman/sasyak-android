@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
@@ -17,6 +18,7 @@ import com.kapilagro.sasyak.presentation.common.components.TaskCard
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
+import com.kapilagro.sasyak.presentation.tasks.components.TabItem
 import com.kapilagro.sasyak.presentation.tasks.components.TaskTabRow
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
@@ -52,7 +54,7 @@ fun TaskListScreen(
                 title = { Text("Tasks") },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 }
             )
@@ -75,18 +77,45 @@ fun TaskListScreen(
                 .padding(paddingValues)
         ) {
             // Using our custom TaskTabRow instead of the Material3 TabRow
+//            TaskTabRow(
+//                selectedTab = selectedTab,
+//                onTabSelected = { viewModel.onTabSelected(it) },
+//                pendingCount = (taskListState as? TaskViewModel.TaskListState.Success)?.let {
+//                    it.tasks.count { task -> task.status.equals("pending", ignoreCase = true) }
+//                } ?: 0,
+//                approvedCount = (taskListState as? TaskViewModel.TaskListState.Success)?.let {
+//                    it.tasks.count { task -> task.status.equals("approved", ignoreCase = true) }
+//                } ?: 0,
+//                rejectedCount = (taskListState as? TaskViewModel.TaskListState.Success)?.let {
+//                    it.tasks.count { task -> task.status.equals("rejected", ignoreCase = true) }
+//                } ?: 0
+//            )
             TaskTabRow(
                 selectedTab = selectedTab,
-                onTabSelected = { viewModel.onTabSelected(it) },
-                pendingCount = (taskListState as? TaskViewModel.TaskListState.Success)?.let {
-                    it.tasks.count { task -> task.status.equals("pending", ignoreCase = true) }
-                } ?: 0,
-                approvedCount = (taskListState as? TaskViewModel.TaskListState.Success)?.let {
-                    it.tasks.count { task -> task.status.equals("approved", ignoreCase = true) }
-                } ?: 0,
-                rejectedCount = (taskListState as? TaskViewModel.TaskListState.Success)?.let {
-                    it.tasks.count { task -> task.status.equals("rejected", ignoreCase = true) }
-                } ?: 0
+                tabs = listOf(
+                    TabItem(
+                        id = TaskViewModel.TaskTab.PENDING,
+                        title = "Pending",
+                        count = (taskListState as? TaskViewModel.TaskListState.Success)?.let {
+                            it.tasks.count { task -> task.status.equals("pending", ignoreCase = true) }
+                        } ?: 0
+                    ),
+                    TabItem(
+                        id = TaskViewModel.TaskTab.APPROVED,
+                        title = "Approved",
+                        count = (taskListState as? TaskViewModel.TaskListState.Success)?.let {
+                            it.tasks.count { task -> task.status.equals("approved", ignoreCase = true) }
+                        } ?: 0
+                    ),
+                    TabItem(
+                        id = TaskViewModel.TaskTab.REJECTED,
+                        title = "Rejected",
+                        count = (taskListState as? TaskViewModel.TaskListState.Success)?.let {
+                            it.tasks.count { task -> task.status.equals("rejected", ignoreCase = true) }
+                        } ?: 0
+                    )
+                ),
+                onTabSelected = { viewModel.onTabSelected(it) }
             )
 
             Box(

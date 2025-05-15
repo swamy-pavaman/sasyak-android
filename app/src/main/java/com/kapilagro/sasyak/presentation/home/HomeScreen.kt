@@ -52,6 +52,7 @@ fun HomeScreen(
     onSowingTaskClick: () -> Unit,
     onSprayingTaskClick: () -> Unit,
     onYieldTaskClick: () -> Unit,
+
     onTeamClick:()->Unit,
 
 
@@ -63,6 +64,7 @@ fun HomeScreen(
     val weatherState by viewModel.weatherState.collectAsState()
     val tasksState by viewModel.tasksState.collectAsState()
     val userRole by viewModel.userRole.collectAsState()
+    val newTasksState by viewModel.newTasksState.collectAsState()
 
     // Permission state for location
     val locationPermissionState = rememberMultiplePermissionsState(
@@ -230,12 +232,13 @@ fun HomeScreen(
                 "MANAGER" -> {
                     ManagerHomeContent(
                         onTaskClick = onTaskClick,
-                        tasksState = tasksState,
-                        loadTasksData = { viewModel.loadTasksData() },
-                        onTeamClick=onTeamClick,
+                        tasksState = tasksState, // For "My" tasks
+                        newTasksState = newTasksState, // For "New" tasks
+                        loadHotMyTasks = { viewModel.loadHotMyTasks() }, // For "My" tasks
+                        loadHotNewTasks = { viewModel.loadHotNewTasks() }, // For "New" tasks
+                        onTeamClick = onTeamClick,
                         onReportsClick = onReportsClick,
-                        onAdviceClick = onAdviceClick     // Pass the new callbacks
-
+                        onAdviceClick = onAdviceClick
                     )
                 }
                 "SUPERVISOR" -> {
@@ -266,14 +269,18 @@ fun HomeScreen(
     }
 }
 
+
+
 @Composable
 fun ManagerHomeContent(
     onTaskClick: (String) -> Unit,
-    tasksState: HomeViewModel.TasksState,
-    loadTasksData: () -> Unit,
-    onTeamClick: ()-> Unit,
-    onReportsClick: () -> Unit,  // Added for Reports navigation
-    onAdviceClick: () -> Unit,   // Added for Advice navigation
+    tasksState: HomeViewModel.TasksState, // For "My" tasks
+    newTasksState: HomeViewModel.TasksState, // For "New" tasks
+    loadHotMyTasks: () -> Unit, // For "My" tasks
+    loadHotNewTasks: () -> Unit, // For "New" tasks
+    onTeamClick: () -> Unit,
+    onReportsClick: () -> Unit,
+    onAdviceClick: () -> Unit,
 ) {
     // Manager-specific quick actions
     Text(
@@ -305,14 +312,6 @@ fun ManagerHomeContent(
             onClick = onReportsClick
         )
 
-//        QuickActionButton(
-//            icon = Icons.AutoMirrored.Outlined.Assignment,
-//            label = "Tasks",
-//            backgroundColor = TasksIcon,
-//            containerColor = TasksContainer,
-//            onClick = { /* Handle tasks */ }
-//        )
-
         QuickActionButton(
             icon = Icons.Outlined.Healing,
             label = "Advice",
@@ -324,8 +323,17 @@ fun ManagerHomeContent(
 
     Spacer(modifier = Modifier.height(16.dp))
 
-    // UPDATED: Manager Task Sections with New and My Tabs
+    // Manager Task Sections with New and My Tabs
     var selectedManagerTab by remember { mutableStateOf(0) }
+
+    // Load tasks based on tab selection
+    LaunchedEffect(selectedManagerTab) {
+        if (selectedManagerTab == 0) {
+            loadHotNewTasks() // Load "New" tasks
+        } else {
+            loadHotMyTasks() // Load "My" tasks
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -359,9 +367,9 @@ fun ManagerHomeContent(
         when (selectedManagerTab) {
             0 -> {
                 // New tasks (created by supervisors)
-                when (tasksState) {
+                when (newTasksState) {
                     is HomeViewModel.TasksState.Success -> {
-                        val tasks = (tasksState as HomeViewModel.TasksState.Success).tasks
+                        val tasks = (newTasksState as HomeViewModel.TasksState.Success).tasks
                         if (tasks.isEmpty()) {
                             Box(
                                 modifier = Modifier
@@ -377,6 +385,7 @@ fun ManagerHomeContent(
                                     task = task,
                                     onClick = { onTaskClick(task.id.toString()) }
                                 )
+                                Spacer(modifier = Modifier.height(8.dp))
                             }
                         }
                     }
@@ -399,12 +408,12 @@ fun ManagerHomeContent(
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(
-                                    text = "Failed to load tasks",
+                                    text = (newTasksState as HomeViewModel.TasksState.Error).message,
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.error
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
-                                Button(onClick = loadTasksData) {
+                                Button(onClick = loadHotNewTasks) {
                                     Text("Retry")
                                 }
                             }
@@ -432,6 +441,7 @@ fun ManagerHomeContent(
                                     task = task,
                                     onClick = { onTaskClick(task.id.toString()) }
                                 )
+                                Spacer(modifier = Modifier.height(8.dp))
                             }
                         }
                     }
@@ -454,12 +464,12 @@ fun ManagerHomeContent(
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(
-                                    text = "Failed to load tasks",
+                                    text = (tasksState as HomeViewModel.TasksState.Error).message,
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.error
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
-                                Button(onClick = loadTasksData) {
+                                Button(onClick = loadHotMyTasks) {
                                     Text("Retry")
                                 }
                             }
