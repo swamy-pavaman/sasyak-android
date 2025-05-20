@@ -16,6 +16,7 @@ import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -27,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
@@ -35,6 +37,7 @@ import com.kapilagro.sasyak.presentation.common.components.TaskCard
 import com.kapilagro.sasyak.presentation.common.components.WeatherCard
 import com.kapilagro.sasyak.presentation.common.theme.*
 import com.kapilagro.sasyak.presentation.home.components.QuickActionButton
+import com.kapilagro.sasyak.presentation.notifications.NotificationViewModel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.*
@@ -59,12 +62,14 @@ fun HomeScreen(
     onReportsClick: () -> Unit,    // Added for Reports navigation
     onAdviceClick: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
+    notificationViewModel: NotificationViewModel = hiltViewModel() // Inject NotificationViewModel
 ) {
     val userState by viewModel.userState.collectAsState()
     val weatherState by viewModel.weatherState.collectAsState()
     val tasksState by viewModel.tasksState.collectAsState()
     val userRole by viewModel.userRole.collectAsState()
     val newTasksState by viewModel.newTasksState.collectAsState()
+    val unreadCountState by notificationViewModel.unreadCountState.collectAsState() // Observe unread count
 
     // Permission state for location
     val locationPermissionState = rememberMultiplePermissionsState(
@@ -114,11 +119,65 @@ fun HomeScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = onNotificationClick, modifier = Modifier.padding(end = 8.dp)) {
-                        Icon(
-                            imageVector = Icons.Outlined.Notifications,
-                            contentDescription = "Notifications"
-                        )
+                    Box(modifier = Modifier.padding(end = 8.dp)) {
+                        IconButton(onClick = onNotificationClick) {
+                            Icon(
+                                imageVector = Icons.Outlined.Notifications,
+                                contentDescription = "Notifications"
+                            )
+                        }
+                        when (val state = unreadCountState) {
+                            is NotificationViewModel.UnreadCountState.Success -> {
+                                val unreadCount = state.count
+                                if (unreadCount > 0) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(20.dp) // Slightly larger for visibility
+                                            .background(MaterialTheme.colorScheme.error, shape = CircleShape)
+                                            .align(Alignment.TopEnd)
+                                            .offset(x = (-2).dp, y = 2.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = if (unreadCount > 99) "99+" else unreadCount.toString(),
+                                            fontSize = 11.sp, // Slightly larger text
+                                            color = Color.White,
+                                            textAlign = TextAlign.Center // Use TextAlign.Center instead of Alignment.Center
+                                        )
+                                    }
+                                }
+                            }
+                            is NotificationViewModel.UnreadCountState.Loading -> {
+                                Box(
+                                    modifier = Modifier
+                                        .size(18.dp)
+                                        .align(Alignment.TopEnd)
+                                        .offset(x = (-2).dp, y = 2.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(14.dp),
+                                        strokeWidth = 2.dp
+                                    )
+                                }
+                            }
+                            is NotificationViewModel.UnreadCountState.Error -> {
+                                Box(
+                                    modifier = Modifier
+                                        .size(18.dp)
+                                        .background(MaterialTheme.colorScheme.error, shape = CircleShape)
+                                        .align(Alignment.TopEnd)
+                                        .offset(x = (-2).dp, y = 2.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "!",
+                                        fontSize = 11.sp,
+                                        color = Color.White
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             )
