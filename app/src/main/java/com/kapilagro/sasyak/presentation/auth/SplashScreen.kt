@@ -121,7 +121,7 @@ fun SplashScreen(
 
                 // 🌞 Sun icon (moving to top-left with scale)
                 Image(
-                    painter = painterResource(id = R.drawable.ic_sun), // Add this to drawable
+                    painter = painterResource(id = R.drawable.baseline_sunny_24), // Add this to drawable
                     contentDescription = "Sun",
                     colorFilter = ColorFilter.tint(Color.White),
 

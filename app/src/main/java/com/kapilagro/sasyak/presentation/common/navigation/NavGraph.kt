@@ -26,7 +26,6 @@ import com.kapilagro.sasyak.presentation.common.navigation.Screen.SprayingReques
 import com.kapilagro.sasyak.presentation.common.navigation.Screen.YieldRequestScreen
 import com.kapilagro.sasyak.presentation.fuel.FuelRequestScreen
 import com.kapilagro.sasyak.presentation.fuel.FuelScreen
-import com.kapilagro.sasyak.presentation.fuel.FuelTaskDetailScreen
 import com.kapilagro.sasyak.presentation.home.HomeScreen
 import com.kapilagro.sasyak.presentation.home.HomeViewModel
 import com.kapilagro.sasyak.presentation.notifications.NotificationScreen
@@ -160,7 +159,7 @@ fun AppNavGraph(
                     navController.navigate(Screen.SowingRequestScreen.route)
                 },
                 onTaskClick = { taskId ->
-                    navController.navigate("sowing_task_detail/$taskId")
+                    navController.navigate(Screen.TaskDetail.createRoute(taskId.toString()))
                 },
                 onBackClick = {
                     navController.popBackStack()
@@ -360,7 +359,8 @@ fun AppNavGraph(
                     navController.navigate(Screen.ScoutingRequestScreen.route)
                 },
                 onTaskClick = { taskId ->
-                    navController.navigate("scouting_task_detail/$taskId")
+//                    navController.navigate("scouting_task_detail/$taskId")
+                    navController.navigate(Screen.TaskDetail.createRoute(taskId.toString()))
                 },
                 onBackClick = {
                     navController.popBackStack()
@@ -392,7 +392,7 @@ fun AppNavGraph(
                     navController.navigate(Screen.YieldRequestScreen.route)
                 },
                 onTaskClick = { taskId ->
-                    navController.navigate("yield_task_detail/$taskId")
+                    navController.navigate(Screen.TaskDetail.createRoute(taskId.toString()))
                 },
                 onBackClick = {
                     navController.popBackStack()
@@ -403,10 +403,10 @@ fun AppNavGraph(
         composable(Screen.Fuel.route) {
             FuelScreen(
                 onTaskCreated = {
-                    navController.navigate(Screen.FuelRequestScreen.route)
+                    navController.navigate(FuelRequestScreen.route)
                 },
                 onTaskClick = { taskId ->
-                    navController.navigate("fuel_task_detail/$taskId")
+                    navController.navigate(Screen.TaskDetail.createRoute(taskId.toString()))
                 },
                 onBackClick = {
                     navController.popBackStack()
@@ -419,7 +419,7 @@ fun AppNavGraph(
                     navController.navigate(Screen.SprayingRequestScreen.route)
                 },
                 onTaskClick = { taskId ->
-                    navController.navigate("spraying_task_detail/$taskId")
+                    navController.navigate(Screen.TaskDetail.createRoute(taskId.toString()))
                 },
                 onBackClick = {
                     navController.popBackStack()
@@ -432,7 +432,7 @@ fun AppNavGraph(
                     navController.navigate(Screen.ScoutingRequestScreen.route)
                 },
                 onTaskClick = { taskId ->
-                    navController.navigate("scouting_task_detail/$taskId")
+                    navController.navigate(Screen.TaskDetail.createRoute(taskId.toString()))
                 },
                 onBackClick = {
                     navController.popBackStack()
@@ -473,20 +473,20 @@ fun AppNavGraph(
             )
         }
 
-        composable(
-            route = "fuel_task_detail/{taskId}",
-            arguments = listOf(
-                navArgument("taskId") { type = NavType.IntType }
-            )
-        ) { backStackEntry ->
-            val taskId = backStackEntry.arguments?.getInt("taskId") ?: -1
-            FuelTaskDetailScreen(
-                taskId = taskId,
-                onBackClick = {
-                    navController.popBackStack()
-                }
-            )
-        }
+//        composable(
+//            route = "fuel_task_detail/{taskId}",
+//            arguments = listOf(
+//                navArgument("taskId") { type = NavType.IntType }
+//            )
+//        ) { backStackEntry ->
+//            val taskId = backStackEntry.arguments?.getInt("taskId") ?: -1
+//            FuelTaskDetailScreen(
+//                taskId = taskId,
+//                onBackClick = {
+//                    navController.popBackStack()
+//                }
+//            )
+//        }
 
         composable(
             route = "spraying_task_detail/{taskId}",
