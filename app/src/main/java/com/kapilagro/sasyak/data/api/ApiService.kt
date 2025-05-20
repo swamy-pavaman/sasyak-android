@@ -10,6 +10,16 @@ import retrofit2.http.*
 interface ApiService {
 
 
+    @GET("/api/manager/users/supervisor-list")
+    suspend fun getSupervisorsList(): Response<List<SupervisorListResponse>>
+
+    @GET("api/tasks/by-supervisors")
+    suspend fun getTasksBySupervisors(
+        @Query("page") page: Int = 0,
+        @Query("size") size: Int = 10
+    ): Response<TaskListResponse>
+
+
     @POST("api/auth/login")
     suspend fun login(@Body loginRequest: LoginRequest): Response<AuthResponse>
 

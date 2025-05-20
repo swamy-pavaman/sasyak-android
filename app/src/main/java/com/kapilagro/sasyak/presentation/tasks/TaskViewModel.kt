@@ -2,6 +2,7 @@ package com.kapilagro.sasyak.presentation.tasks
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.kapilagro.sasyak.data.api.models.responses.SupervisorListResponse
 import com.kapilagro.sasyak.di.IoDispatcher
 import com.kapilagro.sasyak.domain.models.ApiResponse
 import com.kapilagro.sasyak.domain.models.Task
@@ -9,6 +10,7 @@ import com.kapilagro.sasyak.domain.models.TaskAdvice
 import com.kapilagro.sasyak.domain.repositories.TaskAdviceRepository
 import com.kapilagro.sasyak.domain.repositories.TaskRepository
 import com.kapilagro.sasyak.domain.repositories.AuthRepository
+import com.kapilagro.sasyak.domain.repositories.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,6 +25,7 @@ class TaskViewModel @Inject constructor(
     private val taskRepository: TaskRepository,
     private val taskAdviceRepository: TaskAdviceRepository,
     private val authRepository: AuthRepository,
+    private val userRepository: UserRepository,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) : ViewModel() {
 
@@ -47,10 +50,30 @@ class TaskViewModel @Inject constructor(
     private val _userRole = MutableStateFlow<String?>(null)
     val userRole: StateFlow<String?> = _userRole.asStateFlow()
 
+    private val _supervisorsListState = MutableStateFlow<SupervisorsListState>(SupervisorsListState.Idle)
+    val supervisorsListState: StateFlow<SupervisorsListState> = _supervisorsListState.asStateFlow()
+
     fun getCurrentUserRole() {
         viewModelScope.launch {
             authRepository.getUserRole().collect { role ->
                 _userRole.value = role
+            }
+        }
+    }
+
+    fun loadSupervisorsList() {
+        _supervisorsListState.value = SupervisorsListState.Loading
+        viewModelScope.launch(ioDispatcher) {
+            when (val response = userRepository.getSupervisorsList()) {
+                is ApiResponse.Success -> {
+                    _supervisorsListState.value = SupervisorsListState.Success(response.data)
+                }
+                is ApiResponse.Error -> {
+                    _supervisorsListState.value = SupervisorsListState.Error(response.errorMessage)
+                }
+                is ApiResponse.Loading -> {
+                    _supervisorsListState.value = SupervisorsListState.Loading
+                }
             }
         }
     }
@@ -251,6 +274,13 @@ class TaskViewModel @Inject constructor(
         object Loading : AddAdviceState()
         object Success : AddAdviceState()
         data class Error(val message: String) : AddAdviceState()
+    }
+
+    sealed class SupervisorsListState{
+        object Idle : SupervisorsListState()
+        object Loading : SupervisorsListState()
+        data class Success(val supervisors: List<SupervisorListResponse>) : SupervisorsListState()
+        data class Error(val message: String) : SupervisorsListState()
     }
 
     enum class TaskTab {
