@@ -39,9 +39,7 @@ fun NotificationScreen(
     onBackClick: () -> Unit,
     viewModel: NotificationViewModel = hiltViewModel()
 ) {
-
     val unreadCountState by viewModel.unreadCountState.collectAsState()
-
     val notificationsState by viewModel.notificationsState.collectAsState()
     val userRole by viewModel.userRole.collectAsState()
 
@@ -72,37 +70,6 @@ fun NotificationScreen(
                     }
                 },
                 actions = {
-                    Box {
-                        IconButton(onClick = { /* Optional: open another screen */ }) {
-                            Icon(Icons.Filled.Notifications, contentDescription = "Notifications")
-                        }
-                        val unreadCount = (unreadCountState as? NotificationViewModel.UnreadCountState.Success)?.count
-
-                        if (unreadCount != null && unreadCount > 0                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .align(Alignment.TopEnd)
-                                    .offset(x = (-2).dp, y = 4.dp)
-                                    .size(16.dp)
-                                    .background(Color.Red, CircleShape),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                when (val state = unreadCountState) {
-                                    is NotificationViewModel.UnreadCountState.Success -> {
-                                        Text(
-                                            text = state.count.toString(),
-                                            fontSize = 10.sp,
-                                            color = Color.White
-                                        )
-                                    }
-
-                                    else -> {
-                                        // Do nothing or show placeholder
-                                    }
-                                }
-                            }
-                        }
-                    }
                     if (notificationsState is NotificationViewModel.NotificationsState.Success &&
                         (notificationsState as NotificationViewModel.NotificationsState.Success).notifications.any { !it.isRead }
                     ) {
@@ -152,14 +119,12 @@ fun NotificationScreen(
                                     }
                                 )
                             }
-
                             item {
                                 Spacer(modifier = Modifier.height(16.dp))
                             }
                         }
                     }
                 }
-
                 is NotificationViewModel.NotificationsState.Loading -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
@@ -168,7 +133,6 @@ fun NotificationScreen(
                         CircularProgressIndicator()
                     }
                 }
-
                 is NotificationViewModel.NotificationsState.Error -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
@@ -191,7 +155,6 @@ fun NotificationScreen(
                     }
                 }
             }
-
             PullRefreshIndicator(
                 refreshing = isRefreshing,
                 state = pullRefreshState,
