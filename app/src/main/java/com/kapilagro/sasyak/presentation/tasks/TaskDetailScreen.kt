@@ -22,24 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.kapilagro.sasyak.domain.models.TaskAdvice
 import com.kapilagro.sasyak.presentation.common.components.TaskTypeChip
-import com.kapilagro.sasyak.presentation.common.theme.AgroMuted
-import com.kapilagro.sasyak.presentation.common.theme.AgroMutedForeground
-import com.kapilagro.sasyak.presentation.common.theme.ApprovedContainer
-import com.kapilagro.sasyak.presentation.common.theme.ApprovedText
-import com.kapilagro.sasyak.presentation.common.theme.FuelContainer
-import com.kapilagro.sasyak.presentation.common.theme.FuelIcon
-import com.kapilagro.sasyak.presentation.common.theme.RejectedContainer
-import com.kapilagro.sasyak.presentation.common.theme.RejectedText
-import com.kapilagro.sasyak.presentation.common.theme.ScoutingContainer
-import com.kapilagro.sasyak.presentation.common.theme.ScoutingIcon
-import com.kapilagro.sasyak.presentation.common.theme.SowingContainer
-import com.kapilagro.sasyak.presentation.common.theme.SowingIcon
-import com.kapilagro.sasyak.presentation.common.theme.SprayingContainer
-import com.kapilagro.sasyak.presentation.common.theme.SprayingIcon
-import com.kapilagro.sasyak.presentation.common.theme.SubmittedContainer
-import com.kapilagro.sasyak.presentation.common.theme.SubmittedText
-import com.kapilagro.sasyak.presentation.common.theme.YieldContainer
-import com.kapilagro.sasyak.presentation.common.theme.YieldIcon
+import com.kapilagro.sasyak.presentation.common.theme.*
 import kotlinx.coroutines.delay
 import org.json.JSONObject
 import java.time.LocalDateTime
@@ -56,6 +39,7 @@ fun TaskDetailScreen(
 ) {
     val taskDetailState by viewModel.taskDetailState.collectAsState()
     val updateTaskState by viewModel.updateTaskState.collectAsState()
+    val addAdviceState by viewModel.addAdviceState.collectAsState()
     val userRole by viewModel.userRole.collectAsState()
 
     var comment by remember { mutableStateOf("") }
@@ -67,7 +51,6 @@ fun TaskDetailScreen(
         viewModel.loadTaskDetail(taskId)
         viewModel.getCurrentUserRole()
         if (shouldRefresh) {
-            // Reset the refresh flag after loading
             shouldRefresh = false
         }
     }
@@ -76,8 +59,18 @@ fun TaskDetailScreen(
     LaunchedEffect(updateTaskState) {
         if (updateTaskState is TaskViewModel.UpdateTaskState.Success) {
             viewModel.clearUpdateTaskState()
-            delay(300) // Short delay to ensure server-side update is complete
-            shouldRefresh = true // Trigger refresh
+            delay(300)
+            shouldRefresh = true
+        }
+    }
+
+    // Handle advice submission success
+    LaunchedEffect(addAdviceState) {
+        if (addAdviceState is TaskViewModel.AddAdviceState.Success) {
+            viewModel.clearAddAdviceState()
+            comment = ""
+            delay(300)
+            shouldRefresh = true
         }
     }
 
@@ -85,7 +78,6 @@ fun TaskDetailScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Task Review") },
-
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -107,15 +99,6 @@ fun TaskDetailScreen(
                         .verticalScroll(rememberScrollState())
                         .padding(16.dp)
                 ) {
-                    // Task header
-//                    Text(
-//                       // text = task.description,
-//                        style = MaterialTheme.typography.headlineMedium,
-//                        fontWeight = FontWeight.Bold
-//                    )
-
-//                    Spacer(modifier = Modifier.height(8.dp))
-
                     // Task type chips
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -123,9 +106,8 @@ fun TaskDetailScreen(
                     ) {
                         TaskTypeChip(taskType = task.taskType)
                         Spacer(modifier = Modifier.width(8.dp))
-                        TaskStatusChip(taskStaus=task.status)
+                        TaskStatusChip(taskStatus = task.status)
                         Spacer(modifier = Modifier.width(8.dp))
-                        // Add a second chip for crop type if available
                         val cropName = getCropNameFromJson(task.detailsJson)
                         if (!cropName.isNullOrBlank()) {
                             Surface(
@@ -152,11 +134,9 @@ fun TaskDetailScreen(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // Task details in key-value format
                     if (task.taskType.uppercase() == "SCOUTING") {
                         FormattedScoutingFields(task.detailsJson)
                     } else {
-                        // Generic field display
                         val details = try {
                             task.detailsJson?.let { JSONObject(it) }
                         } catch (e: Exception) {
@@ -175,7 +155,6 @@ fun TaskDetailScreen(
                         }
                     }
 
-                    // Location info
                     val locationInfo = getLocationFromJson(task.detailsJson)
                     if (!locationInfo.isNullOrBlank()) {
                         Spacer(modifier = Modifier.height(8.dp))
@@ -193,7 +172,6 @@ fun TaskDetailScreen(
                         }
                     }
 
-                    // Date
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
@@ -208,7 +186,6 @@ fun TaskDetailScreen(
                         )
                     }
 
-                    // Assigned user
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
@@ -225,9 +202,7 @@ fun TaskDetailScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // SECTION 2: Description section if there's a detailed description
-
-                    task.description.takeIf { it.length >0 }?.let {
+                    task.description.takeIf { it.isNotBlank() }?.let {
                         Text(
                             text = "Description",
                             style = MaterialTheme.typography.titleMedium,
@@ -244,7 +219,6 @@ fun TaskDetailScreen(
                         Spacer(modifier = Modifier.height(16.dp))
                     }
 
-                    // Uploaded Images section
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
@@ -258,7 +232,6 @@ fun TaskDetailScreen(
 
                             Spacer(modifier = Modifier.height(12.dp))
 
-                            // Placeholder images row - this would be replaced with actual image loading logic
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -287,7 +260,6 @@ fun TaskDetailScreen(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // SECTION 3: Task advice section if advice exists
                     if (advices.isNotEmpty()) {
                         Text(
                             text = "Task Advice",
@@ -305,7 +277,6 @@ fun TaskDetailScreen(
                         Spacer(modifier = Modifier.height(8.dp))
                     }
 
-                    // SECTION 4: Display implementation if exists (for any user)
                     val implementation = getImplementationFromJson(task.implementationJson)
                     if (!implementation.isNullOrEmpty()) {
                         Text(
@@ -339,126 +310,124 @@ fun TaskDetailScreen(
                     // Role-based actions
                     when (userRole) {
                         "MANAGER" -> {
-                            // Manager - show Add Advice (Optional) field and Approve/Reject buttons
                             if (task.status.equals("submitted", ignoreCase = true)) {
-                                // Only show advice input if no advices exist
-                                if (advices.isEmpty()) {
-                                    Card(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        shape = RoundedCornerShape(12.dp)
-                                    ) {
-                                        Column(modifier = Modifier.padding(16.dp)) {
-                                            Text(
-                                                text = "Add Advice (Optional)",
-                                                style = MaterialTheme.typography.titleMedium,
-                                                fontWeight = FontWeight.Bold
-                                            )
+                                // Advice input section
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Column(modifier = Modifier.padding(16.dp)) {
+                                        Text(
+                                            text = "Add Advice",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold
+                                        )
 
-                                            Spacer(modifier = Modifier.height(8.dp))
+                                        Spacer(modifier = Modifier.height(8.dp))
 
-                                            OutlinedTextField(
-                                                value = comment,
-                                                onValueChange = { comment = it },
-                                                placeholder = { Text("Enter your advice or feedback for the supervisor") },
-                                                modifier = Modifier.fillMaxWidth(),
-                                                minLines = 3
-                                            )
+                                        OutlinedTextField(
+                                            value = comment,
+                                            onValueChange = { comment = it },
+                                            placeholder = { Text("Enter your advice or feedback for the supervisor") },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            minLines = 3,
+                                            enabled = addAdviceState !is TaskViewModel.AddAdviceState.Loading
+                                        )
 
-                                            Spacer(modifier = Modifier.height(16.dp))
+                                        Spacer(modifier = Modifier.height(8.dp))
 
-                                            // Approve/Reject buttons
-                                            Row(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                horizontalArrangement = Arrangement.spacedBy(16.dp)
-                                            ) {
-                                                Button(
-                                                    onClick = {
-                                                        viewModel.updateTaskStatus(taskId, "rejected", comment.takeIf { it.isNotBlank() })
-                                                        comment = ""
-                                                    },
-                                                    colors = ButtonDefaults.buttonColors(
-                                                        containerColor = Color(0xFFFFD6D6),
-                                                        contentColor = Color(0xFFFF3B30)
-                                                    ),
-                                                    modifier = Modifier.weight(1f)
-                                                ) {
-                                                    Icon(
-                                                        imageVector = Icons.Outlined.Close,
-                                                        contentDescription = null
-                                                    )
-                                                    Spacer(modifier = Modifier.width(8.dp))
-                                                    Text("Reject")
+                                        Button(
+                                            onClick = {
+                                                if (comment.isNotBlank()) {
+                                                    viewModel.addTaskAdvice(taskId, comment)
                                                 }
-
-                                                Button(
-                                                    onClick = {
-                                                        viewModel.updateTaskStatus(taskId, "approved", comment.takeIf { it.isNotBlank() })
-                                                        comment = ""
-                                                    },
-                                                    colors = ButtonDefaults.buttonColors(
-                                                        containerColor = Color(0xFFD6F2D6),
-                                                        contentColor = Color(0xFF34C759)
-                                                    ),
-                                                    modifier = Modifier.weight(1f)
-                                                ) {
-                                                    Icon(
-                                                        imageVector = Icons.Outlined.Check,
-                                                        contentDescription = null
-                                                    )
-                                                    Spacer(modifier = Modifier.width(8.dp))
-                                                    Text("Approve")
-                                                }
+                                            },
+                                            enabled = comment.isNotBlank() && addAdviceState !is TaskViewModel.AddAdviceState.Loading,
+                                            modifier = Modifier.align(Alignment.End)
+                                        ) {
+                                            if (addAdviceState is TaskViewModel.AddAdviceState.Loading) {
+                                                CircularProgressIndicator(
+                                                    modifier = Modifier.size(24.dp),
+                                                    color = MaterialTheme.colorScheme.onPrimary
+                                                )
+                                            } else {
+                                                Icon(
+                                                    imageVector = Icons.Outlined.Add,
+                                                    contentDescription = null
+                                                )
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Text("Submit Advice")
                                             }
                                         }
-                                    }
-                                } else {
-                                    // If advice exists, just show approve/reject buttons
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(16.dp)
-                                    ) {
-                                        Button(
-                                            onClick = {
-                                                viewModel.updateTaskStatus(taskId, "rejected", null)
-                                            },
-                                            colors = ButtonDefaults.buttonColors(
-                                                containerColor = Color(0xFFFFD6D6),
-                                                contentColor = Color(0xFFFF3B30)
-                                            ),
-                                            modifier = Modifier.weight(1f)
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Outlined.Close,
-                                                contentDescription = null
-                                            )
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Text("Reject")
-                                        }
 
-                                        Button(
-                                            onClick = {
-                                                viewModel.updateTaskStatus(taskId, "approved", null)
-                                            },
-                                            colors = ButtonDefaults.buttonColors(
-                                                containerColor = Color(0xFFD6F2D6),
-                                                contentColor = Color(0xFF34C759)
-                                            ),
-                                            modifier = Modifier.weight(1f)
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Outlined.Check,
-                                                contentDescription = null
+                                        if (addAdviceState is TaskViewModel.AddAdviceState.Error) {
+                                            Spacer(modifier = Modifier.height(8.dp))
+                                            Text(
+                                                text = (addAdviceState as TaskViewModel.AddAdviceState.Error).message,
+                                                color = MaterialTheme.colorScheme.error,
+                                                style = MaterialTheme.typography.bodySmall
                                             )
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Text("Approve")
                                         }
                                     }
+                                }
+
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                // Approve/Reject buttons
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                ) {
+                                    Button(
+                                        onClick = {
+                                            viewModel.updateTaskStatus(taskId, "rejected")
+                                        },
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = Color(0xFFFFD6D6),
+                                            contentColor = Color(0xFFFF3B30)
+                                        ),
+                                        modifier = Modifier.weight(1f),
+                                        enabled = updateTaskState !is TaskViewModel.UpdateTaskState.Loading
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Close,
+                                            contentDescription = null
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text("Reject")
+                                    }
+
+                                    Button(
+                                        onClick = {
+                                            viewModel.updateTaskStatus(taskId, "approved")
+                                        },
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = Color(0xFFD6F2D6),
+                                            contentColor = Color(0xFF34C759)
+                                        ),
+                                        modifier = Modifier.weight(1f),
+                                        enabled = updateTaskState !is TaskViewModel.UpdateTaskState.Loading
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Check,
+                                            contentDescription = null
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text("Approve")
+                                    }
+                                }
+
+                                if (updateTaskState is TaskViewModel.UpdateTaskState.Error) {
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = (updateTaskState as TaskViewModel.UpdateTaskState.Error).message,
+                                        color = MaterialTheme.colorScheme.error,
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
                                 }
                             }
                         }
                         "SUPERVISOR" -> {
-                            // Supervisor can implement approved tasks
-                            // Only show implementation input if no implementation exists
                             if (task.status.equals("approved", ignoreCase = true) && getImplementationFromJson(task.implementationJson).isNullOrEmpty()) {
                                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -476,7 +445,8 @@ fun TaskDetailScreen(
                                         onValueChange = { implementationInput = it },
                                         placeholder = { Text("Enter implementation details") },
                                         modifier = Modifier.fillMaxWidth(),
-                                        minLines = 3
+                                        minLines = 3,
+                                        enabled = updateTaskState !is TaskViewModel.UpdateTaskState.Loading
                                     )
 
                                     Spacer(modifier = Modifier.height(8.dp))
@@ -485,19 +455,34 @@ fun TaskDetailScreen(
                                         onClick = {
                                             if (implementationInput.isNotBlank()) {
                                                 viewModel.addTaskImplementation(taskId, implementationInput)
-                                                // Reset input but don't refresh yet - wait for success callback
                                                 implementationInput = ""
                                             }
                                         },
-                                        enabled = implementationInput.isNotBlank(),
+                                        enabled = implementationInput.isNotBlank() && updateTaskState !is TaskViewModel.UpdateTaskState.Loading,
                                         modifier = Modifier.align(Alignment.End)
                                     ) {
-                                        Icon(
-                                            imageVector = Icons.Outlined.PlayArrow,
-                                            contentDescription = null
+                                        if (updateTaskState is TaskViewModel.UpdateTaskState.Loading) {
+                                            CircularProgressIndicator(
+                                                modifier = Modifier.size(24.dp),
+                                                color = MaterialTheme.colorScheme.onPrimary
+                                            )
+                                        } else {
+                                            Icon(
+                                                imageVector = Icons.Outlined.PlayArrow,
+                                                contentDescription = null
+                                            )
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text("Submit Implementation")
+                                        }
+                                    }
+
+                                    if (updateTaskState is TaskViewModel.UpdateTaskState.Error) {
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Text(
+                                            text = (updateTaskState as TaskViewModel.UpdateTaskState.Error).message,
+                                            color = MaterialTheme.colorScheme.error,
+                                            style = MaterialTheme.typography.bodySmall
                                         )
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text("Submit Implementation")
                                     }
                                 }
                             }
@@ -543,8 +528,8 @@ fun TaskDetailScreen(
 }
 
 @Composable
-fun TaskStatusChip(taskStaus: String) {
-    val (backgroundColor, textColor) = when (taskStaus.lowercase()) {
+fun TaskStatusChip(taskStatus: String) {
+    val (backgroundColor, textColor) = when (taskStatus.lowercase()) {
         "submitted" -> Pair(SubmittedContainer, SubmittedText)
         "approved" -> Pair(ApprovedContainer, ApprovedText)
         "rejected" -> Pair(RejectedContainer, RejectedText)
@@ -557,7 +542,7 @@ fun TaskStatusChip(taskStaus: String) {
         modifier = Modifier.height(30.dp)
     ) {
         Text(
-            text = taskStaus.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() },
+            text = taskStatus.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() },
             style = MaterialTheme.typography.labelSmall,
             color = textColor,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
@@ -565,7 +550,6 @@ fun TaskStatusChip(taskStaus: String) {
     }
 }
 
-// New detailed row component to match UI in image 2
 @Composable
 fun DetailRow(label: String, value: String) {
     if (value.isNotBlank()) {
@@ -589,7 +573,6 @@ fun DetailRow(label: String, value: String) {
     }
 }
 
-// Scouting fields formatted nicely like in image 2
 @Composable
 fun FormattedScoutingFields(detailsJson: String?) {
     val json = try {
@@ -600,12 +583,9 @@ fun FormattedScoutingFields(detailsJson: String?) {
     }
 
     json?.let {
-        // From image 2:
         DetailRow("Disease/Pest", it.optString("nameOfDisease", "None detected"))
         DetailRow("Fruits Count", it.optString("noOfFruitSeen", ""))
         DetailRow("Flowers Count", it.optString("noOfFlowersSeen", ""))
-
-        // Additional fields from original code
         DetailRow("Row", it.optString("row", ""))
         DetailRow("Tree Number", it.optString("treeNo", ""))
         DetailRow("Fruits Dropped", it.optString("noOfFruitsDropped", ""))
@@ -616,7 +596,6 @@ fun FormattedScoutingFields(detailsJson: String?) {
     )
 }
 
-// Simplified advice item
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun SimpleAdviceItem(advice: TaskAdvice) {
@@ -637,7 +616,7 @@ fun SimpleAdviceItem(advice: TaskAdvice) {
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = formatDateTime(advice.createdAt),
+                    text = formatDateTime(advice.createdAt?:"createdAt"),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -653,25 +632,21 @@ fun SimpleAdviceItem(advice: TaskAdvice) {
     }
 }
 
-// Helper function to format date time
 @RequiresApi(Build.VERSION_CODES.O)
 private fun formatDateTime(dateTime: String): String {
     return try {
-        // Handle different date formats safely
         val dt = if (dateTime.contains(".")) {
             val trimmed = dateTime.split(".")[0]
             LocalDateTime.parse(trimmed)
         } else {
             LocalDateTime.parse(dateTime)
         }
-
         dt.format(DateTimeFormatter.ofPattern("MMM dd, yyyy - HH:mm a"))
     } catch (e: Exception) {
-        dateTime // Return original if parsing fails
+        dateTime
     }
 }
 
-// Helper function to get location from JSON - outside of Composable function
 private fun getLocationFromJson(detailsJson: String?): String? {
     return try {
         detailsJson?.let {
@@ -683,7 +658,6 @@ private fun getLocationFromJson(detailsJson: String?): String? {
     }
 }
 
-// Helper function to get crop name from JSON - outside of Composable function
 private fun getCropNameFromJson(detailsJson: String?): String? {
     return try {
         detailsJson?.let {
@@ -695,12 +669,10 @@ private fun getCropNameFromJson(detailsJson: String?): String? {
     }
 }
 
-// Helper function to parse implementation JSON - outside of Composable function
 private fun getImplementationFromJson(implementationJson: String?): String? {
     if (implementationJson == null || implementationJson == "{}" || implementationJson.isEmpty()) {
         return null
     }
-
     return try {
         JSONObject(implementationJson).optString("text")
     } catch (e: Exception) {

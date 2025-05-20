@@ -22,6 +22,7 @@ class NotificationViewModel @Inject constructor(
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) : ViewModel() {
 
+
     private val _notificationsState = MutableStateFlow<NotificationsState>(NotificationsState.Loading)
     val notificationsState: StateFlow<NotificationsState> = _notificationsState.asStateFlow()
 
@@ -41,6 +42,7 @@ class NotificationViewModel @Inject constructor(
             }
         }
     }
+
 
     fun loadNotifications() {
         _notificationsState.value = NotificationsState.Loading
@@ -119,6 +121,8 @@ class NotificationViewModel @Inject constructor(
         }
     }
 
+
+
     sealed class NotificationsState {
         object Loading : NotificationsState()
         data class Success(val notifications: List<Notification>) : NotificationsState()
@@ -131,3 +135,5 @@ class NotificationViewModel @Inject constructor(
         data class Error(val message: String) : UnreadCountState()
     }
 }
+
+

@@ -25,7 +25,6 @@ object NetworkUtils {
             else -> false
         }
     }
-
     /**
      * Get network connection type
      */
@@ -77,13 +76,10 @@ object NetworkUtils {
                 trySend(false)
             }
         }
-
         val networkRequest = NetworkRequest.Builder()
             .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
             .build()
-
         connectivityManager.registerNetworkCallback(networkRequest, callback)
-
         // Set initial value
         val isConnected = isNetworkAvailable(context)
         trySend(isConnected)
