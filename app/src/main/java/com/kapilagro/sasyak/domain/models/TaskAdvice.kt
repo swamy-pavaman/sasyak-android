@@ -4,5 +4,5 @@ data class TaskAdvice(
     val taskId: Int,
     val managerName: String?,
     val adviceText: String,
-    val createdAt: String
+    val createdAt: String?
 )

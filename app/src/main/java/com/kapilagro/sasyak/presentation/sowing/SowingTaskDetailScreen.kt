@@ -76,7 +76,7 @@ fun SowingTaskDetailScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        viewModel.updateTaskStatus(taskId, "approved", comment.takeIf { it.isNotBlank() })
+                        viewModel.updateTaskStatus(taskId, comment.takeIf { it.isNotBlank() }.toString())
                         showApproveDialog = false
                         comment = ""
                     }
@@ -114,7 +114,7 @@ fun SowingTaskDetailScreen(
                 TextButton(
                     onClick = {
                         if (comment.isNotBlank()) {
-                            viewModel.updateTaskStatus(taskId, "rejected", comment)
+                            viewModel.updateTaskStatus(taskId, comment)
                             showRejectDialog = false
                             comment = ""
                         }
@@ -489,7 +489,7 @@ fun SowingTaskDetailScreen(
                                             )
 
                                             Text(
-                                                text = advice.createdAt,
+                                                text = advice.createdAt?:"createdAt",
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )

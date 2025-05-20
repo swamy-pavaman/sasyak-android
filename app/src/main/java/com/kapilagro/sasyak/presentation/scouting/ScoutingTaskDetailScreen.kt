@@ -86,7 +86,9 @@ fun ScoutingTaskDetailScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        viewModel.updateTaskStatus(taskId, "approved", comment.takeIf { it.isNotBlank() })
+                        viewModel.updateTaskStatus(taskId,
+                            comment.takeIf { it.isNotBlank() }.toString()
+                        )
                         showApproveDialog = false
                         comment = ""
                     }
@@ -125,7 +127,7 @@ fun ScoutingTaskDetailScreen(
                 Button(
                     onClick = {
                         if (comment.isNotBlank()) {
-                            viewModel.updateTaskStatus(taskId, "rejected", comment)
+                            viewModel.updateTaskStatus(taskId,  comment)
                             showRejectDialog = false
                             comment = ""
                         }
@@ -528,7 +530,7 @@ fun ScoutingTaskDetailScreen(
                                                     )
 
                                                     Text(
-                                                        text = advice.createdAt,
+                                                        text = advice.createdAt?:"createdAt",
                                                         style = MaterialTheme.typography.bodySmall,
                                                         color = Purple500
                                                     )

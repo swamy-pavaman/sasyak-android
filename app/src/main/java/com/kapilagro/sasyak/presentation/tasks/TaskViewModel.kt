@@ -38,14 +38,15 @@ class TaskViewModel @Inject constructor(
     private val _updateTaskState = MutableStateFlow<UpdateTaskState>(UpdateTaskState.Idle)
     val updateTaskState: StateFlow<UpdateTaskState> = _updateTaskState.asStateFlow()
 
+    private val _addAdviceState = MutableStateFlow<AddAdviceState>(AddAdviceState.Idle)
+    val addAdviceState: StateFlow<AddAdviceState> = _addAdviceState.asStateFlow()
+
     private val _selectedTab = MutableStateFlow(TaskTab.PENDING)
     val selectedTab: StateFlow<TaskTab> = _selectedTab.asStateFlow()
 
-    // User role state flow
     private val _userRole = MutableStateFlow<String?>(null)
     val userRole: StateFlow<String?> = _userRole.asStateFlow()
 
-    // Method to get the current user's role
     fun getCurrentUserRole() {
         viewModelScope.launch {
             authRepository.getUserRole().collect { role ->
@@ -131,7 +132,7 @@ class TaskViewModel @Inject constructor(
             )) {
                 is ApiResponse.Success -> {
                     _createTaskState.value = CreateTaskState.Success(response.data)
-                    loadTasks(0, 10) // Refresh task list
+                    loadTasks(0, 10)
                 }
                 is ApiResponse.Error -> {
                     _createTaskState.value = CreateTaskState.Error(response.errorMessage)
@@ -143,14 +144,14 @@ class TaskViewModel @Inject constructor(
         }
     }
 
-    fun updateTaskStatus(taskId: Int, status: String, comment: String? = null) {
+    fun updateTaskStatus(taskId: Int, status: String) {
         _updateTaskState.value = UpdateTaskState.Loading
         viewModelScope.launch(ioDispatcher) {
-            when (val response = taskRepository.updateTaskStatus(taskId, status, comment)) {
+            when (val response = taskRepository.updateTaskStatus(taskId, status, null)) {
                 is ApiResponse.Success -> {
                     _updateTaskState.value = UpdateTaskState.Success(response.data)
-                    loadTaskDetail(taskId) // Refresh task detail
-                    loadTasks(0, 10) // Refresh task list
+                    loadTaskDetail(taskId)
+                    loadTasks(0, 10)
                 }
                 is ApiResponse.Error -> {
                     _updateTaskState.value = UpdateTaskState.Error(response.errorMessage)
@@ -165,7 +166,6 @@ class TaskViewModel @Inject constructor(
     fun addTaskImplementation(taskId: Int, implementationText: String) {
         _updateTaskState.value = UpdateTaskState.Loading
         viewModelScope.launch(ioDispatcher) {
-            // Create implementation JSON object
             val implementationJson = JSONObject().apply {
                 put("text", implementationText)
                 put("timestamp", System.currentTimeMillis())
@@ -174,7 +174,7 @@ class TaskViewModel @Inject constructor(
             when (val response = taskRepository.updateTaskImplementation(taskId, implementationJson)) {
                 is ApiResponse.Success -> {
                     _updateTaskState.value = UpdateTaskState.Success(response.data)
-                    loadTaskDetail(taskId) // Refresh task detail
+                    loadTaskDetail(taskId)
                 }
                 is ApiResponse.Error -> {
                     _updateTaskState.value = UpdateTaskState.Error(response.errorMessage)
@@ -187,15 +187,19 @@ class TaskViewModel @Inject constructor(
     }
 
     fun addTaskAdvice(taskId: Int, adviceText: String) {
+        _addAdviceState.value = AddAdviceState.Loading
         viewModelScope.launch(ioDispatcher) {
-            when (taskAdviceRepository.createTaskAdvice(taskId, adviceText)) {
+            when (val response = taskAdviceRepository.createTaskAdvice(taskId, adviceText)) {
                 is ApiResponse.Success -> {
-                    loadTaskDetail(taskId) // Refresh task detail to show new advice
+                    _addAdviceState.value = AddAdviceState.Success
+                    loadTaskDetail(taskId)
                 }
                 is ApiResponse.Error -> {
-                    // Handle error
+                    _addAdviceState.value = AddAdviceState.Error(response.errorMessage)
                 }
-                else -> {}
+                is ApiResponse.Loading -> {
+                    _addAdviceState.value = AddAdviceState.Loading
+                }
             }
         }
     }
@@ -206,6 +210,10 @@ class TaskViewModel @Inject constructor(
 
     fun clearUpdateTaskState() {
         _updateTaskState.value = UpdateTaskState.Idle
+    }
+
+    fun clearAddAdviceState() {
+        _addAdviceState.value = AddAdviceState.Idle
     }
 
     sealed class TaskListState {
@@ -236,6 +244,13 @@ class TaskViewModel @Inject constructor(
         object Loading : UpdateTaskState()
         data class Success(val task: Task) : UpdateTaskState()
         data class Error(val message: String) : UpdateTaskState()
+    }
+
+    sealed class AddAdviceState {
+        object Idle : AddAdviceState()
+        object Loading : AddAdviceState()
+        object Success : AddAdviceState()
+        data class Error(val message: String) : AddAdviceState()
     }
 
     enum class TaskTab {

@@ -4,6 +4,12 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.shape.CircleShape
+
+
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -11,6 +17,7 @@ import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MarkEmailRead
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.outlined.NotificationAdd
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
@@ -32,6 +39,9 @@ fun NotificationScreen(
     onBackClick: () -> Unit,
     viewModel: NotificationViewModel = hiltViewModel()
 ) {
+
+    val unreadCountState by viewModel.unreadCountState.collectAsState()
+
     val notificationsState by viewModel.notificationsState.collectAsState()
     val userRole by viewModel.userRole.collectAsState()
 
@@ -62,6 +72,37 @@ fun NotificationScreen(
                     }
                 },
                 actions = {
+                    Box {
+                        IconButton(onClick = { /* Optional: open another screen */ }) {
+                            Icon(Icons.Filled.Notifications, contentDescription = "Notifications")
+                        }
+                        val unreadCount = (unreadCountState as? NotificationViewModel.UnreadCountState.Success)?.count
+
+                        if (unreadCount != null && unreadCount > 0                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .offset(x = (-2).dp, y = 4.dp)
+                                    .size(16.dp)
+                                    .background(Color.Red, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                when (val state = unreadCountState) {
+                                    is NotificationViewModel.UnreadCountState.Success -> {
+                                        Text(
+                                            text = state.count.toString(),
+                                            fontSize = 10.sp,
+                                            color = Color.White
+                                        )
+                                    }
+
+                                    else -> {
+                                        // Do nothing or show placeholder
+                                    }
+                                }
+                            }
+                        }
+                    }
                     if (notificationsState is NotificationViewModel.NotificationsState.Success &&
                         (notificationsState as NotificationViewModel.NotificationsState.Success).notifications.any { !it.isRead }
                     ) {

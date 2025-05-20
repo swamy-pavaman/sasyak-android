@@ -75,7 +75,9 @@ fun FuelTaskDetailScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        viewModel.updateTaskStatus(taskId, "approved", comment.takeIf { it.isNotBlank() })
+                        viewModel.updateTaskStatus(taskId,
+                            comment.takeIf { it.isNotBlank() }.toString()
+                        )
                         showApproveDialog = false
                         comment = ""
                     }
@@ -113,7 +115,7 @@ fun FuelTaskDetailScreen(
                 TextButton(
                     onClick = {
                         if (comment.isNotBlank()) {
-                            viewModel.updateTaskStatus(taskId, "rejected", comment)
+                            viewModel.updateTaskStatus(taskId, comment)
                             showRejectDialog = false
                             comment = ""
                         }
@@ -489,7 +491,7 @@ fun FuelTaskDetailScreen(
                                             )
 
                                             Text(
-                                                text = advice.createdAt,
+                                                text = advice.createdAt?:"createdAt",
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )

@@ -75,7 +75,7 @@ fun SprayingTaskDetailScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        viewModel.updateTaskStatus(taskId, "approved", comment.takeIf { it.isNotBlank() })
+                        viewModel.updateTaskStatus(taskId,comment.takeIf { it.isNotBlank() }.toString())
                         showApproveDialog = false
                         comment = ""
                     }
@@ -113,7 +113,7 @@ fun SprayingTaskDetailScreen(
                 TextButton(
                     onClick = {
                         if (comment.isNotBlank()) {
-                            viewModel.updateTaskStatus(taskId, "rejected", comment)
+                            viewModel.updateTaskStatus(taskId,  comment)
                             showRejectDialog = false
                             comment = ""
                         }
@@ -445,7 +445,7 @@ fun SprayingTaskDetailScreen(
                                             )
 
                                             Text(
-                                                text = advice.createdAt,
+                                                text = advice.createdAt?:"time",
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
