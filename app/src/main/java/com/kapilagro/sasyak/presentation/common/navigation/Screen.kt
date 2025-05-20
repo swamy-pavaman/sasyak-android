@@ -126,7 +126,6 @@ sealed class Screen(val route: String, val title: String, @DrawableRes val icon:
     object TeamMemberDetail : Screen("team_member_detail/{teamMemberId}", "Team Member Detail") {
         fun createRoute(teamMemberId: String) = "team_member_detail/$teamMemberId"
     }
-
     // Task related screens
     object TaskDetail : Screen("task_detail/{taskId}", "Task Detail") {
         fun createRoute(taskId: String) = "task_detail/$taskId"
