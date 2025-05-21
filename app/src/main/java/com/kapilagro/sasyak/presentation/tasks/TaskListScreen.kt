@@ -7,6 +7,7 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -35,7 +36,7 @@ import com.kapilagro.sasyak.presentation.tasks.components.TaskTabRow
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
 fun TaskListScreen(
-    onTaskClick: (Int) -> Unit,
+    onTaskClick: (Pair<Int, String>) -> Unit,
     onCreateTaskClick: (String) -> Unit,
     onBackClick: () -> Unit,
     viewModel: TaskViewModel = hiltViewModel()
@@ -123,90 +124,60 @@ fun TaskListScreen(
                             .padding(bottom = 8.dp)
                             .background(
                                 color = MaterialTheme.colorScheme.surface,
-                                shape = RoundedCornerShape(16.dp)
+                                shape = RoundedCornerShape(8.dp)
                             )
                             .padding(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
-                        FloatingActionButton(
-                            onClick = {
-                                onCreateTaskClick("scouting")
-                                isFabMenuOpen = false
-                            },
-                            containerColor = ScoutingContainer,
-                            modifier = Modifier.size(40.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Search,
-                                contentDescription = "Scouting Task",
-                                tint = ScoutingIcon
-                            )
-                        }
-                        FloatingActionButton(
-                            onClick = {
-                                onCreateTaskClick("fuel")
-                                isFabMenuOpen = false
-                            },
-                            containerColor = FuelContainer,
-                            modifier = Modifier.size(40.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.LocalGasStation,
-                                contentDescription = "Fuel Task",
-                                tint = FuelIcon
-                            )
-                        }
-                        FloatingActionButton(
-                            onClick = {
-                                onCreateTaskClick("spray")
-                                isFabMenuOpen = false
-                            },
-                            containerColor = SprayingContainer,
-                            modifier = Modifier.size(40.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Opacity,
-                                contentDescription = "Spray Task",
-                                tint = SprayingIcon
-                            )
-                        }
-                        FloatingActionButton(
-                            onClick = {
-                                onCreateTaskClick("yield")
-                                isFabMenuOpen = false
-                            },
-                            containerColor = YieldContainer,
-                            modifier = Modifier.size(40.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Balance,
-                                contentDescription = "Yield Task",
-                                tint = YieldIcon
-                            )
-                        }
-                        FloatingActionButton(
-                            onClick = {
-                                onCreateTaskClick("sowing")
-                                isFabMenuOpen = false
-                            },
-                            containerColor = SowingContainer,
-                            modifier = Modifier.size(40.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Grass,
-                                contentDescription = "Sowing Task",
-                                tint = SowingIcon
-                            )
+                        // List of task types with their icons and colors
+                        val taskTypes = listOf(
+                            Triple("Scouting", Icons.Outlined.Search, ScoutingContainer to ScoutingIcon),
+                            Triple("Fuel", Icons.Outlined.LocalGasStation, FuelContainer to FuelIcon),
+                            Triple("Spraying", Icons.Outlined.Opacity, SprayingContainer to SprayingIcon),
+                            Triple("Yield", Icons.Outlined.Balance, YieldContainer to YieldIcon),
+                            Triple("Sowing", Icons.Outlined.Grass, SowingContainer to SowingIcon)
+                        )
+
+                        taskTypes.forEach { (name, icon, colors) ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        onCreateTaskClick(name.lowercase())
+                                        isFabMenuOpen = false
+                                    }
+                                    .background(
+                                        color = colors.first.copy(alpha = 0.1f),
+                                        shape = RoundedCornerShape(8.dp)
+                                    )
+                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.End
+                            ) {
+                                Text(
+                                    text = name,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Icon(
+                                    imageVector = icon,
+                                    contentDescription = "$name Task",
+                                    tint = colors.second,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
                         }
                     }
                 }
                 FloatingActionButton(
                     onClick = { isFabMenuOpen = !isFabMenuOpen },
-                    containerColor = MaterialTheme.colorScheme.primary
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    shape = CircleShape
                 ) {
                     Icon(
                         imageVector = Icons.Default.Add,
-                        contentDescription = "Create Task"
+                        contentDescription = "Create Task",
+                        tint = MaterialTheme.colorScheme.onPrimary
                     )
                 }
             }
@@ -280,7 +251,16 @@ fun TaskListScreen(
                                 items(tasks) { task ->
                                     TaskCard(
                                         task = task,
-                                        onClick = { onTaskClick(task.id) }
+                                        onClick = {
+                                            when (task.taskType.lowercase()) {
+                                                "spraying" -> onTaskClick(task.id to "spraying_task_detail")
+                                                "scouting" -> onTaskClick(task.id to "scouting_task_detail")
+                                                "yield" -> onTaskClick(task.id to "yield_task_detail")
+                                                "sowing" -> onTaskClick(task.id to "sowing_task_detail")
+                                                "fuel" -> onTaskClick(task.id to "fuel_task_detail")
+                                                else -> onTaskClick(task.id to "task_detail")
+                                            }
+                                        }
                                     )
                                 }
                             }
@@ -324,5 +304,7 @@ fun TaskListScreen(
                 )
             }
         }
+
     }
+
 }
