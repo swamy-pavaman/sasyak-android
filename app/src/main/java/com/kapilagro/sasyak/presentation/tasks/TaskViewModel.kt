@@ -44,7 +44,7 @@ class TaskViewModel @Inject constructor(
     private val _addAdviceState = MutableStateFlow<AddAdviceState>(AddAdviceState.Idle)
     val addAdviceState: StateFlow<AddAdviceState> = _addAdviceState.asStateFlow()
 
-    private val _selectedTab = MutableStateFlow(TaskTab.PENDING)
+    private val _selectedTab = MutableStateFlow(TaskTab.ASSIGNED)
     val selectedTab: StateFlow<TaskTab> = _selectedTab.asStateFlow()
 
     private val _userRole = MutableStateFlow<String?>(null)
@@ -87,23 +87,18 @@ class TaskViewModel @Inject constructor(
         _taskListState.value = TaskListState.Loading
         viewModelScope.launch(ioDispatcher) {
             val response = when (_selectedTab.value) {
-                TaskTab.PENDING, TaskTab.APPROVED, TaskTab.REJECTED -> {
-                    taskRepository.getAssignedTasks(page, size)
-                }
+                TaskTab.SUPERVISORS -> taskRepository.getTasksBySupervisors(page, size)
+                TaskTab.ME -> taskRepository.getCreatedTasks(page, size)
+                TaskTab.ASSIGNED -> taskRepository.getAssignedTasks(page, size)
+                TaskTab.BY_STATUS -> taskRepository.getTasksByStatus("all", page, size)
+                TaskTab.CREATED -> taskRepository.getCreatedTasks(page, size)
             }
 
             when (response) {
                 is ApiResponse.Success -> {
-                    val filteredTasks = response.data.first.filter { task ->
-                        when (_selectedTab.value) {
-                            TaskTab.PENDING -> task.status.equals("pending", ignoreCase = true)
-                            TaskTab.APPROVED -> task.status.equals("approved", ignoreCase = true)
-                            TaskTab.REJECTED -> task.status.equals("rejected", ignoreCase = true)
-                        }
-                    }
                     _taskListState.value = TaskListState.Success(
-                        tasks = filteredTasks,
-                        totalCount = filteredTasks.size,
+                        tasks = response.data.first,
+                        totalCount = response.data.second,
                         hasMore = response.data.second > (page + 1) * size
                     )
                 }
@@ -276,7 +271,7 @@ class TaskViewModel @Inject constructor(
         data class Error(val message: String) : AddAdviceState()
     }
 
-    sealed class SupervisorsListState{
+    sealed class SupervisorsListState {
         object Idle : SupervisorsListState()
         object Loading : SupervisorsListState()
         data class Success(val supervisors: List<SupervisorListResponse>) : SupervisorsListState()
@@ -284,6 +279,6 @@ class TaskViewModel @Inject constructor(
     }
 
     enum class TaskTab {
-        PENDING, APPROVED, REJECTED
+        SUPERVISORS, ME, ASSIGNED, BY_STATUS, CREATED
     }
 }
