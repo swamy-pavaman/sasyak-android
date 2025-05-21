@@ -307,7 +307,70 @@ fun TaskDetailScreen(
                         Spacer(modifier = Modifier.height(16.dp))
                     }
 
-                    // Role-based actions
+                    // Implementation input section for all tasks
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = "Implementation Details",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            OutlinedTextField(
+                                value = implementationInput,
+                                onValueChange = { implementationInput = it },
+                                placeholder = { Text("Enter implementation details") },
+                                modifier = Modifier.fillMaxWidth(),
+                                minLines = 3,
+                                enabled = updateTaskState !is TaskViewModel.UpdateTaskState.Loading
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Button(
+                                onClick = {
+                                    if (implementationInput.isNotBlank()) {
+                                        viewModel.addTaskImplementation(taskId, implementationInput)
+                                        implementationInput = ""
+                                    }
+                                },
+                                enabled = implementationInput.isNotBlank() && updateTaskState !is TaskViewModel.UpdateTaskState.Loading,
+                                modifier = Modifier.align(Alignment.End)
+                            ) {
+                                if (updateTaskState is TaskViewModel.UpdateTaskState.Loading) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(24.dp),
+                                        color = MaterialTheme.colorScheme.onPrimary
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = Icons.Outlined.PlayArrow,
+                                        contentDescription = null
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Submit Implementation")
+                                }
+                            }
+
+                            if (updateTaskState is TaskViewModel.UpdateTaskState.Error) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = (updateTaskState as TaskViewModel.UpdateTaskState.Error).message,
+                                    color = MaterialTheme.colorScheme.error,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Role-based actions (Advice and Approve/Reject for MANAGER)
                     when (userRole) {
                         "MANAGER" -> {
                             if (task.status.equals("submitted", ignoreCase = true)) {
@@ -424,66 +487,6 @@ fun TaskDetailScreen(
                                         color = MaterialTheme.colorScheme.error,
                                         style = MaterialTheme.typography.bodySmall
                                     )
-                                }
-                            }
-                        }
-                        "SUPERVISOR" -> {
-                            if (task.status.equals("approved", ignoreCase = true) && getImplementationFromJson(task.implementationJson).isNullOrEmpty()) {
-                                Spacer(modifier = Modifier.height(16.dp))
-
-                                Column {
-                                    Text(
-                                        text = "Implementation Details",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold
-                                    )
-
-                                    Spacer(modifier = Modifier.height(8.dp))
-
-                                    OutlinedTextField(
-                                        value = implementationInput,
-                                        onValueChange = { implementationInput = it },
-                                        placeholder = { Text("Enter implementation details") },
-                                        modifier = Modifier.fillMaxWidth(),
-                                        minLines = 3,
-                                        enabled = updateTaskState !is TaskViewModel.UpdateTaskState.Loading
-                                    )
-
-                                    Spacer(modifier = Modifier.height(8.dp))
-
-                                    Button(
-                                        onClick = {
-                                            if (implementationInput.isNotBlank()) {
-                                                viewModel.addTaskImplementation(taskId, implementationInput)
-                                                implementationInput = ""
-                                            }
-                                        },
-                                        enabled = implementationInput.isNotBlank() && updateTaskState !is TaskViewModel.UpdateTaskState.Loading,
-                                        modifier = Modifier.align(Alignment.End)
-                                    ) {
-                                        if (updateTaskState is TaskViewModel.UpdateTaskState.Loading) {
-                                            CircularProgressIndicator(
-                                                modifier = Modifier.size(24.dp),
-                                                color = MaterialTheme.colorScheme.onPrimary
-                                            )
-                                        } else {
-                                            Icon(
-                                                imageVector = Icons.Outlined.PlayArrow,
-                                                contentDescription = null
-                                            )
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Text("Submit Implementation")
-                                        }
-                                    }
-
-                                    if (updateTaskState is TaskViewModel.UpdateTaskState.Error) {
-                                        Spacer(modifier = Modifier.height(8.dp))
-                                        Text(
-                                            text = (updateTaskState as TaskViewModel.UpdateTaskState.Error).message,
-                                            color = MaterialTheme.colorScheme.error,
-                                            style = MaterialTheme.typography.bodySmall
-                                        )
-                                    }
                                 }
                             }
                         }
