@@ -5,7 +5,7 @@ package com.kapilagro.sasyak.di
 import com.kapilagro.sasyak.data.api.OpenWeatherApiService
 import com.kapilagro.sasyak.data.repositories.AuthRepositoryImpl
 import com.kapilagro.sasyak.data.repositories.NotificationRepositoryImpl
-import com.kapilagro.sasyak.data.repositories.TaskAdviceRepositoryImpl
+
 import com.kapilagro.sasyak.data.repositories.TaskRepositoryImpl
 import com.kapilagro.sasyak.data.repositories.UserRepositoryImpl
 import com.kapilagro.sasyak.domain.repositories.WeatherRepository
@@ -13,6 +13,7 @@ import com.kapilagro.sasyak.data.repositories.WeatherRepositoryImpl
 import com.kapilagro.sasyak.domain.repositories.AuthRepository
 import com.kapilagro.sasyak.domain.repositories.NotificationRepository
 import com.kapilagro.sasyak.domain.repositories.TaskAdviceRepository
+import com.kapilagro.sasyak.domain.repositories.TaskAdviceRepositoryImpl
 import com.kapilagro.sasyak.domain.repositories.TaskRepository
 import com.kapilagro.sasyak.domain.repositories.UserRepository
 import com.kapilagro.sasyak.utils.LocationService
