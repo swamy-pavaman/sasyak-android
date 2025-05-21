@@ -4,6 +4,7 @@ import com.kapilagro.sasyak.data.api.ApiService
 import com.kapilagro.sasyak.data.api.mappers.toDomainModel
 import com.kapilagro.sasyak.data.api.models.requests.UpdateProfileRequest
 import com.kapilagro.sasyak.data.api.models.requests.UpdateTeamMemberRequest
+import com.kapilagro.sasyak.data.api.models.responses.SupervisorListResponse
 import com.kapilagro.sasyak.domain.models.ApiResponse
 import com.kapilagro.sasyak.domain.models.TeamMember
 import com.kapilagro.sasyak.domain.models.User
@@ -162,19 +163,20 @@ class UserRepositoryImpl @Inject constructor(
             ApiResponse.Error(e.message ?: "An unknown error occurred")
         }
     }
-//    override suspend fun getTeamMemberById(userId: Int): ApiResponse<User> {
-//        return try {
-//            val response = apiService.getTeamMemberById(userId)
-//
-//            if (response.isSuccessful && response.body() != null) {
-//                ApiResponse.Success(response.body()!!.toDomainModel())
-//            } else {
-//                ApiResponse.Error(response.errorBody()?.string() ?: "Failed to get team member")
-//            }
-//        } catch (e: Exception) {
-//            ApiResponse.Error(e.message ?: "An unknown error occurred")
-//        }
-//    }
+
+    override suspend fun getSupervisorsList(): ApiResponse<List<SupervisorListResponse>> {
+        return try {
+            val response = apiService.getSupervisorsList()
+            if (response.isSuccessful && response.body() != null) {
+                ApiResponse.Success(response.body()!!)
+            } else {
+                ApiResponse.Error(response.errorBody()?.string() ?: "Failed to get supervisors list")
+            }
+        } catch (e: Exception) {
+            ApiResponse.Error(e.message ?: "An unknown error occurred")
+        }
+    }
+
 
     override suspend fun updateTeamMember(
         userId: Int,

@@ -182,4 +182,19 @@ class TaskRepositoryImpl @Inject constructor(
             ApiResponse.Error("Exception when getting tasks by status: ${e.message}")
         }
     }
+
+    override suspend fun getTasksBySupervisors(page: Int, size: Int): ApiResponse<Pair<List<Task>, Int>> {
+        return try {
+            val response = apiService.getTasksBySupervisors(page, size)
+            if (response.isSuccessful && response.body() != null) {
+                val tasks = response.body()!!.tasks.map { it.toDomainModel() }
+                val totalCount = response.body()!!.totalCount
+                ApiResponse.Success(Pair(tasks, totalCount))
+            } else {
+                ApiResponse.Error(response.errorBody()?.string() ?: "Failed to get tasks by supervisors")
+            }
+        } catch (e: Exception) {
+            ApiResponse.Error(e.message ?: "An unknown error occurred")
+        }
+    }
 }
