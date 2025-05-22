@@ -102,7 +102,8 @@ class ScoutingListViewModel @Inject constructor(
 
     fun createScoutingTask(
         scoutingDetails: ScoutingDetails,
-        description: String
+        description: String,
+        assignedToId:Int?=null
     ) {
         _createScoutingState.value = CreateScoutingState.Loading
         viewModelScope.launch(ioDispatcher) {

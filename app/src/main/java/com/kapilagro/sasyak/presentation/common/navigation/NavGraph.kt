@@ -427,18 +427,15 @@ fun AppNavGraph(
                 }
             )
         }
-
         composable(Screen.TaskList.route) {
             TaskListScreen(
                 onTaskClick = { taskId ->
                     navController.navigate(Screen.TaskDetail.createRoute(taskId.toString()))
                 },
-                onCreateTaskClick = {
-                    navController.navigate(Screen.CreateTask.route)
-                },
                 onBackClick = {
                     navController.popBackStack()
-                }
+                },
+                navController = navController
             )
         }
 

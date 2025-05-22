@@ -22,6 +22,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.kapilagro.sasyak.domain.models.SowingDetails
 import com.kapilagro.sasyak.presentation.common.components.SuccessDialog
 import com.kapilagro.sasyak.presentation.common.theme.*
+import com.kapilagro.sasyak.presentation.home.HomeViewModel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -31,9 +32,12 @@ import java.time.format.DateTimeFormatter
 fun SowingRequestScreen(
     onTaskCreated: () -> Unit,
     onBackClick: () -> Unit,
-    viewModel: SowingListViewModel = hiltViewModel()
+    viewModel: SowingListViewModel = hiltViewModel(),
+    homeViewModel: HomeViewModel = hiltViewModel()
 ) {
     val createSowingState by viewModel.createSowingState.collectAsState()
+    val userRole by homeViewModel.userRole.collectAsState()
+    val supervisorsListState by homeViewModel.supervisorsListState.collectAsState()
 
     // Dialog state
     var showSuccessDialog by remember { mutableStateOf(false) }
@@ -60,6 +64,9 @@ fun SowingRequestScreen(
     var weatherCondition by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var imageUploaded by remember { mutableStateOf(false) }
+
+    var assignedTo by remember { mutableStateOf<Int?>(null) }
+    var assignedToExpanded by remember { mutableStateOf(false) }
 
     val crops = listOf(
         "Wheat", "Rice", "Maize", "Barley", "Sorghum",
@@ -93,6 +100,12 @@ fun SowingRequestScreen(
             else -> {
                 // Handle other states if needed
             }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        if (userRole == "MANAGER") {
+            homeViewModel.loadSupervisorsList()
         }
     }
 
@@ -445,6 +458,52 @@ fun SowingRequestScreen(
             }
 
             Spacer(modifier = Modifier.height(16.dp))
+            if (userRole == "MANAGER") {
+                val supervisors = when (supervisorsListState) {
+                    is HomeViewModel.SupervisorsListState.Success ->
+                        (supervisorsListState as HomeViewModel.SupervisorsListState.Success).supervisors
+                    else -> emptyList()
+                }
+
+                val selectedSupervisorName = supervisors.find { it.supervisorId == assignedTo }?.supervisorName ?: ""
+
+                ExposedDropdownMenuBox(
+                    expanded = assignedToExpanded,
+                    onExpandedChange = { assignedToExpanded = it },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    OutlinedTextField(
+                        value = selectedSupervisorName,
+                        onValueChange = {}, // Read-only
+                        label = { Text("Assign to *") },
+                        trailingIcon = {
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = assignedToExpanded)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(),
+                        readOnly = true,
+                        shape = RoundedCornerShape(8.dp)
+                    )
+
+                    ExposedDropdownMenu(
+                        expanded = assignedToExpanded,
+                        onDismissRequest = { assignedToExpanded = false }
+                    ) {
+                        supervisors.forEach { supervisor ->
+                            DropdownMenuItem(
+                                text = { Text(supervisor.supervisorName) },
+                                onClick = {
+                                    assignedTo = supervisor.supervisorId // Send this ID to backend
+                                    assignedToExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+            }
 
             // Upload Section with clickable cards
             Text(
@@ -533,7 +592,10 @@ fun SowingRequestScreen(
             // Submit Button
             Button(
                 onClick = {
-                    if (cropName.isNotBlank() && row.isNotBlank() && seedVariety.isNotBlank() && sowingMethod.isNotBlank()) {
+                    if (cropName.isNotBlank() && row.isNotBlank() && seedVariety.isNotBlank() &&
+                        sowingMethod.isNotBlank() && imageUploaded &&
+                        (userRole != "MANAGER" || assignedTo != null)) {
+
                         val sowingDetails = SowingDetails(
                             sowingDate = sowingDate,
                             cropName = cropName,
@@ -550,12 +612,18 @@ fun SowingRequestScreen(
                             weatherCondition = weatherCondition.ifBlank { null },
                             uploadedFiles = null // TODO: Handle file uploads
                         )
+
                         submittedEntry = sowingDetails
-                        viewModel.createSowingTask(sowingDetails, description)
+                        viewModel.createSowingTask(
+                            sowingDetails,
+                            description,
+                            assignedToId = if (userRole == "MANAGER") assignedTo else null
+                        )
                     }
                 },
                 enabled = cropName.isNotBlank() && row.isNotBlank() && seedVariety.isNotBlank() &&
                         sowingMethod.isNotBlank() && imageUploaded &&
+                        (userRole != "MANAGER" || assignedTo != null) &&
                         createSowingState !is SowingListViewModel.CreateSowingState.Loading,
                 modifier = Modifier
                     .fillMaxWidth()

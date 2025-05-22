@@ -368,17 +368,22 @@ fun SprayingRequestScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             if (userRole == "MANAGER") {
+                val supervisors = when (supervisorsListState) {
+                    is HomeViewModel.SupervisorsListState.Success ->
+                        (supervisorsListState as HomeViewModel.SupervisorsListState.Success).supervisors
+                    else -> emptyList()
+                }
+
+                val selectedSupervisorName = supervisors.find { it.supervisorId == assignedTo }?.supervisorName ?: ""
+
                 ExposedDropdownMenuBox(
                     expanded = assignedToExpanded,
                     onExpandedChange = { assignedToExpanded = it },
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     OutlinedTextField(
-                        value = assignedTo?.toString() ?: "", // Convert Int to String for display
-                        onValueChange = { newValue ->
-                            assignedTo = newValue.toIntOrNull() // Convert input to Int
-                            assignedToExpanded = true
-                        },
+                        value = selectedSupervisorName,
+                        onValueChange = {}, // Read-only
                         label = { Text("Assign to *") },
                         trailingIcon = {
                             ExposedDropdownMenuDefaults.TrailingIcon(expanded = assignedToExpanded)
@@ -386,6 +391,7 @@ fun SprayingRequestScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .menuAnchor(),
+                        readOnly = true,
                         shape = RoundedCornerShape(8.dp)
                     )
 
@@ -393,17 +399,11 @@ fun SprayingRequestScreen(
                         expanded = assignedToExpanded,
                         onDismissRequest = { assignedToExpanded = false }
                     ) {
-                        val supervisors = when (supervisorsListState) {
-                            is HomeViewModel.SupervisorsListState.Success ->
-                                (supervisorsListState as HomeViewModel.SupervisorsListState.Success).supervisors
-                            else -> emptyList()
-                        }
-
                         supervisors.forEach { supervisor ->
                             DropdownMenuItem(
-                                text = { Text("${supervisor.supervisorName} (${supervisor.supervisorId})") }, // Display name and ID
+                                text = { Text(supervisor.supervisorName) },
                                 onClick = {
-                                    assignedTo = supervisor.supervisorId // Use supervisorId (Int)
+                                    assignedTo = supervisor.supervisorId // Send this ID to backend
                                     assignedToExpanded = false
                                 }
                             )
@@ -411,7 +411,7 @@ fun SprayingRequestScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             }
 
             // Upload Section with clickable cards

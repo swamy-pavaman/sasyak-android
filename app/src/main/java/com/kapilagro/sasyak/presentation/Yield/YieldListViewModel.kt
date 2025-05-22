@@ -100,7 +100,8 @@ class YieldListViewModel @Inject constructor(
 
     fun createYieldTask(
         yieldDetails: YieldDetails,
-        description: String
+        description: String,
+        assignedToId:Int?= null
     ) {
         _createYieldState.value = CreateYieldState.Loading
         viewModelScope.launch(ioDispatcher) {
@@ -112,7 +113,7 @@ class YieldListViewModel @Inject constructor(
                     description = description,
                     detailsJson = detailsJson,
                     imagesJson = null,  // TODO: Handle file uploads
-                    assignedToId = null
+                    assignedToId = assignedToId
                 )) {
                     is ApiResponse.Success -> {
                         _createYieldState.value = CreateYieldState.Success(response.data)

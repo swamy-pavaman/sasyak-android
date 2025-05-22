@@ -22,6 +22,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.kapilagro.sasyak.domain.models.ScoutingDetails
 import com.kapilagro.sasyak.presentation.common.components.SuccessDialog
 import com.kapilagro.sasyak.presentation.common.theme.*
+import com.kapilagro.sasyak.presentation.home.HomeViewModel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -31,9 +32,12 @@ import java.time.format.DateTimeFormatter
 fun ScoutingRequestScreen(
     onTaskCreated: () -> Unit,
     onBackClick: () -> Unit,
-    viewModel: ScoutingListViewModel = hiltViewModel()
+    viewModel: ScoutingListViewModel = hiltViewModel(),
+    homeViewModel: HomeViewModel = hiltViewModel() // Added HomeViewModel dependency
 ) {
     val createScoutingState by viewModel.createScoutingState.collectAsState()
+    val userRole by homeViewModel.userRole.collectAsState() // Added userRole
+    val supervisorsListState by homeViewModel.supervisorsListState.collectAsState() // Added supervisorsListState
 
     // Dialog state
     var showSuccessDialog by remember { mutableStateOf(false) }
@@ -52,7 +56,9 @@ fun ScoutingRequestScreen(
     var noOfFruitsDropped by remember { mutableStateOf("") }
     var nameOfDisease by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
-    var imageUploaded by remember { mutableStateOf(false) } // Added to track upload state
+    var imageUploaded by remember { mutableStateOf(false) }
+    var assignedTo by remember { mutableStateOf<Int?>(null) } // Added assignedTo state
+    var assignedToExpanded by remember { mutableStateOf(false) } // Added assignedToExpanded state
 
     val crops = listOf(
         "Wheat", "Rice", "Maize", "Barley", "Sorghum",
@@ -62,6 +68,13 @@ fun ScoutingRequestScreen(
     )
     val rows = (1..20).map { it.toString() }
     val trees = (1..50).map { it.toString() }
+
+    // Load supervisors list for MANAGER role
+    LaunchedEffect(Unit) {
+        if (userRole == "MANAGER") {
+            homeViewModel.loadSupervisorsList()
+        }
+    }
 
     // Handle task creation success
     LaunchedEffect(createScoutingState) {
@@ -257,7 +270,6 @@ fun ScoutingRequestScreen(
                 label = { Text("No of fruit seen") },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(8.dp),
-
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
             )
 
@@ -270,7 +282,6 @@ fun ScoutingRequestScreen(
                 label = { Text("No of Flowers Seen") },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(8.dp),
-
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
             )
 
@@ -283,7 +294,6 @@ fun ScoutingRequestScreen(
                 label = { Text("No of Fruits Dropped") },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(8.dp),
-
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
             )
 
@@ -299,6 +309,54 @@ fun ScoutingRequestScreen(
             )
 
             Spacer(modifier = Modifier.height(16.dp))
+
+            // Assign to Dropdown (for MANAGER role)
+            if (userRole == "MANAGER") {
+                val supervisors = when (supervisorsListState) {
+                    is HomeViewModel.SupervisorsListState.Success ->
+                        (supervisorsListState as HomeViewModel.SupervisorsListState.Success).supervisors
+                    else -> emptyList()
+                }
+
+                val selectedSupervisorName = supervisors.find { it.supervisorId == assignedTo }?.supervisorName ?: ""
+
+                ExposedDropdownMenuBox(
+                    expanded = assignedToExpanded,
+                    onExpandedChange = { assignedToExpanded = it },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    OutlinedTextField(
+                        value = selectedSupervisorName,
+                        onValueChange = {}, // Read-only
+                        label = { Text("Assign to *") },
+                        trailingIcon = {
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = assignedToExpanded)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(),
+                        readOnly = true,
+                        shape = RoundedCornerShape(8.dp)
+                    )
+
+                    ExposedDropdownMenu(
+                        expanded = assignedToExpanded,
+                        onDismissRequest = { assignedToExpanded = false }
+                    ) {
+                        supervisors.forEach { supervisor ->
+                            DropdownMenuItem(
+                                text = { Text(supervisor.supervisorName) },
+                                onClick = {
+                                    assignedTo = supervisor.supervisorId
+                                    assignedToExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+            }
 
             // Upload Section with clickable cards
             Text(
@@ -387,7 +445,8 @@ fun ScoutingRequestScreen(
             // Submit Button
             Button(
                 onClick = {
-                    if (cropName.isNotBlank() && row.isNotBlank() && treeNo.isNotBlank()) {
+                    if (cropName.isNotBlank() && row.isNotBlank() && treeNo.isNotBlank() && imageUploaded &&
+                        (userRole != "MANAGER" || assignedTo != null)) {
                         val scoutingDetails = ScoutingDetails(
                             scoutingDate = scoutingDate,
                             cropName = cropName,
@@ -400,11 +459,15 @@ fun ScoutingRequestScreen(
                             uploadedFiles = null // TODO: Handle file uploads
                         )
                         submittedEntry = scoutingDetails
-                        viewModel.createScoutingTask(scoutingDetails, description)
+                        viewModel.createScoutingTask(
+                            scoutingDetails = scoutingDetails,
+                            description = description,
+                            assignedToId = if (userRole == "MANAGER") assignedTo else null
+                        )
                     }
                 },
-                enabled = cropName.isNotBlank() && row.isNotBlank() && treeNo.isNotBlank() &&
-                        imageUploaded && // Added upload validation
+                enabled = cropName.isNotBlank() && row.isNotBlank() && treeNo.isNotBlank() && imageUploaded &&
+                        (userRole != "MANAGER" || assignedTo != null) &&
                         createScoutingState !is ScoutingListViewModel.CreateScoutingState.Loading,
                 modifier = Modifier
                     .fillMaxWidth()

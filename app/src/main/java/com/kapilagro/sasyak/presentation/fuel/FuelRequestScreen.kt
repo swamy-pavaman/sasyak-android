@@ -22,6 +22,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.kapilagro.sasyak.domain.models.FuelDetails
 import com.kapilagro.sasyak.presentation.common.components.SuccessDialog
 import com.kapilagro.sasyak.presentation.common.theme.*
+import com.kapilagro.sasyak.presentation.home.HomeViewModel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -31,9 +32,12 @@ import java.time.format.DateTimeFormatter
 fun FuelRequestScreen(
     onTaskCreated: () -> Unit,
     onBackClick: () -> Unit,
-    viewModel: FuelListViewModel = hiltViewModel()
+    viewModel: FuelListViewModel = hiltViewModel(),
+    homeViewModel: HomeViewModel = hiltViewModel() // Added HomeViewModel dependency
 ) {
     val createFuelState by viewModel.createFuelState.collectAsState()
+    val userRole by homeViewModel.userRole.collectAsState() // Added userRole
+    val supervisorsListState by homeViewModel.supervisorsListState.collectAsState() // Added supervisorsListState
 
     // Dialog state
     var showSuccessDialog by remember { mutableStateOf(false) }
@@ -58,6 +62,8 @@ fun FuelRequestScreen(
     var notes by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var imageUploaded by remember { mutableStateOf(false) }
+    var assignedTo by remember { mutableStateOf<Int?>(null) } // Added assignedTo state
+    var assignedToExpanded by remember { mutableStateOf(false) } // Added assignedToExpanded state
 
     val vehicles = listOf(
         "Tractor - John Deere",
@@ -76,6 +82,13 @@ fun FuelRequestScreen(
     )
 
     val units = listOf("liters", "gallons", "kWh")
+
+    // Load supervisors list for MANAGER role
+    LaunchedEffect(Unit) {
+        if (userRole == "MANAGER") {
+            homeViewModel.loadSupervisorsList()
+        }
+    }
 
     // Handle task creation success
     LaunchedEffect(createFuelState) {
@@ -377,6 +390,54 @@ fun FuelRequestScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Assign to Dropdown (for MANAGER role)
+            if (userRole == "MANAGER") {
+                val supervisors = when (supervisorsListState) {
+                    is HomeViewModel.SupervisorsListState.Success ->
+                        (supervisorsListState as HomeViewModel.SupervisorsListState.Success).supervisors
+                    else -> emptyList()
+                }
+
+                val selectedSupervisorName = supervisors.find { it.supervisorId == assignedTo }?.supervisorName ?: ""
+
+                ExposedDropdownMenuBox(
+                    expanded = assignedToExpanded,
+                    onExpandedChange = { assignedToExpanded = it },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    OutlinedTextField(
+                        value = selectedSupervisorName,
+                        onValueChange = {}, // Read-only
+                        label = { Text("Assign to *") },
+                        trailingIcon = {
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = assignedToExpanded)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(),
+                        readOnly = true,
+                        shape = RoundedCornerShape(8.dp)
+                    )
+
+                    ExposedDropdownMenu(
+                        expanded = assignedToExpanded,
+                        onDismissRequest = { assignedToExpanded = false }
+                    ) {
+                        supervisors.forEach { supervisor ->
+                            DropdownMenuItem(
+                                text = { Text(supervisor.supervisorName) },
+                                onClick = {
+                                    assignedTo = supervisor.supervisorId
+                                    assignedToExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
             // Upload Section with clickable cards
             Text(
                 text = "Upload *",
@@ -448,7 +509,8 @@ fun FuelRequestScreen(
             // Submit Button
             Button(
                 onClick = {
-                    if (vehicleName.isNotBlank() && fuelType.isNotBlank() && quantity.isNotBlank()) {
+                    if (vehicleName.isNotBlank() && fuelType.isNotBlank() && quantity.isNotBlank() &&
+                        (userRole != "MANAGER" || assignedTo != null)) {
                         val fuelDetails = FuelDetails(
                             fuelDate = fuelDate,
                             vehicleName = vehicleName,
@@ -466,11 +528,15 @@ fun FuelRequestScreen(
                             uploadedFiles = null // TODO: Handle file uploads
                         )
                         submittedEntry = fuelDetails
-                        viewModel.createFuelTask(fuelDetails, description)
+                        viewModel.createFuelTask(
+                            fuelDetails = fuelDetails,
+                            description = description,
+                            assignedToId = if (userRole == "MANAGER") assignedTo else null
+                        )
                     }
                 },
                 enabled = vehicleName.isNotBlank() && fuelType.isNotBlank() && quantity.isNotBlank() &&
-                        imageUploaded &&
+                        imageUploaded && (userRole != "MANAGER" || assignedTo != null) &&
                         createFuelState !is FuelListViewModel.CreateFuelState.Loading,
                 modifier = Modifier
                     .fillMaxWidth()

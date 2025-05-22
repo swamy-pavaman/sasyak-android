@@ -100,7 +100,8 @@ class FuelListViewModel @Inject constructor(
 
     fun createFuelTask(
         fuelDetails: FuelDetails,
-        description: String
+        description: String,
+        assignedToId : Int? =null
     ) {
         _createFuelState.value = CreateFuelState.Loading
         viewModelScope.launch(ioDispatcher) {
@@ -112,7 +113,7 @@ class FuelListViewModel @Inject constructor(
                     description = description,
                     detailsJson = detailsJson,
                     imagesJson = null,  // TODO: Handle file uploads
-                    assignedToId = null
+                    assignedToId = assignedToId
                 )) {
                     is ApiResponse.Success -> {
                         _createFuelState.value = CreateFuelState.Success(response.data)

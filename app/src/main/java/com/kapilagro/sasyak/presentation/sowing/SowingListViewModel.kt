@@ -100,7 +100,8 @@ class SowingListViewModel @Inject constructor(
 
     fun createSowingTask(
         sowingDetails: SowingDetails,
-        description: String
+        description: String,
+        assignedToId: Int? =null
     ) {
         _createSowingState.value = CreateSowingState.Loading
         viewModelScope.launch(ioDispatcher) {
@@ -112,7 +113,7 @@ class SowingListViewModel @Inject constructor(
                     description = description,
                     detailsJson = detailsJson,
                     imagesJson = null,  // TODO: Handle file uploads
-                    assignedToId = null
+                    assignedToId = assignedToId
                 )) {
                     is ApiResponse.Success -> {
                         _createSowingState.value = CreateSowingState.Success(response.data)

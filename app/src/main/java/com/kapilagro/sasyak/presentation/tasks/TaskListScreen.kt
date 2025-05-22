@@ -1,5 +1,7 @@
 package com.kapilagro.sasyak.presentation.tasks
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
@@ -9,60 +11,76 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.*
-import androidx.compose.material.pullrefresh.PullRefreshIndicator
-import androidx.compose.material.pullrefresh.pullRefresh
-import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavHostController
+import com.google.accompanist.swiperefresh.SwipeRefresh
+import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import com.kapilagro.sasyak.presentation.common.components.TaskCard
+import com.kapilagro.sasyak.presentation.common.navigation.Screen
 import com.kapilagro.sasyak.presentation.common.theme.*
 import com.kapilagro.sasyak.presentation.tasks.components.TabItem
 import com.kapilagro.sasyak.presentation.tasks.components.TaskTabRow
+import kotlinx.coroutines.flow.distinctUntilChanged
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
+@RequiresApi(Build.VERSION_CODES.O)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TaskListScreen(
     onTaskClick: (Int) -> Unit,
-    onCreateTaskClick: (String) -> Unit,
     onBackClick: () -> Unit,
+    navController: NavHostController,
     viewModel: TaskViewModel = hiltViewModel()
 ) {
     val selectedTab by viewModel.selectedTab.collectAsState()
     val taskListState by viewModel.taskListState.collectAsState()
     val userRole by viewModel.userRole.collectAsState()
-    var isRefreshing by remember { mutableStateOf(false) }
-    var isFabMenuOpen by remember { mutableStateOf(false) }
+    val isRefreshing by viewModel.refreshing.collectAsState()
+    val listState = rememberLazyListState()
 
-    LaunchedEffect(taskListState) {
-        if (taskListState !is TaskViewModel.TaskListState.Loading) {
-            isRefreshing = false
-        }
-    }
+    // Task counts
+    val supervisorTaskCount by viewModel.supervisorTaskCount.collectAsState()
+    val createdTaskCount by viewModel.createdTaskCount.collectAsState()
+    val assignedTaskCount by viewModel.assignedTaskCount.collectAsState()
 
+    // Fetch user role on start
     LaunchedEffect(Unit) {
         viewModel.getCurrentUserRole()
     }
 
-    val pullRefreshState = rememberPullRefreshState(
-        refreshing = isRefreshing,
-        onRefresh = {
-            isRefreshing = true
-            viewModel.loadTasks(0, 10)
+    // Pagination logic
+    LaunchedEffect(listState) {
+        snapshotFlow {
+            val layoutInfo = listState.layoutInfo
+            val visibleItemsInfo = layoutInfo.visibleItemsInfo
+            if (visibleItemsInfo.isEmpty()) false else {
+                val lastVisibleItem = visibleItemsInfo.last()
+                lastVisibleItem.index >= layoutInfo.totalItemsCount - 2
+            }
         }
-    )
+            .distinctUntilChanged()
+            .collect { isAtBottom ->
+                if (isAtBottom && taskListState is TaskViewModel.TaskListState.Success &&
+                    !(taskListState as TaskViewModel.TaskListState.Success).isLastPage
+                ) {
+                    viewModel.loadMoreTasks()
+                }
+            }
+    }
 
     // Define tabs based on user role
     val tabs: List<TabItem<TaskViewModel.TaskTab>> = when (userRole) {
@@ -70,144 +88,206 @@ fun TaskListScreen(
             TabItem(
                 id = TaskViewModel.TaskTab.SUPERVISORS,
                 title = "Supervisors",
-                count = (taskListState as? TaskViewModel.TaskListState.Success)?.totalCount ?: 0
+                count = supervisorTaskCount
             ),
             TabItem(
                 id = TaskViewModel.TaskTab.ME,
                 title = "Me",
-                count = (taskListState as? TaskViewModel.TaskListState.Success)?.totalCount ?: 0
+                count = createdTaskCount
             )
         )
         "SUPERVISOR" -> listOf(
             TabItem(
                 id = TaskViewModel.TaskTab.ASSIGNED,
                 title = "Assigned",
-                count = (taskListState as? TaskViewModel.TaskListState.Success)?.totalCount ?: 0
-            ),
-            TabItem(
-                id = TaskViewModel.TaskTab.BY_STATUS,
-                title = "By Status",
-                count = (taskListState as? TaskViewModel.TaskListState.Success)?.totalCount ?: 0
+                count = assignedTaskCount
             ),
             TabItem(
                 id = TaskViewModel.TaskTab.CREATED,
                 title = "Created",
-                count = (taskListState as? TaskViewModel.TaskListState.Success)?.totalCount ?: 0
+                count = createdTaskCount
             )
         )
         else -> emptyList()
     }
 
+    var isFabMenuOpen by remember { mutableStateOf(false) }
+
     Scaffold(
         topBar = {
-            TopAppBar(
+            CenterAlignedTopAppBar(
                 title = { Text("Tasks") },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                )
             )
         },
         floatingActionButton = {
-            Column(
-                horizontalAlignment = Alignment.End
-            ) {
-                AnimatedVisibility(
-                    visible = isFabMenuOpen,
-                    enter = expandVertically(animationSpec = tween(200)),
-                    exit = shrinkVertically(animationSpec = tween(200))
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .padding(bottom = 8.dp)
-                            .background(
-                                color = MaterialTheme.colorScheme.surface,
-                                shape = RoundedCornerShape(16.dp)
-                            )
-                            .padding(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+            if (userRole == "MANAGER") {
+                Column(horizontalAlignment = Alignment.End) {
+                    AnimatedVisibility(
+                        visible = isFabMenuOpen,
+                        enter = expandVertically(animationSpec = tween(200)),
+                        exit = shrinkVertically(animationSpec = tween(200))
                     ) {
-                        FloatingActionButton(
-                            onClick = {
-                                onCreateTaskClick("scouting")
-                                isFabMenuOpen = false
-                            },
-                            containerColor = ScoutingContainer,
-                            modifier = Modifier.size(40.dp)
+                        Column(
+                            modifier = Modifier
+                                .padding(bottom = 8.dp)
+                                .background(
+                                    color = MaterialTheme.colorScheme.surface,
+                                    shape = RoundedCornerShape(16.dp)
+                                )
+                                .padding(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Search,
-                                contentDescription = "Scouting Task",
-                                tint = ScoutingIcon
-                            )
-                        }
-                        FloatingActionButton(
-                            onClick = {
-                                onCreateTaskClick("fuel")
-                                isFabMenuOpen = false
-                            },
-                            containerColor = FuelContainer,
-                            modifier = Modifier.size(40.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.LocalGasStation,
-                                contentDescription = "Fuel Task",
-                                tint = FuelIcon
-                            )
-                        }
-                        FloatingActionButton(
-                            onClick = {
-                                onCreateTaskClick("spray")
-                                isFabMenuOpen = false
-                            },
-                            containerColor = SprayingContainer,
-                            modifier = Modifier.size(40.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Opacity,
-                                contentDescription = "Spray Task",
-                                tint = SprayingIcon
-                            )
-                        }
-                        FloatingActionButton(
-                            onClick = {
-                                onCreateTaskClick("yield")
-                                isFabMenuOpen = false
-                            },
-                            containerColor = YieldContainer,
-                            modifier = Modifier.size(40.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Balance,
-                                contentDescription = "Yield Task",
-                                tint = YieldIcon
-                            )
-                        }
-                        FloatingActionButton(
-                            onClick = {
-                                onCreateTaskClick("sowing")
-                                isFabMenuOpen = false
-                            },
-                            containerColor = SowingContainer,
-                            modifier = Modifier.size(40.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Grass,
-                                contentDescription = "Sowing Task",
-                                tint = SowingIcon
-                            )
+                            Row(
+                                modifier = Modifier
+                                    .clickable {
+                                        navController.navigate(Screen.ScoutingRequestScreen.route)
+                                        isFabMenuOpen = false
+                                    }
+                                    .padding(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                FloatingActionButton(
+                                    onClick = {
+                                        navController.navigate(Screen.ScoutingRequestScreen.route)
+                                        isFabMenuOpen = false
+                                    },
+                                    containerColor = ScoutingContainer,
+                                    modifier = Modifier.size(40.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Search,
+                                        contentDescription = "Scouting Task",
+                                        tint = ScoutingIcon
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Scouting Task", style = MaterialTheme.typography.labelLarge)
+                            }
+                            Row(
+                                modifier = Modifier
+                                    .clickable {
+                                        navController.navigate(Screen.FuelRequestScreen.route)
+                                        isFabMenuOpen = false
+                                    }
+                                    .padding(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                FloatingActionButton(
+                                    onClick = {
+                                        navController.navigate(Screen.FuelRequestScreen.route)
+                                        isFabMenuOpen = false
+                                    },
+                                    containerColor = FuelContainer,
+                                    modifier = Modifier.size(40.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.LocalGasStation,
+                                        contentDescription = "Fuel Task",
+                                        tint = FuelIcon
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Fuel Task", style = MaterialTheme.typography.labelLarge)
+                            }
+                            Row(
+                                modifier = Modifier
+                                    .clickable {
+                                        navController.navigate(Screen.SprayingRequestScreen.route)
+                                        isFabMenuOpen = false
+                                    }
+                                    .padding(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                FloatingActionButton(
+                                    onClick = {
+                                        navController.navigate(Screen.SprayingRequestScreen.route)
+                                        isFabMenuOpen = false
+                                    },
+                                    containerColor = SprayingContainer,
+                                    modifier = Modifier.size(40.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Opacity,
+                                        contentDescription = "Spray Task",
+                                        tint = SprayingIcon
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Spray Task", style = MaterialTheme.typography.labelLarge)
+                            }
+                            Row(
+                                modifier = Modifier
+                                    .clickable {
+                                        navController.navigate(Screen.YieldRequestScreen.route)
+                                        isFabMenuOpen = false
+                                    }
+                                    .padding(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                FloatingActionButton(
+                                    onClick = {
+                                        navController.navigate(Screen.YieldRequestScreen.route)
+                                        isFabMenuOpen = false
+                                    },
+                                    containerColor = YieldContainer,
+                                    modifier = Modifier.size(40.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Balance,
+                                        contentDescription = "Yield Task",
+                                        tint = YieldIcon
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Yield Task", style = MaterialTheme.typography.labelLarge)
+                            }
+                            Row(
+                                modifier = Modifier
+                                    .clickable {
+                                        navController.navigate(Screen.SowingRequestScreen.route)
+                                        isFabMenuOpen = false
+                                    }
+                                    .padding(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                FloatingActionButton(
+                                    onClick = {
+                                        navController.navigate(Screen.SowingRequestScreen.route)
+                                        isFabMenuOpen = false
+                                    },
+                                    containerColor = SowingContainer,
+                                    modifier = Modifier.size(40.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Grass,
+                                        contentDescription = "Sowing Task",
+                                        tint = SowingIcon
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Sowing Task", style = MaterialTheme.typography.labelLarge)
+                            }
                         }
                     }
-                }
-                FloatingActionButton(
-                    onClick = { isFabMenuOpen = !isFabMenuOpen },
-                    containerColor = MaterialTheme.colorScheme.primary
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = "Create Task"
-                    )
+                    FloatingActionButton(
+                        onClick = { isFabMenuOpen = !isFabMenuOpen },
+                        containerColor = MaterialTheme.colorScheme.primary
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Create Task"
+                        )
+                    }
                 }
             }
         }
@@ -216,66 +296,79 @@ fun TaskListScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .padding(horizontal = 16.dp)
         ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Tasks",
+                    style = MaterialTheme.typography.titleLarge
+                )
+
+                if (taskListState is TaskViewModel.TaskListState.Success) {
+                    val taskCount = when (selectedTab) {
+                        TaskViewModel.TaskTab.SUPERVISORS -> supervisorTaskCount
+                        TaskViewModel.TaskTab.ME -> createdTaskCount
+                        TaskViewModel.TaskTab.ASSIGNED -> assignedTaskCount
+                        TaskViewModel.TaskTab.CREATED -> createdTaskCount
+                        else -> 0
+                    }
+                    Surface(
+                        color = MaterialTheme.colorScheme.secondaryContainer,
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Text(
+                            text = "$taskCount Tasks",
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    }
+                }
+            }
+
             if (tabs.isNotEmpty()) {
                 TaskTabRow(
                     selectedTab = selectedTab,
                     tabs = tabs,
-                    onTabSelected = { viewModel.onTabSelected(it) }
+                    onTabSelected = { tab ->
+                        viewModel.onTabSelected(tab)
+                    }
                 )
             }
 
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .pullRefresh(pullRefreshState)
+            Spacer(modifier = Modifier.height(16.dp))
+
+            SwipeRefresh(
+                state = rememberSwipeRefreshState(isRefreshing),
+                onRefresh = { viewModel.refreshTasks() },
+                modifier = Modifier.fillMaxSize()
             ) {
                 when (taskListState) {
+                    is TaskViewModel.TaskListState.Loading -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                        }
+                    }
                     is TaskViewModel.TaskListState.Success -> {
                         val tasks = (taskListState as TaskViewModel.TaskListState.Success).tasks
+                        val isLastPage = (taskListState as TaskViewModel.TaskListState.Success).isLastPage
+
                         if (tasks.isEmpty()) {
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    modifier = Modifier.padding(16.dp)
-                                ) {
-                                    Text(
-                                        text = when (selectedTab) {
-                                            TaskViewModel.TaskTab.SUPERVISORS -> "No supervisor tasks"
-                                            TaskViewModel.TaskTab.ME -> "No tasks created by you"
-                                            TaskViewModel.TaskTab.ASSIGNED -> "No assigned tasks"
-                                            TaskViewModel.TaskTab.BY_STATUS -> "No tasks by status"
-                                            TaskViewModel.TaskTab.CREATED -> "No created tasks"
-                                            else -> "No tasks"
-                                        },
-                                        style = MaterialTheme.typography.titleMedium
-                                    )
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Text(
-                                        text = when (selectedTab) {
-                                            TaskViewModel.TaskTab.SUPERVISORS -> "Tasks from supervisors will appear here"
-                                            TaskViewModel.TaskTab.ME -> "Tasks created by you will appear here"
-                                            TaskViewModel.TaskTab.ASSIGNED -> "Assigned tasks will appear here"
-                                            TaskViewModel.TaskTab.BY_STATUS -> "Tasks filtered by status will appear here"
-                                            TaskViewModel.TaskTab.CREATED -> "Tasks you created will appear here"
-                                            else -> "Tasks will appear here"
-                                        },
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
+                            EmptyStateForTasks(selectedTab)
                         } else {
                             LazyColumn(
-                                contentPadding = PaddingValues(
-                                    start = 16.dp,
-                                    end = 16.dp,
-                                    bottom = 16.dp
-                                ),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                                state = listState,
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(bottom = 80.dp)
                             ) {
                                 items(tasks) { task ->
                                     TaskCard(
@@ -283,45 +376,114 @@ fun TaskListScreen(
                                         onClick = { onTaskClick(task.id) }
                                     )
                                 }
-                            }
-                        }
-                    }
-                    is TaskViewModel.TaskListState.Loading -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator()
-                        }
-                    }
-                    is TaskViewModel.TaskListState.Error -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier.padding(16.dp)
-                            ) {
-                                Text(
-                                    text = "Failed to load tasks",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.error
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Button(onClick = { viewModel.loadTasks(0, 10) }) {
-                                    Text("Retry")
+                                if (!isLastPage) {
+                                    item {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(16.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            CircularProgressIndicator(
+                                                modifier = Modifier.size(36.dp),
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
+                    is TaskViewModel.TaskListState.Error -> {
+                        ErrorView(
+                            message = (taskListState as TaskViewModel.TaskListState.Error).message,
+                            onRetry = { viewModel.refreshTasks() },
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
                 }
+            }
+        }
+    }
+}
 
-                PullRefreshIndicator(
-                    refreshing = isRefreshing,
-                    state = pullRefreshState,
-                    modifier = Modifier.align(Alignment.TopCenter)
-                )
+@Composable
+fun EmptyStateForTasks(selectedTab: TaskViewModel.TaskTab) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.Search,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.size(80.dp)
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            val message = when (selectedTab) {
+                TaskViewModel.TaskTab.SUPERVISORS -> "No supervisor tasks"
+                TaskViewModel.TaskTab.ME -> "No tasks created by you"
+                TaskViewModel.TaskTab.ASSIGNED -> "No assigned tasks"
+                TaskViewModel.TaskTab.CREATED -> "No created tasks"
+                else -> "No tasks"
+            }
+
+            Text(
+                text = message,
+                style = MaterialTheme.typography.titleMedium,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = when (selectedTab) {
+                    TaskViewModel.TaskTab.SUPERVISORS -> "Tasks from supervisors will appear here"
+                    TaskViewModel.TaskTab.ME -> "Tasks created by you will appear here"
+                    TaskViewModel.TaskTab.ASSIGNED -> "Assigned tasks will appear here"
+                    TaskViewModel.TaskTab.CREATED -> "Tasks you created will appear here"
+                    else -> "Tasks will appear here"
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+fun ErrorView(
+    message: String,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier,
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Text(
+                text = message,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.error,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(onClick = onRetry) {
+                Text("Retry")
             }
         }
     }
