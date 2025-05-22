@@ -2,6 +2,7 @@ package com.kapilagro.sasyak.presentation.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.kapilagro.sasyak.data.api.models.responses.SupervisorListResponse
 import com.kapilagro.sasyak.domain.repositories.WeatherRepository
 import com.kapilagro.sasyak.di.IoDispatcher
 import com.kapilagro.sasyak.domain.models.ApiResponse
@@ -43,6 +44,9 @@ class HomeViewModel @Inject constructor(
     private val _teamMembersState = MutableStateFlow<TeamMembersState>(TeamMembersState.Loading)
     val teamMembersState: StateFlow<TeamMembersState> = _teamMembersState.asStateFlow()
 
+    private val _supervisorsListState = MutableStateFlow<SupervisorsListState>(SupervisorsListState.Idle)
+    val supervisorsListState: StateFlow<SupervisorsListState> = _supervisorsListState.asStateFlow()
+
 
 
 
@@ -69,6 +73,22 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    fun loadSupervisorsList() {
+        _supervisorsListState.value = SupervisorsListState.Loading
+        viewModelScope.launch(ioDispatcher) {
+            when (val response = userRepository.getSupervisorsList()) {
+                is ApiResponse.Success -> {
+                    _supervisorsListState.value = SupervisorsListState.Success(response.data)
+                }
+                is ApiResponse.Error -> {
+                    _supervisorsListState.value = SupervisorsListState.Error(response.errorMessage)
+                }
+                is ApiResponse.Loading -> {
+                    _supervisorsListState.value = SupervisorsListState.Loading
+                }
+            }
+        }
+    }
 
     fun loadHotNewTasks(){
         _newTasksState.value = TasksState.Loading
@@ -308,6 +328,13 @@ class HomeViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    sealed class SupervisorsListState {
+        object Idle : SupervisorsListState()
+        object Loading : SupervisorsListState()
+        data class Success(val supervisors: List<SupervisorListResponse>) : SupervisorsListState()
+        data class Error(val message: String) : SupervisorsListState()
     }
 
 }

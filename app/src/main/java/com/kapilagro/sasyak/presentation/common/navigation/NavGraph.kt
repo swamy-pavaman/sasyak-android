@@ -18,6 +18,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.kapilagro.sasyak.presentation.advice.AdviceScreen
 import com.kapilagro.sasyak.presentation.auth.LoginScreen
 import com.kapilagro.sasyak.presentation.auth.SplashScreen
 import com.kapilagro.sasyak.presentation.auth.AuthViewModel
@@ -70,18 +71,15 @@ fun AppNavGraph(
         startDestination = startDestination,
         modifier = modifier
     ) {
-
-        // Scouting screen
-        composable(Screen.Scouting.route) {
-            ScoutingScreen(
-                onTaskCreated = {
-                    navController.navigate(Screen.ScoutingRequestScreen.route)
+        // Advice screen
+        composable(Screen.Advice.route) {
+            AdviceScreen(
+                onTaskClick = { taskId ->
+                    navController.navigate(Screen.TaskDetail.createRoute(taskId.toString()))
                 },
                 onBackClick = {
                     navController.popBackStack()
-                },
-                onTaskClick = TODO(),
-                viewModel = TODO()
+                }
             )
         }
 
@@ -112,7 +110,6 @@ fun AppNavGraph(
             )
         }
 
-
         // Scouting Request screen
         composable(Screen.ScoutingRequestScreen.route) {
             ScoutingRequestScreen(
@@ -134,13 +131,11 @@ fun AppNavGraph(
                 onBackClick = {
                     navController.popBackStack()
                 },
-                onTaskClick = {
-                    navController.popBackStack()
+                onTaskClick = { taskId ->
+                    navController.navigate(Screen.TaskDetail.createRoute(taskId.toString()))
                 }
-
             )
         }
-
 
         composable(Screen.FuelRequestScreen.route) {
             FuelRequestScreen(
@@ -152,6 +147,7 @@ fun AppNavGraph(
                 }
             )
         }
+
         // Sowing screens
         composable(Screen.SowingScreen.route) {
             SowingScreen(
@@ -164,11 +160,8 @@ fun AppNavGraph(
                 onBackClick = {
                     navController.popBackStack()
                 }
-
-                )
+            )
         }
-
-
 
         composable(Screen.SowingRequestScreen.route) {
             SowingRequestScreen(
@@ -190,8 +183,8 @@ fun AppNavGraph(
                 onBackClick = {
                     navController.popBackStack()
                 },
-                onTaskClick = {
-                    navController.popBackStack()
+                onTaskClick = { taskId ->
+                    navController.navigate(Screen.TaskDetail.createRoute(taskId.toString()))
                 }
             )
         }
@@ -216,13 +209,12 @@ fun AppNavGraph(
                 onBackClick = {
                     navController.popBackStack()
                 },
-                onTaskClick = {
-                    navController.popBackStack()
+                onTaskClick = { taskId ->
+                    navController.navigate(Screen.TaskDetail.createRoute(taskId.toString()))
                 }
             )
         }
 
-        // Request/creation screens
         composable(Screen.YieldRequestScreen.route) {
             YieldRequestScreen(
                 onTaskCreated = {
@@ -236,7 +228,6 @@ fun AppNavGraph(
 
         // Weather screen
         composable(Screen.WeatherDetail.route) {
-            // Get the HomeViewModel to access weather data
             val parentEntry = remember(it) {
                 navController.getBackStackEntry(Screen.Home.route)
             }
@@ -253,7 +244,6 @@ fun AppNavGraph(
                     )
                 }
                 else -> {
-                    // Handle loading or error state
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
@@ -320,19 +310,17 @@ fun AppNavGraph(
                 onSprayingTaskClick = {
                     navController.navigate(Screen.SprayingScreen.route)
                 },
-                onTeamClick={
+                onTeamClick = {
                     navController.navigate(Screen.Team.route)
-                
                 },
                 onYieldTaskClick = {
                     navController.navigate(Screen.YieldScreen.route)
                 },
                 onReportsClick = {
                     navController.navigate(Screen.Reports.route)
-                },        onAdviceClick = {
-                    // You'll need to implement this screen or functionality
-                    // For now, we'll leave it as a TODO
-                    // TODO: Implement Advice screen navigation
+                },
+                onAdviceClick = {
+                    navController.navigate(Screen.Advice.route)
                 }
             )
         }
@@ -345,13 +333,12 @@ fun AppNavGraph(
             NotificationScreen(
                 onTaskClick = { taskId ->
                     navController.navigate(Screen.TaskDetail.createRoute(taskId.toString()))
-                },onBackClick = {
+                },
+                onBackClick = {
                     navController.popBackStack()
                 }
             )
         }
-
-        // Add these within the AppNavGraph composable in NavGraph.kt
 
         composable(Screen.Scouting.route) {
             ScoutingScreen(
@@ -359,7 +346,6 @@ fun AppNavGraph(
                     navController.navigate(Screen.ScoutingRequestScreen.route)
                 },
                 onTaskClick = { taskId ->
-//                    navController.navigate("scouting_task_detail/$taskId")
                     navController.navigate(Screen.TaskDetail.createRoute(taskId.toString()))
                 },
                 onBackClick = {
@@ -368,7 +354,6 @@ fun AppNavGraph(
             )
         }
 
-        // Add this new route
         composable(
             route = "sowing_task_detail/{taskId}",
             arguments = listOf(
@@ -384,80 +369,6 @@ fun AppNavGraph(
             )
         }
 
-
-        // Main screens
-        composable(Screen.Yield.route) {
-            YieldScreen(
-                onTaskCreated = {
-                    navController.navigate(Screen.YieldRequestScreen.route)
-                },
-                onTaskClick = { taskId ->
-                    navController.navigate(Screen.TaskDetail.createRoute(taskId.toString()))
-                },
-                onBackClick = {
-                    navController.popBackStack()
-                }
-            )
-        }
-
-        composable(Screen.Fuel.route) {
-            FuelScreen(
-                onTaskCreated = {
-                    navController.navigate(FuelRequestScreen.route)
-                },
-                onTaskClick = { taskId ->
-                    navController.navigate(Screen.TaskDetail.createRoute(taskId.toString()))
-                },
-                onBackClick = {
-                    navController.popBackStack()
-                }
-            )
-        }
-        composable(Screen.Spraying.route) {
-            SprayingScreen(
-                onTaskCreated = {
-                    navController.navigate(Screen.SprayingRequestScreen.route)
-                },
-                onTaskClick = { taskId ->
-                    navController.navigate(Screen.TaskDetail.createRoute(taskId.toString()))
-                },
-                onBackClick = {
-                    navController.popBackStack()
-                }
-            )
-        }
-        composable(Screen.Scouting.route) {
-            ScoutingScreen(
-                onTaskCreated = {
-                    navController.navigate(Screen.ScoutingRequestScreen.route)
-                },
-                onTaskClick = { taskId ->
-                    navController.navigate(Screen.TaskDetail.createRoute(taskId.toString()))
-                },
-                onBackClick = {
-                    navController.popBackStack()
-                }
-            )
-        }
-
-
-// Add this new route
-        composable(
-            route = "scouting_task_detail/{taskId}",
-            arguments = listOf(
-                navArgument("taskId") { type = NavType.IntType }
-            )
-        ) { backStackEntry ->
-            val taskId = backStackEntry.arguments?.getInt("taskId") ?: -1
-            ScoutingTaskDetailScreen(
-                taskId = taskId,
-                onBackClick = {
-                    navController.popBackStack()
-                }
-            )
-        }
-
-        // Detail screens
         composable(
             route = "yield_task_detail/{taskId}",
             arguments = listOf(
@@ -472,21 +383,6 @@ fun AppNavGraph(
                 }
             )
         }
-
-//        composable(
-//            route = "fuel_task_detail/{taskId}",
-//            arguments = listOf(
-//                navArgument("taskId") { type = NavType.IntType }
-//            )
-//        ) { backStackEntry ->
-//            val taskId = backStackEntry.arguments?.getInt("taskId") ?: -1
-//            FuelTaskDetailScreen(
-//                taskId = taskId,
-//                onBackClick = {
-//                    navController.popBackStack()
-//                }
-//            )
-//        }
 
         composable(
             route = "spraying_task_detail/{taskId}",
@@ -518,7 +414,6 @@ fun AppNavGraph(
             )
         }
 
-
         composable(Screen.Profile.route) {
             ProfileScreen(
                 onEditProfileClick = {
@@ -532,20 +427,15 @@ fun AppNavGraph(
                 }
             )
         }
-
-        // Task related screens
         composable(Screen.TaskList.route) {
             TaskListScreen(
                 onTaskClick = { taskId ->
                     navController.navigate(Screen.TaskDetail.createRoute(taskId.toString()))
                 },
-                onCreateTaskClick = {
-                    navController.navigate(Screen.CreateTask.route)
-                },
                 onBackClick = {
                     navController.popBackStack()
-                }
-
+                },
+                navController = navController
             )
         }
 
@@ -575,7 +465,6 @@ fun AppNavGraph(
             )
         }
 
-        // Scanner related screens
         composable(Screen.Scanner.route) {
             ScannerScreen(
                 onImageCaptured = {
@@ -601,10 +490,8 @@ fun AppNavGraph(
             )
         }
 
-        // Edit profile screen
         composable("edit_profile") {
             val profileViewModel: ProfileViewModel = hiltViewModel()
-
             EditProfileScreen(
                 onProfileUpdated = {
                     profileViewModel.refreshProfile()
@@ -617,10 +504,6 @@ fun AppNavGraph(
         }
     }
 
-    // Add these to the NavHost in the AppNavGraph.kt file
-
-
-    // Handle authentication state changes
     LaunchedEffect(authState) {
         if (!authState && navController.currentDestination?.route != Screen.Login.route
             && navController.currentDestination?.route != Screen.Splash.route) {

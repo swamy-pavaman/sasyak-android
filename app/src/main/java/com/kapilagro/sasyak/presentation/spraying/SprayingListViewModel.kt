@@ -100,7 +100,8 @@ class SprayingListViewModel @Inject constructor(
 
     fun createSprayingTask(
         sprayingDetails: SprayingDetails,
-        description: String
+        description: String,
+        assignedToId: Int? = null
     ) {
         _createSprayingState.value = CreateSprayingState.Loading
         viewModelScope.launch(ioDispatcher) {
@@ -111,12 +112,11 @@ class SprayingListViewModel @Inject constructor(
                     taskType = "SPRAYING",
                     description = description,
                     detailsJson = detailsJson,
-                    imagesJson = null,  // TODO: Handle file uploads
-                    assignedToId = null
+                    imagesJson = null,
+                    assignedToId = assignedToId
                 )) {
                     is ApiResponse.Success -> {
                         _createSprayingState.value = CreateSprayingState.Success(response.data)
-                        // Refresh the task list after successful creation
                         refreshTasks()
                     }
                     is ApiResponse.Error -> {

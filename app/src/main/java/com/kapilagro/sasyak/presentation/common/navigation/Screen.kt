@@ -137,6 +137,8 @@ sealed class Screen(val route: String, val title: String, @DrawableRes val icon:
 
     // Profile related screens
     object EditProfile : Screen("edit_profile", "Edit Profile")
+    // Advice screen
+    object Advice : Screen("advice", "Advice")
 
     companion object {
         // Updated bottom navigation to have: Home, Tasks, Scanner, Profile

@@ -22,6 +22,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.kapilagro.sasyak.domain.models.SprayingDetails
 import com.kapilagro.sasyak.presentation.common.components.SuccessDialog
 import com.kapilagro.sasyak.presentation.common.theme.*
+import com.kapilagro.sasyak.presentation.home.HomeViewModel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -31,10 +32,13 @@ import java.time.format.DateTimeFormatter
 fun SprayingRequestScreen(
     onTaskCreated: () -> Unit,
     onBackClick: () -> Unit,
-    viewModel: SprayingListViewModel = hiltViewModel()
+    viewModel: SprayingListViewModel = hiltViewModel(),
+    homeViewModel: HomeViewModel = hiltViewModel()
+
 ) {
     val createSprayingState by viewModel.createSprayingState.collectAsState()
-
+    val userRole by homeViewModel.userRole.collectAsState()
+    val supervisorsListState by homeViewModel.supervisorsListState.collectAsState()
     // Dialog state
     var showSuccessDialog by remember { mutableStateOf(false) }
     var submittedEntry by remember { mutableStateOf<SprayingDetails?>(null) }
@@ -55,6 +59,8 @@ fun SprayingRequestScreen(
     var weatherCondition by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var imageUploaded by remember { mutableStateOf(false) }
+    var assignedTo by remember { mutableStateOf<Int?>(null) }
+    var assignedToExpanded by remember { mutableStateOf(false) }
 
     val crops = listOf(
         "Wheat", "Rice", "Maize", "Barley", "Sorghum",
@@ -75,6 +81,12 @@ fun SprayingRequestScreen(
         "Backpack Sprayer", "Boom Sprayer", "Aerial Spraying", "Drip Application",
         "Fogger", "Mist Blower", "Hand Sprayer", "Tractor Mounted Sprayer"
     )
+
+    LaunchedEffect(Unit) {
+        if (userRole == "MANAGER") {
+            homeViewModel.loadSupervisorsList()
+        }
+    }
 
     // Handle task creation success
     LaunchedEffect(createSprayingState) {
@@ -352,7 +364,55 @@ fun SprayingRequestScreen(
                 shape = RoundedCornerShape(8.dp)
             )
 
+
             Spacer(modifier = Modifier.height(16.dp))
+
+            if (userRole == "MANAGER") {
+                val supervisors = when (supervisorsListState) {
+                    is HomeViewModel.SupervisorsListState.Success ->
+                        (supervisorsListState as HomeViewModel.SupervisorsListState.Success).supervisors
+                    else -> emptyList()
+                }
+
+                val selectedSupervisorName = supervisors.find { it.supervisorId == assignedTo }?.supervisorName ?: ""
+
+                ExposedDropdownMenuBox(
+                    expanded = assignedToExpanded,
+                    onExpandedChange = { assignedToExpanded = it },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    OutlinedTextField(
+                        value = selectedSupervisorName,
+                        onValueChange = {}, // Read-only
+                        label = { Text("Assign to *") },
+                        trailingIcon = {
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = assignedToExpanded)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(),
+                        readOnly = true,
+                        shape = RoundedCornerShape(8.dp)
+                    )
+
+                    ExposedDropdownMenu(
+                        expanded = assignedToExpanded,
+                        onDismissRequest = { assignedToExpanded = false }
+                    ) {
+                        supervisors.forEach { supervisor ->
+                            DropdownMenuItem(
+                                text = { Text(supervisor.supervisorName) },
+                                onClick = {
+                                    assignedTo = supervisor.supervisorId // Send this ID to backend
+                                    assignedToExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            }
 
             // Upload Section with clickable cards
             Text(
@@ -441,7 +501,9 @@ fun SprayingRequestScreen(
             // Submit Button
             Button(
                 onClick = {
-                    if (cropName.isNotBlank() && row.isNotBlank() && chemicalName.isNotBlank() && sprayingMethod.isNotBlank()) {
+                    if (cropName.isNotBlank() && row.isNotBlank() && chemicalName.isNotBlank() &&
+                        sprayingMethod.isNotBlank() && imageUploaded &&
+                        (userRole != "MANAGER" || assignedTo != null)) { // Check assignedTo is not null
                         val sprayingDetails = SprayingDetails(
                             sprayingDate = sprayingDate,
                             cropName = cropName,
@@ -452,14 +514,19 @@ fun SprayingRequestScreen(
                             sprayingMethod = sprayingMethod,
                             targetPest = targetPest.ifBlank { null },
                             weatherCondition = weatherCondition.ifBlank { null },
-                            uploadedFiles = null // TODO: Handle file uploads
+                            uploadedFiles = null
                         )
                         submittedEntry = sprayingDetails
-                        viewModel.createSprayingTask(sprayingDetails, description)
+                        viewModel.createSprayingTask(
+                            sprayingDetails = sprayingDetails,
+                            description = description,
+                            assignedToId = if (userRole == "MANAGER") assignedTo else null // Pass Int?
+                        )
                     }
                 },
                 enabled = cropName.isNotBlank() && row.isNotBlank() && chemicalName.isNotBlank() &&
                         sprayingMethod.isNotBlank() && imageUploaded &&
+                        (userRole != "MANAGER" || assignedTo != null) &&
                         createSprayingState !is SprayingListViewModel.CreateSprayingState.Loading,
                 modifier = Modifier
                     .fillMaxWidth()

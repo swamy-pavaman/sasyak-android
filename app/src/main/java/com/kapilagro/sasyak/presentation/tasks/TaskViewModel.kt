@@ -2,7 +2,6 @@ package com.kapilagro.sasyak.presentation.tasks
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.kapilagro.sasyak.data.api.models.responses.SupervisorListResponse
 import com.kapilagro.sasyak.di.IoDispatcher
 import com.kapilagro.sasyak.domain.models.ApiResponse
 import com.kapilagro.sasyak.domain.models.Task
@@ -10,7 +9,6 @@ import com.kapilagro.sasyak.domain.models.TaskAdvice
 import com.kapilagro.sasyak.domain.repositories.TaskAdviceRepository
 import com.kapilagro.sasyak.domain.repositories.TaskRepository
 import com.kapilagro.sasyak.domain.repositories.AuthRepository
-import com.kapilagro.sasyak.domain.repositories.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,7 +23,6 @@ class TaskViewModel @Inject constructor(
     private val taskRepository: TaskRepository,
     private val taskAdviceRepository: TaskAdviceRepository,
     private val authRepository: AuthRepository,
-    private val userRepository: UserRepository,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) : ViewModel() {
 
@@ -44,72 +41,99 @@ class TaskViewModel @Inject constructor(
     private val _addAdviceState = MutableStateFlow<AddAdviceState>(AddAdviceState.Idle)
     val addAdviceState: StateFlow<AddAdviceState> = _addAdviceState.asStateFlow()
 
-    private val _selectedTab = MutableStateFlow(TaskTab.ASSIGNED)
+    private val _selectedTab = MutableStateFlow(TaskTab.ASSIGNED) // Default to ASSIGNED
     val selectedTab: StateFlow<TaskTab> = _selectedTab.asStateFlow()
 
     private val _userRole = MutableStateFlow<String?>(null)
     val userRole: StateFlow<String?> = _userRole.asStateFlow()
 
-    private val _supervisorsListState = MutableStateFlow<SupervisorsListState>(SupervisorsListState.Idle)
-    val supervisorsListState: StateFlow<SupervisorsListState> = _supervisorsListState.asStateFlow()
+    private val _refreshing = MutableStateFlow(false)
+    val refreshing: StateFlow<Boolean> = _refreshing.asStateFlow()
+
+    // Task counts for each tab
+    private val _supervisorTaskCount = MutableStateFlow(0)
+    val supervisorTaskCount: StateFlow<Int> = _supervisorTaskCount.asStateFlow()
+
+    private val _createdTaskCount = MutableStateFlow(0)
+    val createdTaskCount: StateFlow<Int> = _createdTaskCount.asStateFlow()
+
+    private val _assignedTaskCount = MutableStateFlow(0)
+    val assignedTaskCount: StateFlow<Int> = _assignedTaskCount.asStateFlow()
+
+    private var currentPage = 0
+    private val pageSize = 10
+    private val accumulatedTasks = mutableListOf<Task>()
 
     fun getCurrentUserRole() {
         viewModelScope.launch {
             authRepository.getUserRole().collect { role ->
                 _userRole.value = role
-            }
-        }
-    }
-
-    fun loadSupervisorsList() {
-        _supervisorsListState.value = SupervisorsListState.Loading
-        viewModelScope.launch(ioDispatcher) {
-            when (val response = userRepository.getSupervisorsList()) {
-                is ApiResponse.Success -> {
-                    _supervisorsListState.value = SupervisorsListState.Success(response.data)
-                }
-                is ApiResponse.Error -> {
-                    _supervisorsListState.value = SupervisorsListState.Error(response.errorMessage)
-                }
-                is ApiResponse.Loading -> {
-                    _supervisorsListState.value = SupervisorsListState.Loading
+                if (role == "SUPERVISOR") {
+                    onTabSelected(TaskTab.ASSIGNED) // Load ASSIGNED tab for supervisors
                 }
             }
         }
     }
 
     fun onTabSelected(tab: TaskTab) {
-        _selectedTab.value = tab
-        loadTasks(0, 10)
+        if (_selectedTab.value != tab) {
+            _selectedTab.value = tab
+            accumulatedTasks.clear()
+            currentPage = 0
+            loadTasks(currentPage, pageSize)
+        }
     }
 
     fun loadTasks(page: Int, size: Int) {
-        _taskListState.value = TaskListState.Loading
+        if (page == 0) {
+            accumulatedTasks.clear()
+            _taskListState.value = TaskListState.Loading
+        }
+        _refreshing.value = page == 0
         viewModelScope.launch(ioDispatcher) {
             val response = when (_selectedTab.value) {
                 TaskTab.SUPERVISORS -> taskRepository.getTasksBySupervisors(page, size)
                 TaskTab.ME -> taskRepository.getCreatedTasks(page, size)
                 TaskTab.ASSIGNED -> taskRepository.getAssignedTasks(page, size)
-                TaskTab.BY_STATUS -> taskRepository.getTasksByStatus("all", page, size)
                 TaskTab.CREATED -> taskRepository.getCreatedTasks(page, size)
             }
 
             when (response) {
                 is ApiResponse.Success -> {
+                    accumulatedTasks.addAll(response.data.first)
+                    when (_selectedTab.value) {
+                        TaskTab.SUPERVISORS -> _supervisorTaskCount.value = response.data.second
+                        TaskTab.ME -> _createdTaskCount.value = response.data.second
+                        TaskTab.ASSIGNED -> _assignedTaskCount.value = response.data.second
+                        TaskTab.CREATED -> _createdTaskCount.value = response.data.second
+                    }
                     _taskListState.value = TaskListState.Success(
-                        tasks = response.data.first,
-                        totalCount = response.data.second,
-                        hasMore = response.data.second > (page + 1) * size
+                        tasks = accumulatedTasks.toList(),
+                        isLastPage = response.data.second <= (page + 1) * size
                     )
+                    _refreshing.value = false
                 }
                 is ApiResponse.Error -> {
                     _taskListState.value = TaskListState.Error(response.errorMessage)
+                    _refreshing.value = false
                 }
                 is ApiResponse.Loading -> {
-                    _taskListState.value = TaskListState.Loading
+                    if (page == 0) {
+                        _taskListState.value = TaskListState.Loading
+                    }
                 }
             }
         }
+    }
+
+    fun loadMoreTasks() {
+        currentPage++
+        loadTasks(currentPage, pageSize)
+    }
+
+    fun refreshTasks() {
+        currentPage = 0
+        loadTasks(currentPage, pageSize)
     }
 
     fun loadTaskDetail(taskId: Int) {
@@ -150,7 +174,7 @@ class TaskViewModel @Inject constructor(
             )) {
                 is ApiResponse.Success -> {
                     _createTaskState.value = CreateTaskState.Success(response.data)
-                    loadTasks(0, 10)
+                    refreshTasks()
                 }
                 is ApiResponse.Error -> {
                     _createTaskState.value = CreateTaskState.Error(response.errorMessage)
@@ -169,7 +193,7 @@ class TaskViewModel @Inject constructor(
                 is ApiResponse.Success -> {
                     _updateTaskState.value = UpdateTaskState.Success(response.data)
                     loadTaskDetail(taskId)
-                    loadTasks(0, 10)
+                    refreshTasks()
                 }
                 is ApiResponse.Error -> {
                     _updateTaskState.value = UpdateTaskState.Error(response.errorMessage)
@@ -238,8 +262,7 @@ class TaskViewModel @Inject constructor(
         object Loading : TaskListState()
         data class Success(
             val tasks: List<Task>,
-            val totalCount: Int,
-            val hasMore: Boolean
+            val isLastPage: Boolean
         ) : TaskListState()
         data class Error(val message: String) : TaskListState()
     }
@@ -271,14 +294,7 @@ class TaskViewModel @Inject constructor(
         data class Error(val message: String) : AddAdviceState()
     }
 
-    sealed class SupervisorsListState {
-        object Idle : SupervisorsListState()
-        object Loading : SupervisorsListState()
-        data class Success(val supervisors: List<SupervisorListResponse>) : SupervisorsListState()
-        data class Error(val message: String) : SupervisorsListState()
-    }
-
     enum class TaskTab {
-        SUPERVISORS, ME, ASSIGNED, BY_STATUS, CREATED
+        SUPERVISORS, ME, ASSIGNED, CREATED
     }
 }
