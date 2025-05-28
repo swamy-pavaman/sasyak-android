@@ -1,6 +1,7 @@
 package com.kapilagro.sasyak.domain.models
 
 data class DailyTaskCount(
-    val day: String,
-    val count: Int
+    val data: String,
+    val count: Int,
+    val days: String
 )

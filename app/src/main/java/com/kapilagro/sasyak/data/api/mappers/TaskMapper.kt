@@ -1,7 +1,12 @@
 package com.kapilagro.sasyak.data.api.mappers
 
+import com.kapilagro.sasyak.data.api.models.responses.DailyTaskCount as ApiDailyTaskCount
+import com.kapilagro.sasyak.data.api.models.responses.TaskReportResponse
+import com.kapilagro.sasyak.data.api.models.responses.TrendReportResponse
 import com.kapilagro.sasyak.data.db.entities.TaskEntity
+import com.kapilagro.sasyak.domain.models.DailyTaskCount as DomainDailyTaskCount
 import com.kapilagro.sasyak.domain.models.Task
+import com.kapilagro.sasyak.domain.models.TaskReport
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -51,3 +56,27 @@ fun Task.toEntityModel(): TaskEntity {
     )
 }
 
+object TaskMapper {
+    fun toTaskReport(response: TaskReportResponse): TaskReport {
+        return TaskReport(
+            totalTasks = response.totalTasks,
+            tasksByType = response.tasksByType,
+            tasksByStatus = response.tasksByStatus,
+            tasksByUser = response.tasksByUser,
+            avgCompletionTimeByType = response.avgCompletionTimeByType
+        )
+    }
+}
+
+// Mapping for DailyTaskCount
+fun ApiDailyTaskCount.toDomainModel(): DomainDailyTaskCount {
+    return DomainDailyTaskCount(
+        data = "",  // Default value since the API doesn't provide this field
+        count = this.count,
+        days = this.days
+    )
+}
+
+fun List<ApiDailyTaskCount>.toDomainModel(): List<DomainDailyTaskCount> {
+    return this.map { it.toDomainModel() }
+}

@@ -1,6 +1,7 @@
 package com.kapilagro.sasyak.domain.repositories
 
 import com.kapilagro.sasyak.domain.models.ApiResponse
+import com.kapilagro.sasyak.domain.models.DailyTaskCount
 import com.kapilagro.sasyak.domain.models.Task
 import com.kapilagro.sasyak.domain.models.TaskAdvice
 import com.kapilagro.sasyak.domain.models.TaskReport
@@ -21,5 +22,6 @@ interface TaskRepository {
     suspend fun getTaskReport(): ApiResponse<TaskReport>
     suspend fun getTasksByType(taskType: String, page: Int = 0, size: Int = 10): ApiResponse<Pair<List<Task>, Int>>
     suspend fun getTasksByStatus(status: String, page: Int, size: Int): ApiResponse<Pair<List<Task>, Int>>
+    suspend fun getTrendReport(): ApiResponse<List<DailyTaskCount>>
     suspend fun getTasksBySupervisors(page: Int = 0, size: Int = 10): ApiResponse<Pair<List<Task>, Int>>
 }

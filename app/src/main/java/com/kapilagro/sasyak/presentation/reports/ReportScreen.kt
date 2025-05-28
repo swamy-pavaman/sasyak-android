@@ -1,14 +1,15 @@
-// ReportScreen.kt
 package com.kapilagro.sasyak.presentation.reports
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
-import androidx.compose.foundation.background
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -17,10 +18,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.kapilagro.sasyak.R
 import com.kapilagro.sasyak.domain.models.DailyTaskCount
 import com.kapilagro.sasyak.presentation.common.theme.*
-import com.kapilagro.sasyak.R
 
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReportScreen(
@@ -37,7 +39,7 @@ fun ReportScreen(
                     IconButton(onClick = { /* Export reports */ }) {
                         Icon(
                             painter = androidx.compose.ui.res.painterResource(
-                                id = R.drawable.ic_drop // TODO download icon
+                                id = R.drawable.ic_drop
                             ),
                             contentDescription = "Export"
                         )
@@ -52,7 +54,6 @@ fun ReportScreen(
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
         ) {
-            // Chart section title
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -65,7 +66,6 @@ fun ReportScreen(
                     style = MaterialTheme.typography.titleLarge
                 )
 
-                // Date picker dropdown
                 OutlinedButton(
                     onClick = { /* Show date picker */ },
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
@@ -82,7 +82,6 @@ fun ReportScreen(
                 }
             }
 
-            // Weekly/Monthly tabs
             TabRow(
                 selectedTabIndex = if (chartTab == ReportViewModel.ChartTab.WEEKLY) 0 else 1,
                 modifier = Modifier.padding(horizontal = 16.dp)
@@ -101,7 +100,6 @@ fun ReportScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Task completion chart
             when (reportState) {
                 is ReportViewModel.ReportState.Success -> {
                     val taskCounts = if (chartTab == ReportViewModel.ChartTab.WEEKLY) {
@@ -120,7 +118,6 @@ fun ReportScreen(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // Task summary section
                     Text(
                         text = "Task Summary",
                         style = MaterialTheme.typography.titleLarge,
@@ -129,7 +126,6 @@ fun ReportScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Task type summary
                     val report = (reportState as ReportViewModel.ReportState.Success).report
                     TaskTypeSummary(report.tasksByType)
                 }
@@ -199,7 +195,6 @@ fun TaskTypeSummary(
                     .fillMaxWidth()
                     .padding(vertical = 8.dp)
             ) {
-                // Task type indicator
                 Box(
                     modifier = Modifier
                         .size(12.dp)
@@ -208,7 +203,6 @@ fun TaskTypeSummary(
 
                 Spacer(modifier = Modifier.width(12.dp))
 
-                // Task type and count
                 Text(
                     text = taskType,
                     style = MaterialTheme.typography.bodyLarge,
@@ -217,7 +211,6 @@ fun TaskTypeSummary(
 
                 Spacer(modifier = Modifier.width(8.dp))
 
-                // Progress bar
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -234,7 +227,6 @@ fun TaskTypeSummary(
 
                 Spacer(modifier = Modifier.width(16.dp))
 
-                // Count
                 Text(
                     text = count.toString(),
                     style = MaterialTheme.typography.bodyLarge,
@@ -242,7 +234,6 @@ fun TaskTypeSummary(
                 )
             }
 
-            // Add a divider except after the last item
             if (index < tasksByType.size - 1) {
                 Divider(
                     modifier = Modifier.padding(vertical = 8.dp),
@@ -264,7 +255,6 @@ fun TaskCompletionChart(
     Box(
         modifier = modifier
     ) {
-        // Y-axis labels
         Column(
             modifier = Modifier
                 .height(chartHeight)
@@ -282,21 +272,18 @@ fun TaskCompletionChart(
             }
         }
 
-        // Chart with bars
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(chartHeight)
                 .padding(start = 24.dp, top = 8.dp, bottom = 24.dp)
         ) {
-            // Draw bars
             Canvas(
                 modifier = Modifier.fillMaxSize()
             ) {
                 val barWidth = (size.width - 16.dp.toPx()) / taskCounts.size
                 val maxHeight = size.height
 
-                // Draw horizontal grid lines
                 for (i in 0..4) {
                     val y = maxHeight - (maxHeight * i / 4)
                     drawLine(
@@ -307,7 +294,6 @@ fun TaskCompletionChart(
                     )
                 }
 
-                // Draw bars
                 taskCounts.forEachIndexed { index, dailyCount ->
                     val barHeight = if (maxCount > 0) {
                         (dailyCount.count.toFloat() / maxCount) * maxHeight
@@ -318,17 +304,15 @@ fun TaskCompletionChart(
                     val barX = (index * barWidth) + 8.dp.toPx()
                     val barY = maxHeight - barHeight
 
-                    // Draw bar with rounded corners
                     drawRoundRect(
                         color = Info,
                         topLeft = Offset(barX, barY),
                         size = Size(barWidth - 16.dp.toPx(), barHeight),
-                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(4.dp.toPx()),
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(4.dp.toPx())
                     )
                 }
             }
 
-            // X-axis labels
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -337,7 +321,7 @@ fun TaskCompletionChart(
             ) {
                 taskCounts.forEach { dailyCount ->
                     Text(
-                        text = dailyCount.day,
+                        text = dailyCount.days,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,

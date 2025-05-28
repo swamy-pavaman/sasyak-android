@@ -1,5 +1,7 @@
 package com.kapilagro.sasyak.presentation.reports
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kapilagro.sasyak.di.IoDispatcher
@@ -13,6 +15,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
 @HiltViewModel
@@ -27,8 +31,11 @@ class ReportViewModel @Inject constructor(
     private val _chartTab = MutableStateFlow(ChartTab.WEEKLY)
     val chartTab: StateFlow<ChartTab> = _chartTab.asStateFlow()
 
+    private var trendData: List<DailyTaskCount> = emptyList()
+
     init {
         loadTaskReport()
+        loadTrendReport()
     }
 
     fun loadTaskReport() {
@@ -39,11 +46,27 @@ class ReportViewModel @Inject constructor(
                     _reportState.value = ReportState.Success(response.data)
                 }
                 is ApiResponse.Error -> {
-                    // Since we don't have a real task report API, we'll simulate the data
-                    _reportState.value = ReportState.Success(generateMockTaskReport())
+                    _reportState.value = ReportState.Error(response.errorMessage)
                 }
                 is ApiResponse.Loading -> {
                     _reportState.value = ReportState.Loading
+                }
+            }
+        }
+    }
+
+    private fun loadTrendReport() {
+        viewModelScope.launch(ioDispatcher) {
+            when (val response = taskRepository.getTrendReport()) {
+                is ApiResponse.Success -> {
+                    trendData = response.data  // Fixed from 'response.day' to 'response.data'
+                }
+                is ApiResponse.Error -> {
+                    _reportState.value = ReportState.Error(response.errorMessage)
+                }
+                is ApiResponse.Loading -> {
+                    _reportState.value = ReportState.Loading
+                    // Handle loading state if needed
                 }
             }
         }
@@ -53,67 +76,48 @@ class ReportViewModel @Inject constructor(
         _chartTab.value = tab
     }
 
-    private fun generateMockTaskReport(): TaskReport {
-        // Generate mock data that matches what's shown in the screenshot
-        val tasksByType = mapOf(
-            "Scouting" to 42,
-            "Spraying" to 28,
-            "Sowing" to 16,
-            "Fuel" to 9,
-            "Yield" to 5
-        )
-
-        val tasksByStatus = mapOf(
-            "pending" to 18,
-            "approved" to 45,
-            "rejected" to 12,
-            "implemented" to 25
-        )
-
-        val tasksByUser = mapOf(
-            "John Doe" to 20,
-            "Jane Smith" to 18,
-            "Bob Johnson" to 15
-        )
-
-        val avgCompletionTimeByType = mapOf(
-            "Scouting" to 2.5,
-            "Spraying" to 3.2,
-            "Sowing" to 4.1,
-            "Fuel" to 1.5,
-            "Yield" to 2.0
-        )
-
-        return TaskReport(
-            totalTasks = 100,
-            tasksByType = tasksByType,
-            tasksByStatus = tasksByStatus,
-            tasksByUser = tasksByUser,
-            avgCompletionTimeByType = avgCompletionTimeByType
-        )
-    }
-
+    @RequiresApi(Build.VERSION_CODES.O)
     fun getWeeklyTaskCounts(): List<DailyTaskCount> {
-        // Generate mock data that matches what's shown in the screenshot
-        return listOf(
-            DailyTaskCount("Mon", 4),
-            DailyTaskCount("Tue", 6),
-            DailyTaskCount("Wed", 3),
-            DailyTaskCount("Thu", 8),
-            DailyTaskCount("Fri", 5),
-            DailyTaskCount("Sat", 7),
-            DailyTaskCount("Sun", 2)
-        )
+        val today = LocalDate.now()
+        val startOfWeek = today.minusDays(today.dayOfWeek.value.toLong() - 1)
+        val formatter = DateTimeFormatter.ISO_LOCAL_DATE
+        return trendData
+            .filter {
+                val taskDate = LocalDate.parse(it.days, formatter)
+                taskDate >= startOfWeek && taskDate <= today
+            }
+            .map {
+                DailyTaskCount(
+                    data = it.data,
+                    count = it.count,
+                    days = LocalDate.parse(it.days, formatter).dayOfWeek.toString().substring(0, 3)
+                )
+            }
+            .sortedBy { LocalDate.parse(it.days, formatter) }
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     fun getMonthlyTaskCounts(): List<DailyTaskCount> {
-        // Generate mock monthly data
-        return listOf(
-            DailyTaskCount("Week 1", 18),
-            DailyTaskCount("Week 2", 24),
-            DailyTaskCount("Week 3", 15),
-            DailyTaskCount("Week 4", 22)
-        )
+        val today = LocalDate.now()
+        val startOfMonth = today.withDayOfMonth(1)
+        val formatter = DateTimeFormatter.ISO_LOCAL_DATE
+        val weeks = mutableListOf<DailyTaskCount>()
+        var currentWeekStart = startOfMonth
+        var weekNumber = 1
+
+        while (currentWeekStart <= today) {
+            val weekEnd = currentWeekStart.plusDays(6).coerceAtMost(today)
+            val weekCount = trendData
+                .filter {
+                    val taskDate = LocalDate.parse(it.days, formatter)
+                    taskDate >= currentWeekStart && taskDate <= weekEnd
+                }
+                .sumOf { it.count }
+            weeks.add(DailyTaskCount("Week $weekNumber", weekCount, "Week $weekNumber"))
+            currentWeekStart = weekEnd.plusDays(1)
+            weekNumber++
+        }
+        return weeks
     }
 
     sealed class ReportState {
