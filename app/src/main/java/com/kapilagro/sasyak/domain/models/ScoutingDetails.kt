@@ -12,5 +12,5 @@ data class ScoutingDetails(
     val noOfFlowersSeen: String?,
     val noOfFruitsDropped: String?,
     val nameOfDisease: String?,
-    val uploadedFiles: List<String>? = null
+    //val uploadedFiles: List<String>? = null
 )

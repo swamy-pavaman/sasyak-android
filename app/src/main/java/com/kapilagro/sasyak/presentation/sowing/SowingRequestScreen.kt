@@ -654,23 +654,23 @@ fun SowingRequestScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             // Video Upload Card (Optional)
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(100.dp)
-                    .clickable { /* TODO: Handle video upload */ },
-                shape = RoundedCornerShape(8.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-            ) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("Upload Sowing Video (Optional)")
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
+//            Card(
+//                modifier = Modifier
+//                    .fillMaxWidth()
+//                    .height(100.dp)
+//                    .clickable { /* TODO: Handle video upload */ },
+//                shape = RoundedCornerShape(8.dp),
+//                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+//            ) {
+//                Box(
+//                    modifier = Modifier.fillMaxSize(),
+//                    contentAlignment = Alignment.Center
+//                ) {
+//                    Text("Upload Sowing Video (Optional)")
+//                }
+//            }
+//
+//            Spacer(modifier = Modifier.height(16.dp))
 
             // Description
             OutlinedTextField(

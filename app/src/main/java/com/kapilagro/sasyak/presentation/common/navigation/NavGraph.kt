@@ -28,6 +28,7 @@ import com.kapilagro.sasyak.presentation.common.image.ImageCaptureScreen
 import com.kapilagro.sasyak.presentation.common.navigation.Screen.FuelRequestScreen
 import com.kapilagro.sasyak.presentation.common.navigation.Screen.SprayingRequestScreen
 import com.kapilagro.sasyak.presentation.common.navigation.Screen.YieldRequestScreen
+import com.kapilagro.sasyak.presentation.fuel.FuelListViewModel
 import com.kapilagro.sasyak.presentation.fuel.FuelRequestScreen
 import com.kapilagro.sasyak.presentation.fuel.FuelScreen
 import com.kapilagro.sasyak.presentation.home.HomeScreen
@@ -39,6 +40,7 @@ import com.kapilagro.sasyak.presentation.profile.ProfileViewModel
 import com.kapilagro.sasyak.presentation.reports.ReportScreen
 import com.kapilagro.sasyak.presentation.scanner.ScanResultScreen
 import com.kapilagro.sasyak.presentation.scanner.ScannerScreen
+import com.kapilagro.sasyak.presentation.scouting.ScoutingListViewModel
 import com.kapilagro.sasyak.presentation.scouting.ScoutingScreen
 import com.kapilagro.sasyak.presentation.scouting.ScoutingRequestScreen
 import com.kapilagro.sasyak.presentation.scouting.ScoutingTaskDetailScreen
@@ -46,6 +48,7 @@ import com.kapilagro.sasyak.presentation.sowing.SowingListViewModel
 import com.kapilagro.sasyak.presentation.sowing.SowingRequestScreen
 import com.kapilagro.sasyak.presentation.sowing.SowingScreen
 import com.kapilagro.sasyak.presentation.sowing.SowingTaskDetailScreen
+import com.kapilagro.sasyak.presentation.spraying.SprayingListViewModel
 import com.kapilagro.sasyak.presentation.spraying.SprayingRequestScreen
 import com.kapilagro.sasyak.presentation.spraying.SprayingScreen
 import com.kapilagro.sasyak.presentation.spraying.SprayingTaskDetailScreen
@@ -55,6 +58,7 @@ import com.kapilagro.sasyak.presentation.tasks.TaskListScreen
 import com.kapilagro.sasyak.presentation.team.TeamMemberDetailScreen
 import com.kapilagro.sasyak.presentation.team.TeamScreen
 import com.kapilagro.sasyak.presentation.weather.WeatherDetailScreen
+import com.kapilagro.sasyak.presentation.yield.YieldListViewModel
 import com.kapilagro.sasyak.presentation.yield.YieldRequestScreen
 import com.kapilagro.sasyak.presentation.yield.YieldScreen
 import com.kapilagro.sasyak.presentation.yield.YieldTaskDetailScreen
@@ -121,13 +125,20 @@ fun AppNavGraph(
 
         // Scouting Request screen
         composable(Screen.ScoutingRequestScreen.route) {
+            val scoutingListViewModel: ScoutingListViewModel = hiltViewModel()
+            val homeViewModel: HomeViewModel = hiltViewModel()
             ScoutingRequestScreen(
                 onTaskCreated = {
                     navController.popBackStack()
                 },
                 onBackClick = {
                     navController.popBackStack()
-                }
+                },
+                navController = navController,
+                viewModel = scoutingListViewModel,
+                homeViewModel = homeViewModel,
+                ioDispatcher = ioDispatcher,
+                imageUploadService = imageUploadService
             )
         }
 
@@ -147,13 +158,21 @@ fun AppNavGraph(
         }
 
         composable(FuelRequestScreen.route) {
+
+            val fuelListViewModel: FuelListViewModel = hiltViewModel()
+            val homeViewModel: HomeViewModel = hiltViewModel()
             FuelRequestScreen(
                 onTaskCreated = {
                     navController.popBackStack()
                 },
                 onBackClick = {
                     navController.popBackStack()
-                }
+                },
+                navController = navController,
+                viewModel = fuelListViewModel,
+                homeViewModel = homeViewModel,
+                ioDispatcher = ioDispatcher,
+                imageUploadService = imageUploadService
             )
         }
 
@@ -213,6 +232,7 @@ fun AppNavGraph(
 
         // Spraying screens
         composable(Screen.SprayingScreen.route) {
+
             SprayingScreen(
                 onTaskCreated = {
                     navController.navigate(SprayingRequestScreen.route)
@@ -227,13 +247,20 @@ fun AppNavGraph(
         }
 
         composable(SprayingRequestScreen.route) {
+            val sprayingListViewModel: SprayingListViewModel = hiltViewModel()
+            val homeViewModel: HomeViewModel = hiltViewModel()
             SprayingRequestScreen(
                 onTaskCreated = {
                     navController.popBackStack()
                 },
                 onBackClick = {
                     navController.popBackStack()
-                }
+                },
+                navController = navController,
+                viewModel = sprayingListViewModel,
+                homeViewModel = homeViewModel,
+                ioDispatcher = ioDispatcher,
+                imageUploadService = imageUploadService
             )
         }
 
@@ -253,13 +280,20 @@ fun AppNavGraph(
         }
 
         composable(YieldRequestScreen.route) {
+            val yieldListViewModel: YieldListViewModel = hiltViewModel()
+            val homeViewModel: HomeViewModel = hiltViewModel()
             YieldRequestScreen(
                 onTaskCreated = {
                     navController.popBackStack()
                 },
                 onBackClick = {
                     navController.popBackStack()
-                }
+                },
+                navController = navController,
+                viewModel = yieldListViewModel,
+                homeViewModel = homeViewModel,
+                ioDispatcher = ioDispatcher,
+                imageUploadService = imageUploadService
             )
         }
 

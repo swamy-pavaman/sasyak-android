@@ -101,18 +101,20 @@ class FuelListViewModel @Inject constructor(
     fun createFuelTask(
         fuelDetails: FuelDetails,
         description: String,
+        imagesJson:List<String>,
         assignedToId : Int? =null
     ) {
         _createFuelState.value = CreateFuelState.Loading
         viewModelScope.launch(ioDispatcher) {
             try {
                 val detailsJson = Json.encodeToString(fuelDetails)
+                val imagesJson= Json.encodeToString(imagesJson)
 
                 when (val response = taskRepository.createTask(
                     taskType = "FUEL",
                     description = description,
                     detailsJson = detailsJson,
-                    imagesJson = null,  // TODO: Handle file uploads
+                    imagesJson = imagesJson,
                     assignedToId = assignedToId
                 )) {
                     is ApiResponse.Success -> {

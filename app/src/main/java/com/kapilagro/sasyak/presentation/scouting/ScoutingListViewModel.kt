@@ -103,6 +103,7 @@ class ScoutingListViewModel @Inject constructor(
     fun createScoutingTask(
         scoutingDetails: ScoutingDetails,
         description: String,
+        imagesJson:List<String>,
         assignedToId:Int?=null
     ) {
         _createScoutingState.value = CreateScoutingState.Loading
@@ -110,12 +111,13 @@ class ScoutingListViewModel @Inject constructor(
             try {
 //                val detailsJson = Json.encodeToString(scoutingDetails)
                 val detailsJson = Json.encodeToString(scoutingDetails)
+                val imagesJson = Json.encodeToString(imagesJson)
 
                 when (val response = taskRepository.createTask(
                     taskType = "SCOUTING",
                     description = description,
                     detailsJson = detailsJson,
-                    imagesJson = null,  // TODO: Handle file uploads
+                    imagesJson = imagesJson,
                     assignedToId = null
                 )) {
                     is ApiResponse.Success -> {
