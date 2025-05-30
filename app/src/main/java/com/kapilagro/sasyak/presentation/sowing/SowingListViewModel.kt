@@ -1,5 +1,6 @@
 package com.kapilagro.sasyak.presentation.sowing
 
+import android.R.string
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kapilagro.sasyak.di.IoDispatcher
@@ -138,13 +139,14 @@ class SowingListViewModel @Inject constructor(
     fun createSowingTask(
         sowingDetails: SowingDetails,
         description: String,
+        imagesJson:List<String>,
         assignedToId: Int? = null
     ) {
         _createSowingState.value = CreateSowingState.Loading
         viewModelScope.launch(ioDispatcher) {
             try {
                 val detailsJson = Json.encodeToString(sowingDetails)
-                val imagesJson = sowingDetails.imageUrls?.let { Json.encodeToString(it) }
+                val imagesJson = Json.encodeToString(imagesJson)
 
                 when (val response = taskRepository.createTask(
                     taskType = "SOWING",
