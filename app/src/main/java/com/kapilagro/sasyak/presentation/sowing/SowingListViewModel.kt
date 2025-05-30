@@ -98,26 +98,63 @@ class SowingListViewModel @Inject constructor(
     private val _createSowingState = MutableStateFlow<CreateSowingState>(CreateSowingState.Idle)
     val createSowingState: StateFlow<CreateSowingState> = _createSowingState.asStateFlow()
 
+//    fun createSowingTask(
+//        sowingDetails: SowingDetails,
+//        description: String,
+//        assignedToId: Int? =null
+//    ) {
+//        _createSowingState.value = CreateSowingState.Loading
+//        viewModelScope.launch(ioDispatcher) {
+//            try {
+//                val detailsJson = Json.encodeToString(sowingDetails)
+//
+//                when (val response = taskRepository.createTask(
+//                    taskType = "SOWING",
+//                    description = description,
+//                    detailsJson = detailsJson,
+//                    imagesJson = null,  // TODO: Handle file uploads
+//                    assignedToId = assignedToId
+//                )) {
+//                    is ApiResponse.Success -> {
+//                        _createSowingState.value = CreateSowingState.Success(response.data)
+//                        // Refresh the task list after successful creation
+//                        refreshTasks()
+//                    }
+//                    is ApiResponse.Error -> {
+//                        _createSowingState.value = CreateSowingState.Error(response.errorMessage)
+//                    }
+//                    is ApiResponse.Loading -> {
+//                        _createSowingState.value = CreateSowingState.Loading
+//                    }
+//                }
+//            } catch (e: Exception) {
+//                _createSowingState.value = CreateSowingState.Error(e.message ?: "Unknown error")
+//            }
+//        }
+//    }
+
+
+    // File: app/src/main/java/com/kapilagro/sasyak/presentation/sowing/SowingListViewModel.kt
     fun createSowingTask(
         sowingDetails: SowingDetails,
         description: String,
-        assignedToId: Int? =null
+        assignedToId: Int? = null
     ) {
         _createSowingState.value = CreateSowingState.Loading
         viewModelScope.launch(ioDispatcher) {
             try {
                 val detailsJson = Json.encodeToString(sowingDetails)
+                val imagesJson = sowingDetails.imageUrls?.let { Json.encodeToString(it) }
 
                 when (val response = taskRepository.createTask(
                     taskType = "SOWING",
                     description = description,
                     detailsJson = detailsJson,
-                    imagesJson = null,  // TODO: Handle file uploads
+                    imagesJson = imagesJson,
                     assignedToId = assignedToId
                 )) {
                     is ApiResponse.Success -> {
                         _createSowingState.value = CreateSowingState.Success(response.data)
-                        // Refresh the task list after successful creation
                         refreshTasks()
                     }
                     is ApiResponse.Error -> {

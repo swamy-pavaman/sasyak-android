@@ -10,7 +10,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,12 +18,21 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavController
+import com.kapilagro.sasyak.data.api.ImageUploadService
+import com.kapilagro.sasyak.di.IoDispatcher
+import com.kapilagro.sasyak.domain.models.ApiResponse
 import com.kapilagro.sasyak.domain.models.SowingDetails
 import com.kapilagro.sasyak.presentation.common.components.SuccessDialog
-import com.kapilagro.sasyak.presentation.common.theme.*
+import com.kapilagro.sasyak.presentation.common.navigation.Screen
+import com.kapilagro.sasyak.presentation.common.theme.AgroPrimary
 import com.kapilagro.sasyak.presentation.home.HomeViewModel
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.launch
+import java.io.File
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import javax.inject.Inject
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
@@ -32,16 +40,21 @@ import java.time.format.DateTimeFormatter
 fun SowingRequestScreen(
     onTaskCreated: () -> Unit,
     onBackClick: () -> Unit,
+    navController: NavController,
     viewModel: SowingListViewModel = hiltViewModel(),
-    homeViewModel: HomeViewModel = hiltViewModel()
+    homeViewModel: HomeViewModel = hiltViewModel(),
+    @IoDispatcher ioDispatcher: CoroutineDispatcher,
+    imageUploadService: ImageUploadService
 ) {
     val createSowingState by viewModel.createSowingState.collectAsState()
     val userRole by homeViewModel.userRole.collectAsState()
     val supervisorsListState by homeViewModel.supervisorsListState.collectAsState()
+    val scope = rememberCoroutineScope()
 
     // Dialog state
     var showSuccessDialog by remember { mutableStateOf(false) }
     var submittedEntry by remember { mutableStateOf<SowingDetails?>(null) }
+    var uploadState by remember { mutableStateOf<UploadState>(UploadState.Idle) }
 
     // Form fields
     var sowingDate by remember { mutableStateOf(LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))) }
@@ -63,7 +76,7 @@ fun SowingRequestScreen(
     var soilCondition by remember { mutableStateOf("") }
     var weatherCondition by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
-    var imageUploaded by remember { mutableStateOf(false) }
+    var imageFiles by remember { mutableStateOf<List<File>?>(null) }
 
     var assignedTo by remember { mutableStateOf<Int?>(null) }
     var assignedToExpanded by remember { mutableStateOf(false) }
@@ -107,6 +120,14 @@ fun SowingRequestScreen(
         if (userRole == "MANAGER") {
             homeViewModel.loadSupervisorsList()
         }
+    }
+
+    // Handle navigation result from ImageCaptureScreen
+    LaunchedEffect(navController) {
+        navController.currentBackStackEntry?.savedStateHandle?.getStateFlow<List<File>>("selectedImages", emptyList())
+            ?.collect { files ->
+                imageFiles = files
+            }
     }
 
     // Success Dialog
@@ -203,7 +224,6 @@ fun SowingRequestScreen(
                                 onClick = {
                                     cropName = crop
                                     cropNameExpanded = false
-                                    // Reset seed variety if crop changes
                                     seedVariety = ""
                                 }
                             )
@@ -458,6 +478,7 @@ fun SowingRequestScreen(
             }
 
             Spacer(modifier = Modifier.height(16.dp))
+
             if (userRole == "MANAGER") {
                 val supervisors = when (supervisorsListState) {
                     is HomeViewModel.SupervisorsListState.Success ->
@@ -494,7 +515,7 @@ fun SowingRequestScreen(
                             DropdownMenuItem(
                                 text = { Text(supervisor.supervisorName) },
                                 onClick = {
-                                    assignedTo = supervisor.supervisorId // Send this ID to backend
+                                    assignedTo = supervisor.supervisorId
                                     assignedToExpanded = false
                                 }
                             )
@@ -505,63 +526,43 @@ fun SowingRequestScreen(
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            // Upload Section with clickable cards
+            // Upload Section
             Text(
                 text = "Upload *",
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            Button(
+                onClick = {
+                    navController.navigate(Screen.ImageCapture.createRoute("SOWING")) {
+                        launchSingleTop = true
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = if (imageFiles != null) Color(0xFF4CAF50) else MaterialTheme.colorScheme.primary)
             ) {
-                Card(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(100.dp)
-                        .clickable { imageUploaded = true },
-                    shape = RoundedCornerShape(8.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (imageUploaded) Color(0xFFE0F7FA) else MaterialTheme.colorScheme.surfaceVariant
-                    )
-                ) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (imageUploaded) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = "Image Uploaded",
-                                    tint = Color(0xFF4CAF50),
-                                    modifier = Modifier.size(28.dp)
-                                )
-                                Text("Image Uploaded", color = Color(0xFF4CAF50))
-                            }
-                        } else {
-                            Text("Upload Sowing Image")
-                        }
-                    }
-                }
+                Text(if (imageFiles != null) "Images Selected (${imageFiles?.size})" else "Select Images")
+            }
 
-                Card(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(100.dp)
-                        .clickable { /* Handle video upload */ },
-                    shape = RoundedCornerShape(8.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Video Upload Card (Optional)
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(100.dp)
+                    .clickable { /* TODO: Handle video upload */ },
+                shape = RoundedCornerShape(8.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("Upload Sowing Video")
-                    }
+                    Text("Upload Sowing Video (Optional)")
                 }
             }
 
@@ -582,10 +583,20 @@ fun SowingRequestScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             // Loading indicator
-            if (createSowingState is SowingListViewModel.CreateSowingState.Loading) {
+            if (createSowingState is SowingListViewModel.CreateSowingState.Loading || uploadState is UploadState.Loading) {
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = AgroPrimary)
                 }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            // Error message for upload
+            if (uploadState is UploadState.Error) {
+                Text(
+                    text = (uploadState as UploadState.Error).message,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium
+                )
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
@@ -593,38 +604,59 @@ fun SowingRequestScreen(
             Button(
                 onClick = {
                     if (cropName.isNotBlank() && row.isNotBlank() && seedVariety.isNotBlank() &&
-                        sowingMethod.isNotBlank() && imageUploaded &&
+                        sowingMethod.isNotBlank() && imageFiles != null &&
                         (userRole != "MANAGER" || assignedTo != null)) {
 
-                        val sowingDetails = SowingDetails(
-                            sowingDate = sowingDate,
-                            cropName = cropName,
-                            row = row.toInt(),
-                            fieldArea = fieldArea.ifBlank { null },
-                            seedVariety = seedVariety,
-                            seedQuantity = seedQuantity.ifBlank { null },
-                            seedUnit = seedUnit.takeIf { seedQuantity.isNotBlank() },
-                            sowingMethod = sowingMethod,
-                            seedTreatment = seedTreatment.ifBlank { null },
-                            spacingBetweenRows = spacingBetweenRows.ifBlank { null },
-                            spacingBetweenPlants = spacingBetweenPlants.ifBlank { null },
-                            soilCondition = soilCondition.ifBlank { null },
-                            weatherCondition = weatherCondition.ifBlank { null },
-                            uploadedFiles = null // TODO: Handle file uploads
-                        )
+                        scope.launch(ioDispatcher) {
+                            // Upload images
+                            uploadState = UploadState.Loading
+                            val uploadResult = imageUploadService.uploadImages(imageFiles!!, "SOWING")
+                            when (uploadResult) {
+                                is ApiResponse.Success -> {
+                                    val imageUrls = uploadResult.data
+                                    if (imageUrls.isEmpty()) {
+                                        uploadState = UploadState.Error("Image upload failed, no URLs received")
+                                        return@launch
+                                    }
+                                    val sowingDetails = SowingDetails(
+                                        sowingDate = sowingDate,
+                                        cropName = cropName,
+                                        row = row.toInt(),
+                                        fieldArea = fieldArea.ifBlank { null },
+                                        seedVariety = seedVariety,
+                                        seedQuantity = seedQuantity.ifBlank { null },
+                                        seedUnit = seedUnit.takeIf { seedQuantity.isNotBlank() },
+                                        sowingMethod = sowingMethod,
+                                        seedTreatment = seedTreatment.ifBlank { null },
+                                        spacingBetweenRows = spacingBetweenRows.ifBlank { null },
+                                        spacingBetweenPlants = spacingBetweenPlants.ifBlank { null },
+                                        soilCondition = soilCondition.ifBlank { null },
+                                        weatherCondition = weatherCondition.ifBlank { null },
+                                        imageUrls = imageUrls
+                                    )
 
-                        submittedEntry = sowingDetails
-                        viewModel.createSowingTask(
-                            sowingDetails,
-                            description,
-                            assignedToId = if (userRole == "MANAGER") assignedTo else null
-                        )
+                                    submittedEntry = sowingDetails
+                                    viewModel.createSowingTask(
+                                        sowingDetails,
+                                        description,
+                                        assignedToId = if (userRole == "MANAGER") assignedTo else null
+                                    )
+                                    uploadState = UploadState.Idle
+                                }
+                                is ApiResponse.Error -> {
+                                    uploadState = UploadState.Error("Image upload failed: ${uploadResult.errorMessage}")
+                                }
+                                is ApiResponse.Loading -> {
+                                    uploadState = UploadState.Loading
+                                }
+                            }
+                        }
                     }
                 },
                 enabled = cropName.isNotBlank() && row.isNotBlank() && seedVariety.isNotBlank() &&
-                        sowingMethod.isNotBlank() && imageUploaded &&
-                        (userRole != "MANAGER" || assignedTo != null) &&
-                        createSowingState !is SowingListViewModel.CreateSowingState.Loading,
+                        sowingMethod.isNotBlank() && imageFiles != null &&
+                        createSowingState !is SowingListViewModel.CreateSowingState.Loading &&
+                        uploadState !is UploadState.Loading,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
@@ -633,7 +665,7 @@ fun SowingRequestScreen(
                 Text("Submit")
             }
 
-            // Error message
+            // Error message for task creation
             if (createSowingState is SowingListViewModel.CreateSowingState.Error) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
@@ -644,4 +676,10 @@ fun SowingRequestScreen(
             }
         }
     }
+}
+
+private sealed class UploadState {
+    object Idle : UploadState()
+    object Loading : UploadState()
+    data class Error(val message: String) : UploadState()
 }

@@ -18,10 +18,13 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.kapilagro.sasyak.data.api.ImageUploadService
+import com.kapilagro.sasyak.di.IoDispatcher
 import com.kapilagro.sasyak.presentation.advice.AdviceScreen
 import com.kapilagro.sasyak.presentation.auth.LoginScreen
 import com.kapilagro.sasyak.presentation.auth.SplashScreen
 import com.kapilagro.sasyak.presentation.auth.AuthViewModel
+import com.kapilagro.sasyak.presentation.common.image.ImageCaptureScreen
 import com.kapilagro.sasyak.presentation.common.navigation.Screen.FuelRequestScreen
 import com.kapilagro.sasyak.presentation.common.navigation.Screen.SprayingRequestScreen
 import com.kapilagro.sasyak.presentation.common.navigation.Screen.YieldRequestScreen
@@ -39,6 +42,7 @@ import com.kapilagro.sasyak.presentation.scanner.ScannerScreen
 import com.kapilagro.sasyak.presentation.scouting.ScoutingScreen
 import com.kapilagro.sasyak.presentation.scouting.ScoutingRequestScreen
 import com.kapilagro.sasyak.presentation.scouting.ScoutingTaskDetailScreen
+import com.kapilagro.sasyak.presentation.sowing.SowingListViewModel
 import com.kapilagro.sasyak.presentation.sowing.SowingRequestScreen
 import com.kapilagro.sasyak.presentation.sowing.SowingScreen
 import com.kapilagro.sasyak.presentation.sowing.SowingTaskDetailScreen
@@ -54,13 +58,18 @@ import com.kapilagro.sasyak.presentation.weather.WeatherDetailScreen
 import com.kapilagro.sasyak.presentation.yield.YieldRequestScreen
 import com.kapilagro.sasyak.presentation.yield.YieldScreen
 import com.kapilagro.sasyak.presentation.yield.YieldTaskDetailScreen
+import kotlinx.coroutines.CoroutineDispatcher
+import java.io.File
+import javax.inject.Inject
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun AppNavGraph(
     navController: NavHostController,
     startDestination: String = Screen.Splash.route,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    @IoDispatcher ioDispatcher: CoroutineDispatcher,
+    imageUploadService: ImageUploadService
 ) {
     val authViewModel: AuthViewModel = hiltViewModel()
     val authState by authViewModel.authState.collectAsState()
@@ -137,7 +146,7 @@ fun AppNavGraph(
             )
         }
 
-        composable(Screen.FuelRequestScreen.route) {
+        composable(FuelRequestScreen.route) {
             FuelRequestScreen(
                 onTaskCreated = {
                     navController.popBackStack()
@@ -164,8 +173,36 @@ fun AppNavGraph(
         }
 
         composable(Screen.SowingRequestScreen.route) {
+            val sowingListViewModel: SowingListViewModel = hiltViewModel()
+            val homeViewModel: HomeViewModel = hiltViewModel()
             SowingRequestScreen(
                 onTaskCreated = {
+                    navController.popBackStack()
+                },
+                onBackClick = {
+                    navController.popBackStack()
+                },
+                navController = navController,
+                viewModel = sowingListViewModel,
+                homeViewModel = homeViewModel,
+                ioDispatcher = ioDispatcher,
+                imageUploadService = imageUploadService
+            )
+        }
+
+        // Image capture screen
+        composable(
+            route = Screen.ImageCapture.route,
+            arguments = listOf(
+                navArgument("folder") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val folder = backStackEntry.arguments?.getString("folder") ?: "SOWING"
+            ImageCaptureScreen(
+                folder = folder,
+                maxImages = 5,
+                onImagesSelected = { images ->
+                    navController.previousBackStackEntry?.savedStateHandle?.set("selectedImages", images)
                     navController.popBackStack()
                 },
                 onBackClick = {
@@ -189,7 +226,7 @@ fun AppNavGraph(
             )
         }
 
-        composable(Screen.SprayingRequestScreen.route) {
+        composable(SprayingRequestScreen.route) {
             SprayingRequestScreen(
                 onTaskCreated = {
                     navController.popBackStack()
@@ -215,7 +252,7 @@ fun AppNavGraph(
             )
         }
 
-        composable(Screen.YieldRequestScreen.route) {
+        composable(YieldRequestScreen.route) {
             YieldRequestScreen(
                 onTaskCreated = {
                     navController.popBackStack()

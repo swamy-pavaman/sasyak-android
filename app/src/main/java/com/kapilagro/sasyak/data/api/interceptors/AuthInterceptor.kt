@@ -10,7 +10,16 @@ class AuthInterceptor @Inject constructor(
 ) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val originalRequest = chain.request()
-        val request = originalRequest.newBuilder()
+        val request = originalRequest.newBuilder(
+        )
+
+        val url = originalRequest.url.toString()
+
+        // Skip adding auth token for MinIO presigned URLs
+        if (url.contains("13.203.61.201:9000") || url.contains("/sasyak/")) {
+            return chain.proceed(originalRequest)
+
+        }
 
         val token = authRepository.get().getAccessToken()
         if (!token.isNullOrBlank()) {

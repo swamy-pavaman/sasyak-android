@@ -36,5 +36,5 @@ data class SowingDetails(
     val spacingBetweenPlants: String? = null,
     val soilCondition: String? = null,
     val weatherCondition: String? = null,
-    val uploadedFiles: List<String>? = null
+    val imageUrls: List<String>? = null
 )
