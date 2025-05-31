@@ -2,15 +2,18 @@ package com.kapilagro.sasyak.presentation.spraying
 
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,10 +22,19 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavController
+import coil.compose.rememberAsyncImagePainter
+import com.kapilagro.sasyak.data.api.ImageUploadService
+import com.kapilagro.sasyak.di.IoDispatcher
+import com.kapilagro.sasyak.domain.models.ApiResponse
 import com.kapilagro.sasyak.domain.models.SprayingDetails
 import com.kapilagro.sasyak.presentation.common.components.SuccessDialog
-import com.kapilagro.sasyak.presentation.common.theme.*
+import com.kapilagro.sasyak.presentation.common.navigation.Screen
+import com.kapilagro.sasyak.presentation.common.theme.AgroPrimary
 import com.kapilagro.sasyak.presentation.home.HomeViewModel
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.launch
+import java.io.File
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -32,35 +44,67 @@ import java.time.format.DateTimeFormatter
 fun SprayingRequestScreen(
     onTaskCreated: () -> Unit,
     onBackClick: () -> Unit,
+    navController: NavController,
     viewModel: SprayingListViewModel = hiltViewModel(),
-    homeViewModel: HomeViewModel = hiltViewModel()
-
+    homeViewModel: HomeViewModel = hiltViewModel(),
+    @IoDispatcher ioDispatcher: CoroutineDispatcher,
+    imageUploadService: ImageUploadService
 ) {
     val createSprayingState by viewModel.createSprayingState.collectAsState()
     val userRole by homeViewModel.userRole.collectAsState()
     val supervisorsListState by homeViewModel.supervisorsListState.collectAsState()
+    val scope = rememberCoroutineScope()
+
     // Dialog state
     var showSuccessDialog by remember { mutableStateOf(false) }
     var submittedEntry by remember { mutableStateOf<SprayingDetails?>(null) }
+    var uploadState by remember { mutableStateOf<UploadState>(UploadState.Idle) }
 
-    // Form fields
-    var sprayingDate by remember { mutableStateOf(LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))) }
-    var cropName by remember { mutableStateOf("") }
+    // Form fields with saved state
+    val savedStateHandle = navController.currentBackStackEntry?.savedStateHandle
+    var sprayingDate by remember { mutableStateOf(
+        savedStateHandle?.get<String>("sprayingDate")
+            ?: LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))
+    ) }
+    var cropName by remember { mutableStateOf(savedStateHandle?.get<String>("cropName") ?: "") }
     var cropNameExpanded by remember { mutableStateOf(false) }
-    var row by remember { mutableStateOf("") }
+    var row by remember { mutableStateOf(savedStateHandle?.get<String>("row") ?: "") }
     var rowExpanded by remember { mutableStateOf(false) }
-    var fieldArea by remember { mutableStateOf("") }
-    var chemicalName by remember { mutableStateOf("") }
+    var fieldArea by remember { mutableStateOf(savedStateHandle?.get<String>("fieldArea") ?: "") }
+    var chemicalName by remember { mutableStateOf(savedStateHandle?.get<String>("chemicalName") ?: "") }
     var chemicalNameExpanded by remember { mutableStateOf(false) }
-    var dosage by remember { mutableStateOf("") }
-    var sprayingMethod by remember { mutableStateOf("") }
+    var dosage by remember { mutableStateOf(savedStateHandle?.get<String>("dosage") ?: "") }
+    var sprayingMethod by remember { mutableStateOf(savedStateHandle?.get<String>("sprayingMethod") ?: "") }
     var sprayingMethodExpanded by remember { mutableStateOf(false) }
-    var targetPest by remember { mutableStateOf("") }
-    var weatherCondition by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-    var imageUploaded by remember { mutableStateOf(false) }
-    var assignedTo by remember { mutableStateOf<Int?>(null) }
+    var targetPest by remember { mutableStateOf(savedStateHandle?.get<String>("targetPest") ?: "") }
+    var weatherCondition by remember { mutableStateOf(savedStateHandle?.get<String>("weatherCondition") ?: "") }
+    var description by remember { mutableStateOf(savedStateHandle?.get<String>("description") ?: "") }
+    var imageFiles by remember { mutableStateOf<List<File>?>(null) }
+    var assignedTo by remember { mutableStateOf<Int?>(savedStateHandle?.get<Int>("assignedTo")) }
     var assignedToExpanded by remember { mutableStateOf(false) }
+
+    // Save form state before navigating to ImageCaptureScreen
+    LaunchedEffect(Unit) {
+        snapshotFlow {
+            mapOf(
+                "sprayingDate" to sprayingDate,
+                "cropName" to cropName,
+                "row" to row,
+                "fieldArea" to fieldArea,
+                "chemicalName" to chemicalName,
+                "dosage" to dosage,
+                "sprayingMethod" to sprayingMethod,
+                "targetPest" to targetPest,
+                "weatherCondition" to weatherCondition,
+                "description" to description,
+                "assignedTo" to assignedTo
+            )
+        }.collect { state ->
+            state.forEach { (key, value) ->
+                savedStateHandle?.set(key, value)
+            }
+        }
+    }
 
     val crops = listOf(
         "Wheat", "Rice", "Maize", "Barley", "Sorghum",
@@ -82,10 +126,19 @@ fun SprayingRequestScreen(
         "Fogger", "Mist Blower", "Hand Sprayer", "Tractor Mounted Sprayer"
     )
 
+    // Load supervisors list for MANAGER role
     LaunchedEffect(Unit) {
         if (userRole == "MANAGER") {
             homeViewModel.loadSupervisorsList()
         }
+    }
+
+    // Handle navigation result from ImageCaptureScreen
+    LaunchedEffect(navController) {
+        navController.currentBackStackEntry?.savedStateHandle?.getStateFlow<List<File>>("selectedImages", emptyList())
+            ?.collect { files ->
+                imageFiles = files
+            }
     }
 
     // Handle task creation success
@@ -124,6 +177,18 @@ fun SprayingRequestScreen(
                 showSuccessDialog = false
                 viewModel.clearCreateSprayingState()
                 onTaskCreated()
+                // Clear saved state after successful submission
+                savedStateHandle?.remove<String>("sprayingDate")
+                savedStateHandle?.remove<String>("cropName")
+                savedStateHandle?.remove<String>("row")
+                savedStateHandle?.remove<String>("fieldArea")
+                savedStateHandle?.remove<String>("chemicalName")
+                savedStateHandle?.remove<String>("dosage")
+                savedStateHandle?.remove<String>("sprayingMethod")
+                savedStateHandle?.remove<String>("targetPest")
+                savedStateHandle?.remove<String>("weatherCondition")
+                savedStateHandle?.remove<String>("description")
+                savedStateHandle?.remove<Int>("assignedTo")
             }
         )
     }
@@ -364,9 +429,9 @@ fun SprayingRequestScreen(
                 shape = RoundedCornerShape(8.dp)
             )
 
-
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Assign to Dropdown (for MANAGER role)
             if (userRole == "MANAGER") {
                 val supervisors = when (supervisorsListState) {
                     is HomeViewModel.SupervisorsListState.Success ->
@@ -403,7 +468,7 @@ fun SprayingRequestScreen(
                             DropdownMenuItem(
                                 text = { Text(supervisor.supervisorName) },
                                 onClick = {
-                                    assignedTo = supervisor.supervisorId // Send this ID to backend
+                                    assignedTo = supervisor.supervisorId
                                     assignedToExpanded = false
                                 }
                             )
@@ -411,65 +476,79 @@ fun SprayingRequestScreen(
                     }
                 }
 
-            Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(16.dp))
             }
 
-            // Upload Section with clickable cards
+            // Upload Section
             Text(
                 text = "Upload *",
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Card(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(100.dp)
-                        .clickable { imageUploaded = true },
-                    shape = RoundedCornerShape(8.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (imageUploaded) Color(0xFFE0F7FA) else MaterialTheme.colorScheme.surfaceVariant
-                    )
-                ) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (imageUploaded) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = "Image Uploaded",
-                                    tint = Color(0xFF4CAF50),
-                                    modifier = Modifier.size(28.dp)
-                                )
-                                Text("Image Uploaded", color = Color(0xFF4CAF50))
-                            }
-                        } else {
-                            Text("Upload Spraying Image")
+            Column {
+                Button(
+                    onClick = {
+                        navController.navigate(Screen.ImageCapture.createRoute("SPRAYING")) {
+                            launchSingleTop = true
                         }
-                    }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                ) {
+                    Text("Select Images")
                 }
 
-                Card(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(100.dp)
-                        .clickable { /* Handle video upload */ },
-                    shape = RoundedCornerShape(8.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                ) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
+                if (imageFiles != null && imageFiles!!.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text("Upload Spraying Video")
+                        imageFiles!!.forEach { file ->
+                            Box(
+                                modifier = Modifier.size(80.dp)
+                            ) {
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .clickable {
+                                            // Optional: Add click handling for image preview
+                                        },
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Image(
+                                        painter = rememberAsyncImagePainter(file),
+                                        contentDescription = "Selected image",
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                                    )
+                                }
+                                IconButton(
+                                    onClick = {
+                                        imageFiles = imageFiles?.filter { it != file }
+                                    },
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .size(24.dp)
+                                        .offset(x = 4.dp, y = (-4).dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Remove image",
+                                        tint = Color.White,
+                                        modifier = Modifier.background(
+                                            color = Color.Black.copy(alpha = 0.6f),
+                                            shape = RoundedCornerShape(12.dp)
+                                        )
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -491,10 +570,20 @@ fun SprayingRequestScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             // Loading indicator
-            if (createSprayingState is SprayingListViewModel.CreateSprayingState.Loading) {
+            if (createSprayingState is SprayingListViewModel.CreateSprayingState.Loading || uploadState is UploadState.Loading) {
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = AgroPrimary)
                 }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            // Error message for upload
+            if (uploadState is UploadState.Error) {
+                Text(
+                    text = (uploadState as UploadState.Error).message,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium
+                )
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
@@ -502,32 +591,55 @@ fun SprayingRequestScreen(
             Button(
                 onClick = {
                     if (cropName.isNotBlank() && row.isNotBlank() && chemicalName.isNotBlank() &&
-                        sprayingMethod.isNotBlank() && imageUploaded &&
-                        (userRole != "MANAGER" || assignedTo != null)) { // Check assignedTo is not null
-                        val sprayingDetails = SprayingDetails(
-                            sprayingDate = sprayingDate,
-                            cropName = cropName,
-                            row = row.toInt(),
-                            fieldArea = fieldArea.ifBlank { null },
-                            chemicalName = chemicalName,
-                            dosage = dosage.ifBlank { null },
-                            sprayingMethod = sprayingMethod,
-                            targetPest = targetPest.ifBlank { null },
-                            weatherCondition = weatherCondition.ifBlank { null },
-                            uploadedFiles = null
-                        )
-                        submittedEntry = sprayingDetails
-                        viewModel.createSprayingTask(
-                            sprayingDetails = sprayingDetails,
-                            description = description,
-                            assignedToId = if (userRole == "MANAGER") assignedTo else null // Pass Int?
-                        )
+                        sprayingMethod.isNotBlank() && imageFiles != null &&
+                        (userRole != "MANAGER" || assignedTo != null)) {
+                        scope.launch(ioDispatcher) {
+                            // Upload images
+                            uploadState = UploadState.Loading
+                            val uploadResult = imageUploadService.uploadImages(imageFiles!!, "SPRAYING")
+                            when (uploadResult) {
+                                is ApiResponse.Success -> {
+                                    val imageUrls = uploadResult.data
+                                    if (imageUrls.isEmpty()) {
+                                        uploadState = UploadState.Error("Image upload failed, no URLs received")
+                                        return@launch
+                                    }
+                                    val sprayingDetails = SprayingDetails(
+                                        sprayingDate = sprayingDate,
+                                        cropName = cropName,
+                                        row = row.toInt(),
+                                        fieldArea = fieldArea.ifBlank { null },
+                                        chemicalName = chemicalName,
+                                        dosage = dosage.ifBlank { null },
+                                        sprayingMethod = sprayingMethod,
+                                        targetPest = targetPest.ifBlank { null },
+                                        weatherCondition = weatherCondition.ifBlank { null },
+                                        //uploadedFiles = imageUrls
+                                    )
+                                    submittedEntry = sprayingDetails
+                                    viewModel.createSprayingTask(
+                                        sprayingDetails = sprayingDetails,
+                                        description = description,
+                                         imageUrls,
+                                        assignedToId = if (userRole == "MANAGER") assignedTo else null
+                                    )
+                                    uploadState = UploadState.Idle
+                                }
+                                is ApiResponse.Error -> {
+                                    uploadState = UploadState.Error("Image upload failed: ${uploadResult.errorMessage}")
+                                }
+                                is ApiResponse.Loading -> {
+                                    uploadState = UploadState.Loading
+                                }
+                            }
+                        }
                     }
                 },
                 enabled = cropName.isNotBlank() && row.isNotBlank() && chemicalName.isNotBlank() &&
-                        sprayingMethod.isNotBlank() && imageUploaded &&
+                        sprayingMethod.isNotBlank() && imageFiles != null &&
                         (userRole != "MANAGER" || assignedTo != null) &&
-                        createSprayingState !is SprayingListViewModel.CreateSprayingState.Loading,
+                        createSprayingState !is SprayingListViewModel.CreateSprayingState.Loading &&
+                        uploadState !is UploadState.Loading,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
@@ -536,7 +648,7 @@ fun SprayingRequestScreen(
                 Text("Submit")
             }
 
-            // Error message
+            // Error message for task creation
             if (createSprayingState is SprayingListViewModel.CreateSprayingState.Error) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
@@ -547,4 +659,10 @@ fun SprayingRequestScreen(
             }
         }
     }
+}
+
+private sealed class UploadState {
+    object Idle : UploadState()
+    object Loading : UploadState()
+    data class Error(val message: String) : UploadState()
 }

@@ -101,18 +101,20 @@ class YieldListViewModel @Inject constructor(
     fun createYieldTask(
         yieldDetails: YieldDetails,
         description: String,
+        imagesJson:List<String>,
         assignedToId:Int?= null
     ) {
         _createYieldState.value = CreateYieldState.Loading
         viewModelScope.launch(ioDispatcher) {
             try {
                 val detailsJson = Json.encodeToString(yieldDetails)
+                val imagesJson =Json.encodeToString(imagesJson)
 
                 when (val response = taskRepository.createTask(
                     taskType = "YIELD",
                     description = description,
                     detailsJson = detailsJson,
-                    imagesJson = null,  // TODO: Handle file uploads
+                    imagesJson = imagesJson,
                     assignedToId = assignedToId
                 )) {
                     is ApiResponse.Success -> {

@@ -1,8 +1,10 @@
+// File: app/src/main/java/com/kapilagro/sasyak/di/AppModule.kt
 package com.kapilagro.sasyak.di
 
 import android.content.Context
 import android.content.SharedPreferences
-
+import com.kapilagro.sasyak.data.api.ApiService
+import com.kapilagro.sasyak.data.api.ImageUploadService
 import com.kapilagro.sasyak.utils.LocationService
 import dagger.Module
 import dagger.Provides
@@ -11,6 +13,8 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import okhttp3.OkHttpClient
+import javax.inject.Named
 import javax.inject.Qualifier
 import javax.inject.Singleton
 
@@ -18,17 +22,9 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object AppModule {
 
-//    @Singleton
-//    @Provides
-//    fun provideMasterKey(@ApplicationContext context: Context): MasterKey {
-//        return MasterKey.Builder(context)
-//            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-//            .build()
-//    }
     @Singleton
     @Provides
     fun provideSecureSharedPreferences(
-        // TODO change this to secured sharedpreference by adding excruption
         @ApplicationContext context: Context
     ): SharedPreferences {
         return context.getSharedPreferences(
@@ -37,12 +33,22 @@ object AppModule {
         )
     }
 
-
     @Singleton
     @Provides
     fun provideLocationService(@ApplicationContext context: Context): LocationService {
         return LocationService(context)
     }
+
+    @Singleton
+    @Provides
+    fun provideImageUploadService(
+        apiService: ApiService,
+        @Named("mainClient") okHttpClient: OkHttpClient // Specify mainClient
+    ): ImageUploadService {
+        return ImageUploadService(apiService, okHttpClient)
+    }
+
+
 
     @IoDispatcher
     @Provides

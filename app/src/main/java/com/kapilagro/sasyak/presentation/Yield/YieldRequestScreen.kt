@@ -2,15 +2,18 @@ package com.kapilagro.sasyak.presentation.yield
 
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,10 +22,19 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavController
+import coil.compose.rememberAsyncImagePainter
+import com.kapilagro.sasyak.data.api.ImageUploadService
+import com.kapilagro.sasyak.di.IoDispatcher
+import com.kapilagro.sasyak.domain.models.ApiResponse
 import com.kapilagro.sasyak.domain.models.YieldDetails
 import com.kapilagro.sasyak.presentation.common.components.SuccessDialog
-import com.kapilagro.sasyak.presentation.common.theme.*
+import com.kapilagro.sasyak.presentation.common.navigation.Screen
+import com.kapilagro.sasyak.presentation.common.theme.AgroPrimary
 import com.kapilagro.sasyak.presentation.home.HomeViewModel
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.launch
+import java.io.File
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -32,37 +44,70 @@ import java.time.format.DateTimeFormatter
 fun YieldRequestScreen(
     onTaskCreated: () -> Unit,
     onBackClick: () -> Unit,
+    navController: NavController,
     viewModel: YieldListViewModel = hiltViewModel(),
-    homeViewModel: HomeViewModel = hiltViewModel() // Added HomeViewModel dependency
+    homeViewModel: HomeViewModel = hiltViewModel(),
+    @IoDispatcher ioDispatcher: CoroutineDispatcher,
+    imageUploadService: ImageUploadService
 ) {
     val createYieldState by viewModel.createYieldState.collectAsState()
-    val userRole by homeViewModel.userRole.collectAsState() // Added userRole
-    val supervisorsListState by homeViewModel.supervisorsListState.collectAsState() // Added supervisorsListState
+    val userRole by homeViewModel.userRole.collectAsState()
+    val supervisorsListState by homeViewModel.supervisorsListState.collectAsState()
+    val scope = rememberCoroutineScope()
 
     // Dialog state
     var showSuccessDialog by remember { mutableStateOf(false) }
     var submittedEntry by remember { mutableStateOf<YieldDetails?>(null) }
+    var uploadState by remember { mutableStateOf<UploadState>(UploadState.Idle) }
 
-    // Form fields
-    var harvestDate by remember { mutableStateOf(LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))) }
-    var cropName by remember { mutableStateOf("") }
+    // Form fields with saved state
+    val savedStateHandle = navController.currentBackStackEntry?.savedStateHandle
+    var harvestDate by remember { mutableStateOf(
+        savedStateHandle?.get<String>("harvestDate")
+            ?: LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))
+    ) }
+    var cropName by remember { mutableStateOf(savedStateHandle?.get<String>("cropName") ?: "") }
     var cropNameExpanded by remember { mutableStateOf(false) }
-    var row by remember { mutableStateOf("") }
+    var row by remember { mutableStateOf(savedStateHandle?.get<String>("row") ?: "") }
     var rowExpanded by remember { mutableStateOf(false) }
-    var fieldArea by remember { mutableStateOf("") }
-    var yieldQuantity by remember { mutableStateOf("") }
-    var yieldUnit by remember { mutableStateOf("kg") }
+    var fieldArea by remember { mutableStateOf(savedStateHandle?.get<String>("fieldArea") ?: "") }
+    var yieldQuantity by remember { mutableStateOf(savedStateHandle?.get<String>("yieldQuantity") ?: "") }
+    var yieldUnit by remember { mutableStateOf(savedStateHandle?.get<String>("yieldUnit") ?: "kg") }
     var yieldUnitExpanded by remember { mutableStateOf(false) }
-    var qualityGrade by remember { mutableStateOf("") }
+    var qualityGrade by remember { mutableStateOf(savedStateHandle?.get<String>("qualityGrade") ?: "") }
     var qualityGradeExpanded by remember { mutableStateOf(false) }
-    var moistureContent by remember { mutableStateOf("") }
-    var harvestMethod by remember { mutableStateOf("") }
+    var moistureContent by remember { mutableStateOf(savedStateHandle?.get<String>("moistureContent") ?: "") }
+    var harvestMethod by remember { mutableStateOf(savedStateHandle?.get<String>("harvestMethod") ?: "") }
     var harvestMethodExpanded by remember { mutableStateOf(false) }
-    var notes by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-    var imageUploaded by remember { mutableStateOf(false) }
-    var assignedTo by remember { mutableStateOf<Int?>(null) } // Added assignedTo state
-    var assignedToExpanded by remember { mutableStateOf(false) } // Added assignedToExpanded state
+    var notes by remember { mutableStateOf(savedStateHandle?.get<String>("notes") ?: "") }
+    var description by remember { mutableStateOf(savedStateHandle?.get<String>("description") ?: "") }
+    var imageFiles by remember { mutableStateOf<List<File>?>(null) }
+    var assignedTo by remember { mutableStateOf<Int?>(savedStateHandle?.get<Int>("assignedTo")) }
+    var assignedToExpanded by remember { mutableStateOf(false) }
+
+    // Save form state before navigating to ImageCaptureScreen
+    LaunchedEffect(Unit) {
+        snapshotFlow {
+            mapOf(
+                "harvestDate" to harvestDate,
+                "cropName" to cropName,
+                "row" to row,
+                "fieldArea" to fieldArea,
+                "yieldQuantity" to yieldQuantity,
+                "yieldUnit" to yieldUnit,
+                "qualityGrade" to qualityGrade,
+                "moistureContent" to moistureContent,
+                "harvestMethod" to harvestMethod,
+                "notes" to notes,
+                "description" to description,
+                "assignedTo" to assignedTo
+            )
+        }.collect { state ->
+            state.forEach { (key, value) ->
+                savedStateHandle?.set(key, value)
+            }
+        }
+    }
 
     val crops = listOf(
         "Wheat", "Rice", "Maize", "Barley", "Sorghum",
@@ -86,6 +131,14 @@ fun YieldRequestScreen(
         if (userRole == "MANAGER") {
             homeViewModel.loadSupervisorsList()
         }
+    }
+
+    // Handle navigation result from ImageCaptureScreen
+    LaunchedEffect(navController) {
+        navController.currentBackStackEntry?.savedStateHandle?.getStateFlow<List<File>>("selectedImages", emptyList())
+            ?.collect { files ->
+                imageFiles = files
+            }
     }
 
     // Handle task creation success
@@ -123,6 +176,19 @@ fun YieldRequestScreen(
                 showSuccessDialog = false
                 viewModel.clearCreateYieldState()
                 onTaskCreated()
+                // Clear saved state after successful submission
+                savedStateHandle?.remove<String>("harvestDate")
+                savedStateHandle?.remove<String>("cropName")
+                savedStateHandle?.remove<String>("row")
+                savedStateHandle?.remove<String>("fieldArea")
+                savedStateHandle?.remove<String>("yieldQuantity")
+                savedStateHandle?.remove<String>("yieldUnit")
+                savedStateHandle?.remove<String>("qualityGrade")
+                savedStateHandle?.remove<String>("moistureContent")
+                savedStateHandle?.remove<String>("harvestMethod")
+                savedStateHandle?.remove<String>("notes")
+                savedStateHandle?.remove<String>("description")
+                savedStateHandle?.remove<Int>("assignedTo")
             }
         )
     }
@@ -443,62 +509,76 @@ fun YieldRequestScreen(
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            // Upload Section with clickable cards
+            // Upload Section
             Text(
                 text = "Upload *",
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Card(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(100.dp)
-                        .clickable { imageUploaded = true },
-                    shape = RoundedCornerShape(8.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (imageUploaded) Color(0xFFE0F7FA) else MaterialTheme.colorScheme.surfaceVariant
-                    )
-                ) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (imageUploaded) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = "Image Uploaded",
-                                    tint = Color(0xFF4CAF50),
-                                    modifier = Modifier.size(28.dp)
-                                )
-                                Text("Image Uploaded", color = Color(0xFF4CAF50))
-                            }
-                        } else {
-                            Text("Upload Harvest Image")
+            Column {
+                Button(
+                    onClick = {
+                        navController.navigate(Screen.ImageCapture.createRoute("YIELD")) {
+                            launchSingleTop = true
                         }
-                    }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                ) {
+                    Text("Select Images")
                 }
 
-                Card(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(100.dp)
-                        .clickable { /* Handle video upload */ },
-                    shape = RoundedCornerShape(8.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                ) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
+                if (imageFiles != null && imageFiles!!.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text("Upload Harvest Video")
+                        imageFiles!!.forEach { file ->
+                            Box(
+                                modifier = Modifier.size(80.dp)
+                            ) {
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .clickable {
+                                            // Optional: Add click handling for image preview
+                                        },
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Image(
+                                        painter = rememberAsyncImagePainter(file),
+                                        contentDescription = "Selected image",
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                                    )
+                                }
+                                IconButton(
+                                    onClick = {
+                                        imageFiles = imageFiles?.filter { it != file }
+                                    },
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .size(24.dp)
+                                        .offset(x = 4.dp, y = (-4).dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Remove image",
+                                        tint = Color.White,
+                                        modifier = Modifier.background(
+                                            color = Color.Black.copy(alpha = 0.6f),
+                                            shape = RoundedCornerShape(12.dp)
+                                        )
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -520,10 +600,20 @@ fun YieldRequestScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             // Loading indicator
-            if (createYieldState is YieldListViewModel.CreateYieldState.Loading) {
+            if (createYieldState is YieldListViewModel.CreateYieldState.Loading || uploadState is UploadState.Loading) {
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = AgroPrimary)
                 }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            // Error message for upload
+            if (uploadState is UploadState.Error) {
+                Text(
+                    text = (uploadState as UploadState.Error).message,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium
+                )
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
@@ -531,33 +621,56 @@ fun YieldRequestScreen(
             Button(
                 onClick = {
                     if (cropName.isNotBlank() && row.isNotBlank() && yieldQuantity.isNotBlank() &&
-                        yieldUnit.isNotBlank() && imageUploaded &&
+                        yieldUnit.isNotBlank() && imageFiles != null &&
                         (userRole != "MANAGER" || assignedTo != null)) {
-                        val yieldDetails = YieldDetails(
-                            harvestDate = harvestDate,
-                            cropName = cropName,
-                            row = row.toInt(),
-                            fieldArea = fieldArea.ifBlank { null },
-                            yieldQuantity = yieldQuantity,
-                            yieldUnit = yieldUnit,
-                            qualityGrade = qualityGrade.ifBlank { null },
-                            moistureContent = moistureContent.ifBlank { null },
-                            harvestMethod = harvestMethod.ifBlank { null },
-                            notes = notes.ifBlank { null },
-                            uploadedFiles = null // TODO: Handle file uploads
-                        )
-                        submittedEntry = yieldDetails
-                        viewModel.createYieldTask(
-                            yieldDetails = yieldDetails,
-                            description = description,
-                            assignedToId = if (userRole == "MANAGER") assignedTo else null
-                        )
+                        scope.launch(ioDispatcher) {
+                            // Upload images
+                            uploadState = UploadState.Loading
+                            val uploadResult = imageUploadService.uploadImages(imageFiles!!, "YIELD")
+                            when (uploadResult) {
+                                is ApiResponse.Success -> {
+                                    val imageUrls = uploadResult.data
+                                    if (imageUrls.isEmpty()) {
+                                        uploadState = UploadState.Error("Image upload failed, no URLs received")
+                                        return@launch
+                                    }
+                                    val yieldDetails = YieldDetails(
+                                        harvestDate = harvestDate,
+                                        cropName = cropName,
+                                        row = row.toInt(),
+                                        fieldArea = fieldArea.ifBlank { null },
+                                        yieldQuantity = yieldQuantity,
+                                        yieldUnit = yieldUnit,
+                                        qualityGrade = qualityGrade.ifBlank { null },
+                                        moistureContent = moistureContent.ifBlank { null },
+                                        harvestMethod = harvestMethod.ifBlank { null },
+                                        notes = notes.ifBlank { null },
+                                       // uploadedFiles = imageUrls
+                                    )
+                                    submittedEntry = yieldDetails
+                                    viewModel.createYieldTask(
+                                        yieldDetails = yieldDetails,
+                                        description = description,
+                                         imageUrls,
+                                        assignedToId = if (userRole == "MANAGER") assignedTo else null
+                                    )
+                                    uploadState = UploadState.Idle
+                                }
+                                is ApiResponse.Error -> {
+                                    uploadState = UploadState.Error("Image upload failed: ${uploadResult.errorMessage}")
+                                }
+                                is ApiResponse.Loading -> {
+                                    uploadState = UploadState.Loading
+                                }
+                            }
+                        }
                     }
                 },
                 enabled = cropName.isNotBlank() && row.isNotBlank() && yieldQuantity.isNotBlank() &&
-                        yieldUnit.isNotBlank() && imageUploaded &&
+                        yieldUnit.isNotBlank() && imageFiles != null &&
                         (userRole != "MANAGER" || assignedTo != null) &&
-                        createYieldState !is YieldListViewModel.CreateYieldState.Loading,
+                        createYieldState !is YieldListViewModel.CreateYieldState.Loading &&
+                        uploadState !is UploadState.Loading,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
@@ -566,7 +679,7 @@ fun YieldRequestScreen(
                 Text("Submit")
             }
 
-            // Error message
+            // Error message for task creation
             if (createYieldState is YieldListViewModel.CreateYieldState.Error) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
@@ -577,4 +690,10 @@ fun YieldRequestScreen(
             }
         }
     }
+}
+
+private sealed class UploadState {
+    object Idle : UploadState()
+    object Loading : UploadState()
+    data class Error(val message: String) : UploadState()
 }

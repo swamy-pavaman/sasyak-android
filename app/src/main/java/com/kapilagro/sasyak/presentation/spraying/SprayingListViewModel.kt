@@ -101,18 +101,20 @@ class SprayingListViewModel @Inject constructor(
     fun createSprayingTask(
         sprayingDetails: SprayingDetails,
         description: String,
+        imagesJson:List<String>,
         assignedToId: Int? = null
     ) {
         _createSprayingState.value = CreateSprayingState.Loading
         viewModelScope.launch(ioDispatcher) {
             try {
                 val detailsJson = Json.encodeToString(sprayingDetails)
+                val imagesJson= Json.encodeToString(imagesJson)
 
                 when (val response = taskRepository.createTask(
                     taskType = "SPRAYING",
                     description = description,
                     detailsJson = detailsJson,
-                    imagesJson = null,
+                    imagesJson = imagesJson,
                     assignedToId = assignedToId
                 )) {
                     is ApiResponse.Success -> {
