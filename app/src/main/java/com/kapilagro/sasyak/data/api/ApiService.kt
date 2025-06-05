@@ -10,6 +10,12 @@ import retrofit2.http.*
 interface ApiService {
 
 
+    // File: app/src/main/java/com/kapilagro/sasyak/data/api/ApiService.kt
+// Add to existing interface
+    @POST("api/minio/presigned-url/upload")
+    suspend fun getPresignedUrls(@Body request: PresignedUrlRequest): Response<PresignedUrlResponse>
+
+
     @GET("/api/manager/users/supervisor-list")
     suspend fun getSupervisorsList(): Response<List<SupervisorListResponse>>
 

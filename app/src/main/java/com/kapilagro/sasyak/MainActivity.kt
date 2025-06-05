@@ -19,20 +19,31 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.kapilagro.sasyak.data.api.ImageUploadService
+import com.kapilagro.sasyak.di.IoDispatcher
 import com.kapilagro.sasyak.presentation.common.navigation.AppNavGraph
 import com.kapilagro.sasyak.presentation.common.navigation.Screen
 import com.kapilagro.sasyak.presentation.common.theme.SasyakTheme
 import com.kapilagro.sasyak.presentation.notifications.NotificationViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineDispatcher
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    @Inject
+    @IoDispatcher
+    lateinit var ioDispatcher: CoroutineDispatcher
+
+    @Inject
+    lateinit var imageUploadService: ImageUploadService
+
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             SasyakTheme {
-                MainScreen()
+                MainScreen(ioDispatcher, imageUploadService)
             }
         }
     }
@@ -41,7 +52,10 @@ class MainActivity : ComponentActivity() {
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen() {
+fun MainScreen(
+    ioDispatcher: CoroutineDispatcher,
+    imageUploadService: ImageUploadService
+) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
@@ -85,7 +99,7 @@ fun MainScreen() {
                                         Icon(
                                             painter = painterResource(id = iconId),
                                             contentDescription = screen.title,
-                                            modifier = Modifier.size(25.dp)  // Add consistent size
+                                            modifier = Modifier.size(25.dp)
                                         )
                                     }
                                 }
@@ -112,11 +126,14 @@ fun MainScreen() {
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            AppNavGraph(navController = navController)
+            AppNavGraph(
+                navController = navController,
+                ioDispatcher = ioDispatcher,
+                imageUploadService = imageUploadService
+            )
         }
     }
 
-    // Trigger notification count load on start
     LaunchedEffect(Unit) {
         notificationViewModel.loadUnreadCount()
     }
