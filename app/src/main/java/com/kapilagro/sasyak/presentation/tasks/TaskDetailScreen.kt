@@ -42,6 +42,7 @@ import androidx.compose.material3.*
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.runtime.*
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
@@ -137,7 +138,7 @@ fun TaskDetailScreen(
                                 imageUrls = listOf("http://13.203.61.201:9000/sasyak/SOWING/gallery_1748631470361.jpg")
                             }
 
-                            ImageSlideshow(
+                            EnhancedImageSlideshow(
                                 imageUrls = imageUrls
                             )
 
@@ -552,105 +553,108 @@ fun TaskDetailScreen(
 }
 
 @Composable
-fun ImageSlideshow(imageUrls: List<String>) {
+fun EnhancedImageSlideshow(imageUrls: List<String>) {
     var currentImageIndex by remember { mutableStateOf(0) }
     var showPreview by remember { mutableStateOf(false) }
     val numberOfImages = imageUrls.size
 
-    // Auto-scroll effect
     LaunchedEffect(currentImageIndex) {
-        delay(3000)
+        delay(4000)
         currentImageIndex = (currentImageIndex + 1) % numberOfImages
     }
-
-    // Smooth transition animation
-    val animatedOffset by animateFloatAsState(
-        targetValue = -currentImageIndex.toFloat(),
-        animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
-        label = "slideOffset"
-    )
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(250.dp)
+            .height(280.dp)
     ) {
-        // Image container with swipe support
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .pointerInput(numberOfImages) {
-                    detectDragGestures(
-                        onDragEnd = {
-                            // Handle swipe completion if needed
-                        }
-                    ) { _, dragAmount ->
+                    detectDragGestures { _, dragAmount ->
                         val swipeThreshold = 50f
                         if (dragAmount.x > swipeThreshold) {
-                            // Swipe right - previous image
                             currentImageIndex = if (currentImageIndex > 0) {
                                 currentImageIndex - 1
                             } else {
                                 numberOfImages - 1
                             }
                         } else if (dragAmount.x < -swipeThreshold) {
-                            // Swipe left - next image
                             currentImageIndex = (currentImageIndex + 1) % numberOfImages
                         }
                     }
                 }
-                .clickable {
-                    showPreview = true
-                }
+                .clickable { showPreview = true }
         ) {
             AsyncImage(
                 model = imageUrls[currentImageIndex],
                 contentDescription = "Image ${currentImageIndex + 1}",
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(16.dp)),
                 contentScale = ContentScale.Crop
+            )
+
+            // Enhanced gradient overlay
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                Color.Black.copy(alpha = 0.3f)
+                            ),
+                            startY = 200f
+                        )
+                    )
             )
         }
 
-        // Indicator dots with smooth transitions
+        // Enhanced indicator dots
         Row(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 16.dp),
+                .padding(bottom = 20.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             repeat(numberOfImages) { index ->
                 val isSelected = index == currentImageIndex
-                val animatedSize by animateFloatAsState(
-                    targetValue = if (isSelected) 10f else 8f,
-                    animationSpec = tween(200),
-                    label = "dotSize"
-                )
-                val animatedAlpha by animateFloatAsState(
-                    targetValue = if (isSelected) 1f else 0.5f,
-                    animationSpec = tween(200),
-                    label = "dotAlpha"
-                )
-
                 Box(
                     modifier = Modifier
-                        .size(animatedSize.dp)
+                        .size(if (isSelected) 12.dp else 8.dp)
                         .clip(CircleShape)
-                        .background(Color.White.copy(alpha = animatedAlpha))
-                        .clickable {
-                            currentImageIndex = index
-                        }
+                        .background(
+                            if (isSelected) Color.White else Color.White.copy(alpha = 0.5f)
+                        )
+                        .clickable { currentImageIndex = index }
                 )
             }
         }
+
+        // Image counter
+        Surface(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(16.dp),
+            shape = RoundedCornerShape(20.dp),
+            color = Color.Black.copy(alpha = 0.7f)
+        ) {
+            Text(
+                text = "${currentImageIndex + 1}/$numberOfImages",
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.White,
+                fontWeight = FontWeight.Medium
+            )
+        }
     }
 
-    // Full-screen preview dialog
     if (showPreview) {
         Dialog(
             onDismissRequest = { showPreview = false },
-            properties = DialogProperties(
-                usePlatformDefaultWidth = false
-            )
+            properties = DialogProperties(usePlatformDefaultWidth = false)
         ) {
             Box(
                 modifier = Modifier
@@ -660,7 +664,6 @@ fun ImageSlideshow(imageUrls: List<String>) {
             ) {
                 var previewIndex by remember { mutableStateOf(currentImageIndex) }
 
-                // Full screen image with swipe support
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -687,16 +690,12 @@ fun ImageSlideshow(imageUrls: List<String>) {
                     )
                 }
 
-                // Close button
                 IconButton(
                     onClick = { showPreview = false },
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .padding(16.dp)
-                        .background(
-                            Color.Black.copy(alpha = 0.5f),
-                            CircleShape
-                        )
+                        .background(Color.Black.copy(alpha = 0.7f), CircleShape)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,
@@ -705,7 +704,6 @@ fun ImageSlideshow(imageUrls: List<String>) {
                     )
                 }
 
-                // Preview indicator dots
                 Row(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
@@ -716,14 +714,10 @@ fun ImageSlideshow(imageUrls: List<String>) {
                         val isSelected = index == previewIndex
                         Box(
                             modifier = Modifier
-                                .size(if (isSelected) 10.dp else 8.dp)
+                                .size(if (isSelected) 12.dp else 8.dp)
                                 .clip(CircleShape)
-                                .background(
-                                    Color.White.copy(alpha = if (isSelected) 1f else 0.5f)
-                                )
-                                .clickable {
-                                    previewIndex = index
-                                }
+                                .background(Color.White.copy(alpha = if (isSelected) 1f else 0.5f))
+                                .clickable { previewIndex = index }
                         )
                     }
                 }
