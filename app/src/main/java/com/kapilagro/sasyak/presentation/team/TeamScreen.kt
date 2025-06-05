@@ -9,7 +9,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -17,6 +19,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -24,7 +27,13 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.rememberAsyncImagePainter
 import com.kapilagro.sasyak.domain.models.TeamMember
 import com.kapilagro.sasyak.presentation.common.components.ErrorView
-import com.kapilagro.sasyak.presentation.common.theme.*
+
+// Custom Theme Colors
+val PrimaryTeal = Color(0xFF00695C)
+val SecondaryTeal = Color(0xFF26A69A)
+val SurfaceLight = Color(0xFFF5F7FA)
+val OnSurfaceDark = Color(0xFF212121)
+val AccentAmber = Color(0xFFFFCA28)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,102 +44,129 @@ fun TeamScreen(
 ) {
     val state by viewModel.teamState.collectAsState()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Team Members",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowBack,
-                            contentDescription = "Back",
-                            tint = MaterialTheme.colorScheme.onSurface
+    MaterialTheme(
+        colorScheme = MaterialTheme.colorScheme.copy(
+            primary = PrimaryTeal,
+            secondary = SecondaryTeal,
+            surface = SurfaceLight,
+            onSurface = OnSurfaceDark,
+            primaryContainer = AccentAmber
+        )
+    ) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = "Our Team",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = OnSurfaceDark
                         )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface,
-                )
-            )
-        },
-        containerColor = MaterialTheme.colorScheme.surface
-    ) { paddingValues ->
-        Surface(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
-            color = MaterialTheme.colorScheme.surface
-        ) {
-            when (state) {
-                is TeamViewModel.TeamState.Loading -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                    }
-                }
-                is TeamViewModel.TeamState.Error -> {
-                    val errorState = state as TeamViewModel.TeamState.Error
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = errorState.message,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.error
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onBackClick) {
+                            Icon(
+                                imageVector = Icons.Default.ArrowBack,
+                                contentDescription = "Back",
+                                tint = PrimaryTeal
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Button(
-                                onClick = { viewModel.loadTeamMembers() },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = TeamIcon
-                                )
-                            ) {
-                                Text("Retry")
-                            }
                         }
-                    }
-                }
-                is TeamViewModel.TeamState.Success -> {
-                    val teamMembers = (state as TeamViewModel.TeamState.Success).teamMembers
-                    if (teamMembers.isEmpty()) {
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = SurfaceLight,
+                        titleContentColor = OnSurfaceDark
+                    )
+                )
+            },
+            containerColor = SurfaceLight
+        ) { paddingValues ->
+            Surface(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                color = SurfaceLight
+            ) {
+                when (state) {
+                    is TeamViewModel.TeamState.Loading -> {
                         Box(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center
                         ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
+                            CircularProgressIndicator(
+                                color = PrimaryTeal,
+                                strokeWidth = 4.dp
+                            )
+                        }
+                    }
+                    is TeamViewModel.TeamState.Error -> {
+                        val errorState = state as TeamViewModel.TeamState.Error
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Icon(
-                                    imageVector = Icons.Default.Person,
-                                    contentDescription = "No Team Members",
-                                    tint = TeamIcon,
-                                    modifier = Modifier
-                                        .size(64.dp)
-                                        .padding(bottom = 16.dp)
+                                    imageVector = Icons.Default.Star,
+                                    contentDescription = "Error",
+                                    tint = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.size(48.dp)
                                 )
+                                Spacer(modifier = Modifier.height(16.dp))
                                 Text(
-                                    text = "No team members found",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    text = errorState.message,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.error
                                 )
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Button(
+                                    onClick = { viewModel.loadTeamMembers() },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = SecondaryTeal
+                                    ),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Text(
+                                        "Retry",
+                                        color = Color.White,
+                                        style = MaterialTheme.typography.labelLarge
+                                    )
+                                }
                             }
                         }
-                    } else {
-                        TeamMembersList(
-                            teamMembers = teamMembers,
-                            onTeamMemberClick = onTeamMemberClick
-                        )
+                    }
+                    is TeamViewModel.TeamState.Success -> {
+                        val teamMembers = (state as TeamViewModel.TeamState.Success).teamMembers
+                        if (teamMembers.isEmpty()) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Person,
+                                        contentDescription = "No Team Members",
+                                        tint = SecondaryTeal,
+                                        modifier = Modifier
+                                            .size(72.dp)
+                                            .padding(bottom = 16.dp)
+                                    )
+                                    Text(
+                                        text = "No team members found",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Medium,
+                                        color = OnSurfaceDark.copy(alpha = 0.7f)
+                                    )
+                                }
+                            }
+                        } else {
+                            TeamMembersList(
+                                teamMembers = teamMembers,
+                                onTeamMemberClick = onTeamMemberClick
+                            )
+                        }
                     }
                 }
             }
@@ -143,27 +179,18 @@ fun TeamMembersList(
     teamMembers: List<TeamMember>,
     onTeamMemberClick: (Int) -> Unit
 ) {
-    Column(
+    LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp)
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(vertical = 16.dp)
     ) {
-//        Text(
-//            text = "Team Members",
-//            style = MaterialTheme.typography.titleLarge,
-//            modifier = Modifier.padding(vertical = 8.dp)
-//        )
-
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            items(teamMembers) { teamMember ->
-                TeamMemberCard(
-                    teamMember = teamMember,
-                    onClick = { onTeamMemberClick(teamMember.id) }
-                )
-            }
+        items(teamMembers) { teamMember ->
+            TeamMemberCard(
+                teamMember = teamMember,
+                onClick = { onTeamMemberClick(teamMember.id) }
+            )
         }
     }
 }
@@ -178,10 +205,13 @@ fun TeamMemberCard(
             .fillMaxWidth()
             .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+            containerColor = Color.White,
+            contentColor = OnSurfaceDark
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 4.dp,
+            pressedElevation = 8.dp
+        ),
         shape = RoundedCornerShape(16.dp)
     ) {
         Row(
@@ -190,17 +220,16 @@ fun TeamMemberCard(
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Profile image or placeholder icon with TeamIcon colors
             Surface(
-                modifier = Modifier.size(56.dp),
+                modifier = Modifier.size(64.dp),
                 shape = CircleShape,
-                color = TeamContainer,
-                tonalElevation = 4.dp
+                color = SecondaryTeal.copy(alpha = 0.1f),
+                tonalElevation = 6.dp
             ) {
                 if (teamMember.profileImageUrl != null) {
                     Image(
                         painter = rememberAsyncImagePainter(teamMember.profileImageUrl),
-                        contentDescription = "Profile Image",
+                        contentDescription = "${teamMember.name}'s Profile Image",
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
                             .fillMaxSize()
@@ -210,9 +239,9 @@ fun TeamMemberCard(
                     Icon(
                         imageVector = Icons.Default.Person,
                         contentDescription = "Profile Icon",
-                        tint = TeamIcon,
+                        tint = SecondaryTeal,
                         modifier = Modifier
-                            .padding(12.dp)
+                            .padding(14.dp)
                             .fillMaxSize()
                     )
                 }
@@ -225,21 +254,33 @@ fun TeamMemberCard(
             ) {
                 Text(
                     text = teamMember.name,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = OnSurfaceDark
                 )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = teamMember.email,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
-                )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Email,
+                        contentDescription = "Email Icon",
+                        tint = SecondaryTeal,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = teamMember.email,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = OnSurfaceDark.copy(alpha = 0.7f)
+                    )
+                }
+                Spacer(modifier = Modifier.height(6.dp))
                 Text(
                     text = "Role: ${teamMember.role}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = TeamIcon
+                    fontWeight = FontWeight.Medium,
+                    color = PrimaryTeal
                 )
             }
         }

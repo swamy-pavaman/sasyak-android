@@ -3,7 +3,7 @@ package com.kapilagro.sasyak.di
 import android.content.SharedPreferences
 import com.kapilagro.sasyak.BuildConfig
 import com.kapilagro.sasyak.data.api.ApiService
-import com.kapilagro.sasyak.data.api.OpenWeatherApiService
+import com.kapilagro.sasyak.data.api.WeatherApiService
 import com.kapilagro.sasyak.data.api.interceptors.AuthInterceptor
 import com.kapilagro.sasyak.data.api.interceptors.NetworkConnectivityInterceptor
 import com.kapilagro.sasyak.data.api.interceptors.ResponseInterceptor
@@ -130,7 +130,7 @@ object NetworkModule {
 
     @Singleton
     @Provides
-    fun provideOpenWeatherApiService(@Named("weatherRetrofit") retrofit: Retrofit): OpenWeatherApiService {
-        return retrofit.create(OpenWeatherApiService::class.java)
+    fun provideOpenWeatherApiService(@Named("weatherRetrofit") retrofit: Retrofit): WeatherApiService {
+        return retrofit.create(WeatherApiService::class.java)
     }
 }

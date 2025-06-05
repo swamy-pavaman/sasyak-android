@@ -145,4 +145,13 @@ interface ApiService {
         @Query("page") page: Int = 0,
         @Query("size") size: Int = 10
     ): Response<TaskListResponse>
+
+
+    @GET("/api/tasks/report")
+    suspend fun getTaskReport(): TaskReportResponse
+
+//    @GET("/api/tasks/report/trend")
+//    suspend fun getTrendReport(): TrendReportResponse
+@GET("/api/tasks/report/trend")
+suspend fun getTrendReport(): Response<TrendReportResponse>
 }

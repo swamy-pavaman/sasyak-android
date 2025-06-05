@@ -1,10 +1,12 @@
 package com.kapilagro.sasyak.data.repositories
 
 import com.kapilagro.sasyak.data.api.ApiService
+import com.kapilagro.sasyak.data.api.mappers.TaskMapper
 import com.kapilagro.sasyak.data.api.mappers.toDomainModel
 import com.kapilagro.sasyak.data.api.models.requests.CreateTaskRequest
 import com.kapilagro.sasyak.data.api.models.requests.UpdateImplementationRequest
 import com.kapilagro.sasyak.data.api.models.requests.UpdateTaskStatusRequest
+import com.kapilagro.sasyak.data.api.models.responses.DailyTaskCount // Added import
 import com.kapilagro.sasyak.domain.models.ApiResponse
 import com.kapilagro.sasyak.domain.models.Task
 import com.kapilagro.sasyak.domain.models.TaskAdvice
@@ -33,8 +35,6 @@ class TaskRepositoryImpl @Inject constructor(
             ApiResponse.Error(e.message ?: "An unknown error occurred")
         }
     }
-
-
 
     override suspend fun getCreatedTasks(page: Int, size: Int): ApiResponse<Pair<List<Task>, Int>> {
         return try {
@@ -143,9 +143,26 @@ class TaskRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getTaskReport(): ApiResponse<TaskReport> {
-        // This would be implemented based on your specific API
-        // For now returning a placeholder error
-        return ApiResponse.Error("Task report not implemented")
+        return try {
+            val response = apiService.getTaskReport()
+            ApiResponse.Success(TaskMapper.toTaskReport(response))
+        } catch (e: Exception) {
+            ApiResponse.Error(e.message ?: "Failed to fetch task report")
+        }
+    }
+
+    override suspend fun getTrendReport(): ApiResponse<List<com.kapilagro.sasyak.domain.models.DailyTaskCount>> {
+        return try {
+            val response = apiService.getTrendReport()
+            if (response.isSuccessful && response.body() != null) {
+                val dailyTaskCounts = response.body()!!.dailyTaskCounts.toDomainModel()
+                ApiResponse.Success(dailyTaskCounts)
+            } else {
+                ApiResponse.Error(response.errorBody()?.string() ?: "Failed to fetch trend report")
+            }
+        } catch (e: Exception) {
+            ApiResponse.Error(e.message ?: "An unknown error occurred")
+        }
     }
 
     override suspend fun getTasksByType(
