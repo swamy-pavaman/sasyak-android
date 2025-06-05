@@ -1,54 +1,58 @@
 package com.kapilagro.sasyak.presentation.common.components
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccessTime
 import androidx.compose.material.icons.outlined.CheckCircle
-import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import com.kapilagro.sasyak.domain.models.Task
 import com.kapilagro.sasyak.presentation.common.theme.*
 import java.text.SimpleDateFormat
 import java.util.*
 
 /**
- * Formats a date-time string into a readable format
- *
- * @param dateTimeString The date-time string in ISO format (yyyy-MM-dd'T'HH:mm:ss)
- * @return Formatted date-time string (e.g., "Today, 10:30 AM" or "May 10, 11:20 AM")
+ * Formats a date-time string into a compact format
  */
 fun formatDateTime(dateTimeString: String): String {
     return try {
         val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
         val date = inputFormat.parse(dateTimeString) ?: return "N/A"
-
-        val today = Calendar.getInstance()
-        val dateCalendar = Calendar.getInstance().apply { time = date }
-
-        val isToday = today.get(Calendar.YEAR) == dateCalendar.get(Calendar.YEAR) &&
-                today.get(Calendar.DAY_OF_YEAR) == dateCalendar.get(Calendar.DAY_OF_YEAR)
-
         val timeFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
-        val dateFormat = SimpleDateFormat("MMM d", Locale.getDefault())
-
-        return if (isToday) {
-            "Today, ${timeFormat.format(date)}"
-        } else {
-            "${dateFormat.format(date)}, ${timeFormat.format(date)}"
-        }
+        timeFormat.format(date)
     } catch (e: Exception) {
         "N/A"
+    }
+}
+
+/**
+ * Extracts the first image URL from the imagesJson string
+ */
+fun getFirstImageUrl(imagesJson: String?): String? {
+    return try {
+        if (imagesJson.isNullOrBlank()) return null
+        val gson = Gson()
+        val listType = object : TypeToken<List<String>>() {}.type
+        val imagesList: List<String> = gson.fromJson(imagesJson, listType)
+        imagesList.firstOrNull()
+    } catch (e: Exception) {
+        null
     }
 }
 
@@ -58,113 +62,132 @@ fun TaskCard(
     task: Task,
     onClick: () -> Unit
 ) {
+    val firstImageUrl = getFirstImageUrl(task.imagesJson)
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 6.dp),
-        shape = RoundedCornerShape(12.dp),
+            .height(100.dp)
+            .padding(vertical = 4.dp, horizontal = 8.dp),
+        shape = RoundedCornerShape(8.dp),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = 2.dp,
-            pressedElevation = 4.dp,
-            hoveredElevation = 3.dp
+            defaultElevation = 1.dp,
+            pressedElevation = 3.dp
         ),
         colors = CardDefaults.cardColors(
             containerColor = White
         ),
-        border = BorderStroke(0.5.dp, Border),
+        border = BorderStroke(0.3.dp, Border),
         onClick = onClick
     ) {
-        Column(
+        Row(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
+                .fillMaxSize()
+                .padding(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Title row with status icon
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Only show the task title without taskType
-                Text(
-                    text = task.title,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.SemiBold,
-                        color = AgroDark
-                    ),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
+            // Image (if available)
+            firstImageUrl?.let { imageUrl ->
+                AsyncImage(
+                    model = imageUrl,
+                    contentDescription = "Task image",
+                    modifier = Modifier
+                        .size(80.dp)
+                        .clip(RoundedCornerShape(6.dp)),
+                    contentScale = ContentScale.Crop
                 )
-
-                // Status indicator icon
-                val statusIcon = when (task.status?.lowercase()) {
-                    "pending" -> Icons.Outlined.Schedule
-                    "approved" -> Icons.Outlined.CheckCircle
-                    "rejected" -> Icons.Outlined.Close
-                    else -> Icons.Outlined.Schedule
-                }
-
-                val statusColor = when (task.status?.lowercase()) {
-                    "pending" -> StatusPending
-                    "approved" -> StatusApproved
-                    "rejected" -> StatusRejected
-                    else -> StatusPending
-                }
-
-                Icon(
-                    imageVector = statusIcon,
-                    contentDescription = "Task status: ${task.status}",
-                    tint = statusColor,
-                    modifier = Modifier.padding(start = 8.dp)
-                )
-
-                Icon(
-                    imageVector = Icons.Outlined.ChevronRight,
-                    contentDescription = "View details",
-                    tint = Border,
-                    modifier = Modifier.padding(start = 4.dp)
-                )
-            }
-
-            // Description
-            Text(
-                text = task.description,
-                style = MaterialTheme.typography.bodyMedium,
-                color = AgroMutedForeground,
-                modifier = Modifier.padding(top = 4.dp),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+            } ?: Box(
+                modifier = Modifier
+                    .size(80.dp)
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(AgroMuted)
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Bottom row with date and task type
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            // Content column
+            Column(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .weight(1f),
+                verticalArrangement = Arrangement.SpaceBetween
             ) {
-                // Date with icon
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Outlined.AccessTime,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = AgroMutedForeground
+                // Title and status row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = task.title,
+                        style = MaterialTheme.typography.titleSmall.copy(
+                            fontWeight = FontWeight.Medium,
+                            color = AgroDark
+                        ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
                     )
 
-                    Spacer(modifier = Modifier.width(4.dp))
+                    // Status indicator icon
+                    val statusIcon = when (task.status?.lowercase()) {
+                        "pending" -> Icons.Outlined.Schedule
+                        "approved" -> Icons.Outlined.CheckCircle
+                        "rejected" -> Icons.Outlined.Close
+                        "submitted" -> Icons.Outlined.Schedule
+                        "implemented" -> Icons.Outlined.CheckCircle
+                        else -> Icons.Outlined.Schedule
+                    }
 
-                    Text(
-                        text = formatDateTime(task.createdAt ?: ""),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = AgroMutedForeground
+                    val statusColor = when (task.status?.lowercase()) {
+                        "pending" -> StatusPending
+                        "approved" -> StatusApproved
+                        "rejected" -> StatusRejected
+                        "submitted" -> StatusPending
+                        "implemented" -> StatusApproved
+                        else -> StatusPending
+                    }
+
+                    Icon(
+                        imageVector = statusIcon,
+                        contentDescription = "Task status: ${task.status}",
+                        tint = statusColor,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
 
-                // Task type chip on the right
-                TaskTypeChip(taskType = task.taskType)
+                // Description
+                Text(
+                    text = task.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AgroMutedForeground,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                // Time and task type
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.AccessTime,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = AgroMutedForeground
+                        )
+                        Text(
+                            text = formatDateTime(task.createdAt ?: ""),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = AgroMutedForeground
+                        )
+                    }
+
+                    TaskTypeChip(taskType = task.taskType)
+                }
             }
         }
     }
@@ -182,15 +205,17 @@ fun TaskTypeChip(taskType: String) {
     }
 
     Surface(
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(12.dp),
         color = backgroundColor,
-        modifier = Modifier.height(30.dp)
+        modifier = Modifier.height(24.dp)
     ) {
         Text(
-            text = taskType.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() },
+            text = taskType.replaceFirstChar {
+                if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString()
+            },
             style = MaterialTheme.typography.labelSmall,
             color = textColor,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
         )
     }
 }
