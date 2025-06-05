@@ -15,14 +15,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kapilagro.sasyak.domain.models.DailyForecast
 import com.kapilagro.sasyak.domain.models.WeatherInfo
+import com.kapilagro.sasyak.presentation.common.theme.AgroLight
+import com.kapilagro.sasyak.presentation.common.theme.AgroPrimary
 import com.kapilagro.sasyak.presentation.common.theme.AgroPrimary
 import com.kapilagro.sasyak.presentation.common.theme.AgroLight
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @RequiresApi(Build.VERSION_CODES.O)
@@ -67,13 +67,38 @@ fun WeatherDetailScreen(
                     modifier = Modifier.padding(16.dp)
                 ) {
                     Text(
-                        text = "Current Conditions",
+                        text = "Current Conditions in ${weatherInfo.location}",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
-
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = weatherInfo.formattedDate,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.Gray
+                    )
                     Spacer(modifier = Modifier.height(16.dp))
-
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        DetailMetricItem(
+                            icon = Icons.Outlined.Thermostat,
+                            title = "Temperature",
+                            value = "${weatherInfo.temperature.toInt()}°C"
+                        )
+                        DetailMetricItem(
+                            icon = Icons.Outlined.WaterDrop,
+                            title = "Humidity",
+                            value = "${weatherInfo.humidity}%"
+                        )
+                        DetailMetricItem(
+                            icon = Icons.Outlined.Air,
+                            title = "Wind Speed",
+                            value = "${weatherInfo.windSpeed} km/h"
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceEvenly
@@ -101,7 +126,7 @@ fun WeatherDetailScreen(
 
             // Extended forecast
             Text(
-                text = "Extended Forecast",
+                text = "7-Day Forecast",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.padding(vertical = 8.dp)

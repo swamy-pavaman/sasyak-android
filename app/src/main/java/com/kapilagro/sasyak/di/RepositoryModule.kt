@@ -2,7 +2,7 @@ package com.kapilagro.sasyak.di
 
 
 
-import com.kapilagro.sasyak.data.api.OpenWeatherApiService
+import com.kapilagro.sasyak.data.api.WeatherApiService
 import com.kapilagro.sasyak.data.repositories.AuthRepositoryImpl
 import com.kapilagro.sasyak.data.repositories.NotificationRepositoryImpl
 

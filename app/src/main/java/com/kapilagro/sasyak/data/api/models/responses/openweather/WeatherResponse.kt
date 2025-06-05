@@ -3,7 +3,7 @@ package com.kapilagro.sasyak.data.api.models.responses.openweather
 
 import com.google.gson.annotations.SerializedName
 
-data class OpenWeatherResponse(
+data class WeatherResponse(
     @SerializedName("lat") val latitude: Double,
     @SerializedName("lon") val longitude: Double,
     @SerializedName("timezone") val timezone: String,
@@ -61,11 +61,4 @@ data class FeelsLike(
     @SerializedName("night") val night: Double,
     @SerializedName("eve") val evening: Double,
     @SerializedName("morn") val morning: Double
-)
-
-data class Weather(
-    @SerializedName("id") val id: Int,
-    @SerializedName("main") val main: String,
-    @SerializedName("description") val description: String,
-    @SerializedName("icon") val icon: String
 )

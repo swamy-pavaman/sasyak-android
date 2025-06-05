@@ -1,5 +1,7 @@
 package com.kapilagro.sasyak.domain.models
+
 import com.kapilagro.sasyak.domain.models.DailyForecast
+
 data class WeatherInfo(
     val location: String,
     val temperature: Double,

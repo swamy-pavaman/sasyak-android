@@ -1,13 +1,9 @@
 package com.kapilagro.sasyak.domain.usecases
 
-
 import com.kapilagro.sasyak.domain.models.ApiResponse
 import com.kapilagro.sasyak.domain.models.WeatherInfo
-
 import com.kapilagro.sasyak.domain.repositories.WeatherRepository
 import javax.inject.Inject
-
-// code includes usecases also
 
 class GetWeatherForLocationUseCase @Inject constructor(
     private val weatherRepository: WeatherRepository
