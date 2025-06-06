@@ -63,7 +63,6 @@ import com.kapilagro.sasyak.presentation.yield.YieldRequestScreen
 import com.kapilagro.sasyak.presentation.yield.YieldScreen
 import com.kapilagro.sasyak.presentation.yield.YieldTaskDetailScreen
 import kotlinx.coroutines.CoroutineDispatcher
-import java.io.File
 import javax.inject.Inject
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -158,7 +157,6 @@ fun AppNavGraph(
         }
 
         composable(FuelRequestScreen.route) {
-
             val fuelListViewModel: FuelListViewModel = hiltViewModel()
             val homeViewModel: HomeViewModel = hiltViewModel()
             FuelRequestScreen(
@@ -232,7 +230,6 @@ fun AppNavGraph(
 
         // Spraying screens
         composable(Screen.SprayingScreen.route) {
-
             SprayingScreen(
                 onTaskCreated = {
                     navController.navigate(SprayingRequestScreen.route)
@@ -498,13 +495,17 @@ fun AppNavGraph(
                 }
             )
         }
+
         composable(Screen.TaskList.route) {
             TaskListScreen(
                 onTaskClick = { taskId ->
                     navController.navigate(Screen.TaskDetail.createRoute(taskId.toString()))
                 },
                 onBackClick = {
-                    navController.popBackStack()
+                    navController.navigate(Screen.Home.route) {
+                        popUpTo(Screen.Home.route) { inclusive = false }
+                        launchSingleTop = true
+                    }
                 },
                 navController = navController
             )

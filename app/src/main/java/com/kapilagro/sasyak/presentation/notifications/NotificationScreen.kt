@@ -73,12 +73,12 @@ fun NotificationScreen(
                     if (notificationsState is NotificationViewModel.NotificationsState.Success &&
                         (notificationsState as NotificationViewModel.NotificationsState.Success).notifications.any { !it.isRead }
                     ) {
-                        IconButton(onClick = { viewModel.markAllNotificationsAsRead() }) {
-                            Icon(
-                                imageVector = Icons.Filled.MarkEmailRead,
-                                contentDescription = "Mark All as Read"
-                            )
-                        }
+//                        IconButton(onClick = { viewModel.markAllNotificationsAsRead() }) {
+//                            Icon(
+//                                imageVector = Icons.Filled.MarkEmailRead,
+//                                contentDescription = "Mark All as Read"
+//                            )
+//                        }
                     }
                 }
             )

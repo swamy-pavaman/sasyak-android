@@ -1,6 +1,5 @@
 package com.kapilagro.sasyak.presentation.common.components
 
-
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -24,7 +23,9 @@ fun BottomNavBar(
     modifier: Modifier = Modifier
 ) {
     NavigationBar(
-        modifier = modifier
+        modifier = modifier,
+        containerColor = MaterialTheme.colorScheme.surface, // Ensure consistent theming
+        contentColor = MaterialTheme.colorScheme.onSurface
     ) {
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentDestination = navBackStackEntry?.destination
@@ -43,9 +44,13 @@ fun BottomNavBar(
                     BadgedBox(
                         badge = {
                             if (badgeCount != null && badgeCount > 0) {
-                                Badge {
+                                Badge(
+                                    containerColor = MaterialTheme.colorScheme.error,
+                                    contentColor = MaterialTheme.colorScheme.onError
+                                ) {
                                     Text(
-                                        text = if (badgeCount > 99) "99+" else badgeCount.toString()
+                                        text = if (badgeCount > 99) "99+" else badgeCount.toString(),
+                                        style = MaterialTheme.typography.labelSmall
                                     )
                                 }
                             }
@@ -56,27 +61,37 @@ fun BottomNavBar(
                                 painterResource(id = it)
                             } ?: return@BadgedBox,
                             contentDescription = screen.title,
-                            modifier = Modifier.size(32.dp),  // Increase from 26.dp to 32.dp or your preferred size
-                            tint = if (selected) AgroPrimary else Color.Gray
+                            modifier = Modifier.size(28.dp), // Adjusted size for better visibility
+                            tint = if (selected) AgroPrimary else Color.Gray.copy(alpha = 0.6f)
                         )
                     }
                 },
-                label = { Text(screen.title) },
+                label = {
+                    Text(
+                        text = screen.title,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = if (selected) AgroPrimary else Color.Gray.copy(alpha = 0.6f)
+                    )
+                },
                 selected = selected,
                 onClick = {
                     navController.navigate(screen.route) {
-                        // Pop up to the start destination of the graph to
-                        // avoid building up a large stack of destinations
+                        // Pop up to the start destination to avoid stacking destinations
                         popUpTo(navController.graph.findStartDestination().id) {
                             saveState = true
                         }
-                        // Avoid multiple copies of the same destination when
-                        // reselecting the same item
+                        // Avoid duplicates and restore state
                         launchSingleTop = true
-                        // Restore state when reelecting a previously selected item
                         restoreState = true
                     }
-                }
+                },
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = AgroPrimary,
+                    selectedTextColor = AgroPrimary,
+                    unselectedIconColor = Color.Gray.copy(alpha = 0.6f),
+                    unselectedTextColor = Color.Gray.copy(alpha = 0.6f),
+                    indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                )
             )
         }
     }
