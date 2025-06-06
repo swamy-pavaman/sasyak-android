@@ -41,7 +41,7 @@ class TaskViewModel @Inject constructor(
     private val _addAdviceState = MutableStateFlow<AddAdviceState>(AddAdviceState.Idle)
     val addAdviceState: StateFlow<AddAdviceState> = _addAdviceState.asStateFlow()
 
-    private val _selectedTab = MutableStateFlow(TaskTab.ASSIGNED) // Default to ASSIGNED
+    private val _selectedTab = MutableStateFlow(TaskTab.SUPERVISORS) // Default to SUPERVISORS
     val selectedTab: StateFlow<TaskTab> = _selectedTab.asStateFlow()
 
     private val _userRole = MutableStateFlow<String?>(null)
@@ -68,8 +68,17 @@ class TaskViewModel @Inject constructor(
         viewModelScope.launch {
             authRepository.getUserRole().collect { role ->
                 _userRole.value = role
-                if (role == "SUPERVISOR") {
-                    onTabSelected(TaskTab.ASSIGNED) // Load ASSIGNED tab for supervisors
+                // Set default tab based on role
+                val newTab = when (role) {
+                    "MANAGER" -> TaskTab.SUPERVISORS
+                    "SUPERVISOR" -> TaskTab.ASSIGNED // Default to ASSIGNED for supervisors
+                    else -> TaskTab.SUPERVISORS
+                }
+                if (_selectedTab.value != newTab) {
+                    _selectedTab.value = newTab
+                    accumulatedTasks.clear()
+                    currentPage = 0
+                    loadTasks(currentPage, pageSize)
                 }
             }
         }

@@ -22,12 +22,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import androidx.navigation.compose.currentBackStackEntryAsState
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import com.kapilagro.sasyak.presentation.common.components.TaskCard
@@ -57,8 +56,12 @@ fun TaskListScreen(
     val createdTaskCount by viewModel.createdTaskCount.collectAsState()
     val assignedTaskCount by viewModel.assignedTaskCount.collectAsState()
 
-    // Fetch user role on start
-    LaunchedEffect(Unit) {
+    // Use the current route as a key to trigger reinitialization
+    val currentRoute by navController.currentBackStackEntryAsState()
+    val routeKey = currentRoute?.destination?.route
+
+    // Fetch user role and reinitialize when the route changes
+    LaunchedEffect(routeKey) {
         viewModel.getCurrentUserRole()
     }
 
@@ -301,22 +304,16 @@ fun TaskListScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 16.dp),
+                    .padding(vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Tasks",
-                    style = MaterialTheme.typography.titleLarge
-                )
-
                 if (taskListState is TaskViewModel.TaskListState.Success) {
                     val taskCount = when (selectedTab) {
                         TaskViewModel.TaskTab.SUPERVISORS -> supervisorTaskCount
                         TaskViewModel.TaskTab.ME -> createdTaskCount
                         TaskViewModel.TaskTab.ASSIGNED -> assignedTaskCount
                         TaskViewModel.TaskTab.CREATED -> createdTaskCount
-                        else -> 0
                     }
                     Surface(
                         color = MaterialTheme.colorScheme.secondaryContainer,
@@ -332,7 +329,7 @@ fun TaskListScreen(
                 }
             }
 
-            if (tabs.isNotEmpty()) {
+            if (userRole != null && tabs.isNotEmpty()) {
                 TaskTabRow(
                     selectedTab = selectedTab,
                     tabs = tabs,
@@ -340,6 +337,18 @@ fun TaskListScreen(
                         viewModel.onTabSelected(tab)
                     }
                 )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -433,7 +442,6 @@ fun EmptyStateForTasks(selectedTab: TaskViewModel.TaskTab) {
                 TaskViewModel.TaskTab.ME -> "No tasks created by you"
                 TaskViewModel.TaskTab.ASSIGNED -> "No assigned tasks"
                 TaskViewModel.TaskTab.CREATED -> "No created tasks"
-                else -> "No tasks"
             }
 
             Text(
@@ -450,7 +458,6 @@ fun EmptyStateForTasks(selectedTab: TaskViewModel.TaskTab) {
                     TaskViewModel.TaskTab.ME -> "Tasks created by you will appear here"
                     TaskViewModel.TaskTab.ASSIGNED -> "Assigned tasks will appear here"
                     TaskViewModel.TaskTab.CREATED -> "Tasks you created will appear here"
-                    else -> "Tasks will appear here"
                 },
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center,
