@@ -1,3 +1,4 @@
+
 package com.kapilagro.sasyak.presentation.common.navigation
 
 import android.os.Build
@@ -55,6 +56,7 @@ import com.kapilagro.sasyak.presentation.spraying.SprayingTaskDetailScreen
 import com.kapilagro.sasyak.presentation.tasks.CreateTaskScreen
 import com.kapilagro.sasyak.presentation.tasks.TaskDetailScreen
 import com.kapilagro.sasyak.presentation.tasks.TaskListScreen
+import com.kapilagro.sasyak.presentation.tasks.TaskViewModel
 import com.kapilagro.sasyak.presentation.team.TeamMemberDetailScreen
 import com.kapilagro.sasyak.presentation.team.TeamScreen
 import com.kapilagro.sasyak.presentation.weather.WeatherDetailScreen
@@ -83,7 +85,6 @@ fun AppNavGraph(
         startDestination = startDestination,
         modifier = modifier
     ) {
-        // Advice screen
         composable(Screen.Advice.route) {
             AdviceScreen(
                 onTaskClick = { taskId ->
@@ -95,7 +96,6 @@ fun AppNavGraph(
             )
         }
 
-        // Team screens
         composable(Screen.Team.route) {
             TeamScreen(
                 onBackClick = {
@@ -122,7 +122,6 @@ fun AppNavGraph(
             )
         }
 
-        // Scouting Request screen
         composable(Screen.ScoutingRequestScreen.route) {
             val scoutingListViewModel: ScoutingListViewModel = hiltViewModel()
             val homeViewModel: HomeViewModel = hiltViewModel()
@@ -141,7 +140,6 @@ fun AppNavGraph(
             )
         }
 
-        // Fuel screens
         composable(Screen.FuelScreen.route) {
             FuelScreen(
                 onTaskCreated = {
@@ -174,7 +172,6 @@ fun AppNavGraph(
             )
         }
 
-        // Sowing screens
         composable(Screen.SowingScreen.route) {
             SowingScreen(
                 onTaskCreated = {
@@ -207,7 +204,6 @@ fun AppNavGraph(
             )
         }
 
-        // Image capture screen
         composable(
             route = Screen.ImageCapture.route,
             arguments = listOf(
@@ -228,7 +224,6 @@ fun AppNavGraph(
             )
         }
 
-        // Spraying screens
         composable(Screen.SprayingScreen.route) {
             SprayingScreen(
                 onTaskCreated = {
@@ -261,7 +256,6 @@ fun AppNavGraph(
             )
         }
 
-        // Yield screens
         composable(Screen.YieldScreen.route) {
             YieldScreen(
                 onTaskCreated = {
@@ -294,7 +288,6 @@ fun AppNavGraph(
             )
         }
 
-        // Weather screen
         composable(Screen.WeatherDetail.route) {
             val parentEntry = remember(it) {
                 navController.getBackStackEntry(Screen.Home.route)
@@ -322,7 +315,6 @@ fun AppNavGraph(
             }
         }
 
-        // Auth screens
         composable(Screen.Splash.route) {
             SplashScreen(
                 onNavigateToLogin = {
@@ -348,7 +340,6 @@ fun AppNavGraph(
             )
         }
 
-        // Main screens with bottom navigation
         composable(Screen.Home.route) {
             HomeScreen(
                 onTaskClick = { taskId ->
@@ -497,6 +488,11 @@ fun AppNavGraph(
         }
 
         composable(Screen.TaskList.route) {
+            val taskViewModel: TaskViewModel = hiltViewModel()
+            LaunchedEffect(Unit) {
+                taskViewModel.getCurrentUserRole() // Ensure user role is fetched
+                taskViewModel.resetTabForNavigation() // Reset tab based on role
+            }
             TaskListScreen(
                 onTaskClick = { taskId ->
                     navController.navigate(Screen.TaskDetail.createRoute(taskId.toString()))

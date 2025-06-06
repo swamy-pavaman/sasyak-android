@@ -84,6 +84,24 @@ class TaskViewModel @Inject constructor(
         }
     }
 
+    // New function to reset tab when "Tasks" is selected in bottom navigation
+    fun resetTabForNavigation() {
+        viewModelScope.launch {
+            val role = _userRole.value
+            val newTab = when (role) {
+                "MANAGER" -> TaskTab.SUPERVISORS
+                "SUPERVISOR" -> TaskTab.ASSIGNED
+                else -> TaskTab.SUPERVISORS
+            }
+            if (_selectedTab.value != newTab) {
+                _selectedTab.value = newTab
+                accumulatedTasks.clear()
+                currentPage = 0
+                loadTasks(currentPage, pageSize)
+            }
+        }
+    }
+
     fun onTabSelected(tab: TaskTab) {
         if (_selectedTab.value != tab) {
             _selectedTab.value = tab
