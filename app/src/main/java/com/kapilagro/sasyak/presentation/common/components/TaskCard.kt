@@ -3,6 +3,7 @@ package com.kapilagro.sasyak.presentation.common.components
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccessTime
@@ -116,16 +117,19 @@ fun TaskCard(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = task.title,
-                        style = MaterialTheme.typography.titleSmall.copy(
-                            fontWeight = FontWeight.Medium,
-                            color = AgroDark
-                        ),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
-                    )
+
+                    // kk
+                    TaskTypeChip(taskType = task.taskType)
+//                    Text(
+//                        text = task.title,
+//                        style = MaterialTheme.typography.titleSmall.copy(
+//                            fontWeight = FontWeight.Medium,
+//                            color = AgroDark
+//                        ),
+//                        maxLines = 1,
+//                        overflow = TextOverflow.Ellipsis,
+//                        modifier = Modifier.weight(1f)
+//                    )
 
                     // Status indicator icon
                     val statusIcon = when (task.status?.lowercase()) {
@@ -166,7 +170,7 @@ fun TaskCard(
                 // Time and task type
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(
@@ -185,8 +189,8 @@ fun TaskCard(
                             color = AgroMutedForeground
                         )
                     }
-
-                    TaskTypeChip(taskType = task.taskType)
+//                        kk
+//                    TaskTypeChip(taskType = task.taskType)
                 }
             }
         }
