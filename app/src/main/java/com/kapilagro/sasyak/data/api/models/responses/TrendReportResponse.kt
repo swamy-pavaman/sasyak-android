@@ -1,6 +1,9 @@
 package com.kapilagro.sasyak.data.api.models.responses
 
-data class TrendReportResponse(
-    val dailyTaskCounts: List<DailyTaskCount>
-)
+import com.google.gson.annotations.SerializedName
+import com.kapilagro.sasyak.domain.models.DailyTaskCount
 
+data class TrendReportResponse(
+    @SerializedName("tasksCompleted") val tasksCompleted: List<DailyTaskCount>,
+    @SerializedName("tasksCreated") val tasksCreated: List<DailyTaskCount>
+)

@@ -6,7 +6,8 @@ import com.kapilagro.sasyak.data.api.mappers.toDomainModel
 import com.kapilagro.sasyak.data.api.models.requests.CreateTaskRequest
 import com.kapilagro.sasyak.data.api.models.requests.UpdateImplementationRequest
 import com.kapilagro.sasyak.data.api.models.requests.UpdateTaskStatusRequest
-import com.kapilagro.sasyak.data.api.models.responses.DailyTaskCount // Added import
+import com.kapilagro.sasyak.data.api.models.responses.DailyTaskCount
+import com.kapilagro.sasyak.data.api.models.responses.TrendReportResponse
 import com.kapilagro.sasyak.domain.models.ApiResponse
 import com.kapilagro.sasyak.domain.models.Task
 import com.kapilagro.sasyak.domain.models.TaskAdvice
@@ -151,12 +152,11 @@ class TaskRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun getTrendReport(): ApiResponse<List<com.kapilagro.sasyak.domain.models.DailyTaskCount>> {
+    override suspend fun getTrendReport(): ApiResponse<TrendReportResponse> {
         return try {
             val response = apiService.getTrendReport()
             if (response.isSuccessful && response.body() != null) {
-                val dailyTaskCounts = response.body()!!.dailyTaskCounts.toDomainModel()
-                ApiResponse.Success(dailyTaskCounts)
+                ApiResponse.Success(response.body()!!)
             } else {
                 ApiResponse.Error(response.errorBody()?.string() ?: "Failed to fetch trend report")
             }
