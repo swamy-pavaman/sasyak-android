@@ -71,9 +71,8 @@ object TaskMapper {
 // Mapping for DailyTaskCount
 fun ApiDailyTaskCount.toDomainModel(): DomainDailyTaskCount {
     return DomainDailyTaskCount(
-        data = "",  // Default value since the API doesn't provide this field
-        count = this.count,
-        days = this.days
+        date = this.date,
+        count = this.count
     )
 }
 

@@ -1,6 +1,7 @@
 package com.kapilagro.sasyak.presentation.reports
 
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -31,7 +32,14 @@ class ReportViewModel @Inject constructor(
     private val _chartTab = MutableStateFlow(ChartTab.WEEKLY)
     val chartTab: StateFlow<ChartTab> = _chartTab.asStateFlow()
 
-    private var trendData: List<DailyTaskCount> = emptyList()
+    private var tasksCompleted: List<DailyTaskCount> = emptyList()
+    private var tasksCreated: List<DailyTaskCount> = emptyList()
+
+    // Define color constants
+    companion object {
+        private const val COLOR_COMPLETED = "#26C6DA" // Teal for Completed
+        private const val COLOR_CREATED = "#EF5350"   // Red for Created
+    }
 
     init {
         loadTaskReport()
@@ -59,14 +67,18 @@ class ReportViewModel @Inject constructor(
         viewModelScope.launch(ioDispatcher) {
             when (val response = taskRepository.getTrendReport()) {
                 is ApiResponse.Success -> {
-                    trendData = response.data  // Fixed from 'response.day' to 'response.data'
+                    tasksCompleted = response.data.tasksCompleted?.map {
+                        it.copy(color = COLOR_COMPLETED) // Assign Teal to completed tasks
+                    } ?: emptyList()
+                    tasksCreated = response.data.tasksCreated?.map {
+                        it.copy(color = COLOR_CREATED) // Assign Red to created tasks
+                    } ?: emptyList()
                 }
                 is ApiResponse.Error -> {
                     _reportState.value = ReportState.Error(response.errorMessage)
                 }
                 is ApiResponse.Loading -> {
                     _reportState.value = ReportState.Loading
-                    // Handle loading state if needed
                 }
             }
         }
@@ -77,47 +89,90 @@ class ReportViewModel @Inject constructor(
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
-    fun getWeeklyTaskCounts(): List<DailyTaskCount> {
+    fun getWeeklyTaskCounts(): Pair<List<DailyTaskCount>, List<DailyTaskCount>> {
         val today = LocalDate.now()
         val startOfWeek = today.minusDays(today.dayOfWeek.value.toLong() - 1)
         val formatter = DateTimeFormatter.ISO_LOCAL_DATE
-        return trendData
+
+        val completed = tasksCompleted
             .filter {
-                val taskDate = LocalDate.parse(it.days, formatter)
+                val taskDate = LocalDate.parse(it.date, formatter)
                 taskDate >= startOfWeek && taskDate <= today
             }
             .map {
                 DailyTaskCount(
-                    data = it.data,
+                    date = LocalDate.parse(it.date, formatter).dayOfWeek.toString().substring(0, 3),
                     count = it.count,
-                    days = LocalDate.parse(it.days, formatter).dayOfWeek.toString().substring(0, 3)
+                    color = COLOR_COMPLETED // Assign Teal to completed tasks
                 )
             }
-            .sortedBy { LocalDate.parse(it.days, formatter) }
+            .sortedBy { LocalDate.parse(it.date, formatter) }
+
+        val created = tasksCreated
+            .filter {
+                val taskDate = LocalDate.parse(it.date, formatter)
+                taskDate >= startOfWeek && taskDate <= today
+            }
+            .map {
+                DailyTaskCount(
+                    date = LocalDate.parse(it.date, formatter).dayOfWeek.toString().substring(0, 3),
+                    count = it.count,
+                    color = COLOR_CREATED // Assign Red to created tasks
+                )
+            }
+            .sortedBy { LocalDate.parse(it.date, formatter) }
+
+        Log.d("ReportViewModel", "Weekly Task Counts - Completed: ${completed.size}, Created: ${created.size}")
+        return Pair(completed, created)
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
-    fun getMonthlyTaskCounts(): List<DailyTaskCount> {
+    fun getMonthlyTaskCounts(): Pair<List<DailyTaskCount>, List<DailyTaskCount>> {
         val today = LocalDate.now()
         val startOfMonth = today.withDayOfMonth(1)
         val formatter = DateTimeFormatter.ISO_LOCAL_DATE
-        val weeks = mutableListOf<DailyTaskCount>()
+        val completedWeeks = mutableListOf<DailyTaskCount>()
+        val createdWeeks = mutableListOf<DailyTaskCount>()
         var currentWeekStart = startOfMonth
         var weekNumber = 1
 
         while (currentWeekStart <= today) {
             val weekEnd = currentWeekStart.plusDays(6).coerceAtMost(today)
-            val weekCount = trendData
+
+            val weekCompletedCount = tasksCompleted
                 .filter {
-                    val taskDate = LocalDate.parse(it.days, formatter)
+                    val taskDate = LocalDate.parse(it.date, formatter)
                     taskDate >= currentWeekStart && taskDate <= weekEnd
                 }
                 .sumOf { it.count }
-            weeks.add(DailyTaskCount("Week $weekNumber", weekCount, "Week $weekNumber"))
+            completedWeeks.add(
+                DailyTaskCount(
+                    date = "Week $weekNumber",
+                    count = weekCompletedCount,
+                    color = COLOR_COMPLETED // Assign Teal to completed tasks
+                )
+            )
+
+            val weekCreatedCount = tasksCreated
+                .filter {
+                    val taskDate = LocalDate.parse(it.date, formatter)
+                    taskDate >= currentWeekStart && taskDate <= weekEnd
+                }
+                .sumOf { it.count }
+            createdWeeks.add(
+                DailyTaskCount(
+                    date = "Week $weekNumber",
+                    count = weekCreatedCount,
+                    color = COLOR_CREATED // Assign Red to created tasks
+                )
+            )
+
             currentWeekStart = weekEnd.plusDays(1)
             weekNumber++
         }
-        return weeks
+
+        Log.d("ReportViewModel", "Monthly Task Counts - Completed Weeks: ${completedWeeks.size}, Created Weeks: ${createdWeeks.size}")
+        return Pair(completedWeeks, createdWeeks)
     }
 
     sealed class ReportState {
