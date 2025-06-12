@@ -32,6 +32,7 @@ import com.kapilagro.sasyak.presentation.common.components.SuccessDialog
 import com.kapilagro.sasyak.presentation.common.navigation.Screen
 import com.kapilagro.sasyak.presentation.common.theme.AgroPrimary
 import com.kapilagro.sasyak.presentation.common.theme.ScoutingColor
+import com.kapilagro.sasyak.presentation.common.theme.ScoutingIcon
 import com.kapilagro.sasyak.presentation.common.theme.SoftBackground
 import com.kapilagro.sasyak.presentation.common.theme.TeamIcon
 import com.kapilagro.sasyak.presentation.home.HomeViewModel
@@ -193,7 +194,7 @@ fun ScoutingRequestScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = ScoutingColor
+                    containerColor = ScoutingIcon
                 )
             )
 
@@ -447,7 +448,7 @@ fun ScoutingRequestScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = ScoutingColor)
+                    colors = ButtonDefaults.buttonColors(containerColor = ScoutingIcon)
                 ) {
                     Text("Select Images")
                 }
@@ -591,7 +592,7 @@ fun ScoutingRequestScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = ScoutingColor)
+                colors = ButtonDefaults.buttonColors(containerColor = ScoutingIcon)
             ) {
                 Text("Submit")
             }
