@@ -31,6 +31,9 @@ import com.kapilagro.sasyak.domain.models.ScoutingDetails
 import com.kapilagro.sasyak.presentation.common.components.SuccessDialog
 import com.kapilagro.sasyak.presentation.common.navigation.Screen
 import com.kapilagro.sasyak.presentation.common.theme.AgroPrimary
+import com.kapilagro.sasyak.presentation.common.theme.ScoutingColor
+import com.kapilagro.sasyak.presentation.common.theme.SoftBackground
+import com.kapilagro.sasyak.presentation.common.theme.TeamIcon
 import com.kapilagro.sasyak.presentation.home.HomeViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.launch
@@ -180,15 +183,20 @@ fun ScoutingRequestScreen(
     }
 
     Scaffold(
+
         topBar = {
             TopAppBar(
-                title = { Text("Scouting") },
+                title = { Text("Scouting", color = Color.White) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = ScoutingColor
+                )
             )
+
         }
     ) { paddingValues ->
         Column(
@@ -439,7 +447,7 @@ fun ScoutingRequestScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                    colors = ButtonDefaults.buttonColors(containerColor = ScoutingColor)
                 ) {
                     Text("Select Images")
                 }
@@ -583,7 +591,7 @@ fun ScoutingRequestScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = AgroPrimary)
+                colors = ButtonDefaults.buttonColors(containerColor = ScoutingColor)
             ) {
                 Text("Submit")
             }

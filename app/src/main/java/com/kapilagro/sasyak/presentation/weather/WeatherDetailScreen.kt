@@ -23,6 +23,7 @@ import com.kapilagro.sasyak.presentation.common.theme.AgroLight
 import com.kapilagro.sasyak.presentation.common.theme.AgroPrimary
 import com.kapilagro.sasyak.presentation.common.theme.AgroPrimary
 import com.kapilagro.sasyak.presentation.common.theme.AgroLight
+import com.kapilagro.sasyak.presentation.common.theme.White
 
 @OptIn(ExperimentalMaterial3Api::class)
 @RequiresApi(Build.VERSION_CODES.O)
@@ -61,7 +62,7 @@ fun WeatherDetailScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = AgroLight)
+                colors = CardDefaults.cardColors(containerColor = White)
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp)

@@ -16,7 +16,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -25,23 +24,13 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.kapilagro.sasyak.presentation.common.theme.*
 
 @Composable
 fun LoginScreen(
     onLoginSuccess: () -> Unit,
     viewModel: AuthViewModel = hiltViewModel()
 ) {
-    // Define new colors
-    val SoftTeal = Color(0xFF40C4FF)
-    val NeutralGray = Color(0xFFF5F7FA)
-    val PrimaryText = Color(0xFF1A1A1A)
-    val SecondaryText = Color(0xFF6B7280)
-    val AccentBlue = Color(0xFF3B82F6)
-    val CursorOrange = Color(0xFFF97316)
-    val ButtonText = Color(0xFFFFFFFF)
-    val ErrorRed = Color(0xFFEF4444)
-    val OffWhite = Color(0xFFF9FAFB)
-
     val loginState by viewModel.loginState.collectAsState()
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -59,8 +48,8 @@ fun LoginScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(OffWhite)
-            .border(1.dp, SoftTeal, RoundedCornerShape(12.dp))
+            .background(LemonLight) // Updated to lemon light background
+            .border(1.dp, YieldColor, RoundedCornerShape(12.dp)) // Updated border to YieldColor
             .padding(horizontal = 16.dp, vertical = 24.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -69,12 +58,12 @@ fun LoginScreen(
                 "Kapil Agro",
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
-                color = PrimaryText
+                color = PrimaryAccent
             )
             Text(
                 "Scouting Hub",
                 fontSize = 14.sp,
-                color = SecondaryText
+                color = TextSecondary
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -82,11 +71,11 @@ fun LoginScreen(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .border(0.5.dp, SoftTeal, RoundedCornerShape(12.dp)),
+                    .border(0.5.dp, SowingColor, RoundedCornerShape(12.dp)), // Updated border to YieldColor
                 shape = RoundedCornerShape(12.dp),
                 elevation = CardDefaults.cardElevation(2.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = NeutralGray
+                    containerColor = LemonLight // Updated to lemon light background
                 )
             ) {
                 Column(
@@ -99,12 +88,12 @@ fun LoginScreen(
                         "Login",
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
-                        color = PrimaryText
+                        color = TextPrimary
                     )
                     Text(
                         "Enter your credentials to access your account",
                         fontSize = 12.sp,
-                        color = SecondaryText
+                        color = TextSecondary
                     )
 
                     Spacer(modifier = Modifier.height(12.dp))
@@ -113,13 +102,13 @@ fun LoginScreen(
                         "Email",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
-                        color = PrimaryText,
+                        color = TextPrimary,
                         modifier = Modifier.align(Alignment.Start)
                     )
                     OutlinedTextField(
                         value = email,
                         onValueChange = { email = it.trim() },
-                        placeholder = { Text("example@email.com", color = SecondaryText) },
+                        placeholder = { Text("example@email.com", color = TextSecondary) },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions.Default.copy(
                             keyboardType = KeyboardType.Email,
@@ -129,24 +118,24 @@ fun LoginScreen(
                             Icon(
                                 imageVector = Icons.Default.Email,
                                 contentDescription = null,
-                                tint = if (email.isNotEmpty()) AccentBlue else SecondaryText
+                                tint = if (email.isNotEmpty()) PrimaryAccent else TextSecondary // Updated to YieldColor
                             )
                         },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(8.dp),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = PrimaryText,
-                            unfocusedTextColor = PrimaryText,
-                            cursorColor = CursorOrange,
-                            focusedBorderColor = AccentBlue,
-                            unfocusedBorderColor = SecondaryText,
-                            errorBorderColor = ErrorRed,
-                            unfocusedPlaceholderColor = SecondaryText,
-                            focusedLeadingIconColor = AccentBlue,
-                            unfocusedLeadingIconColor = SecondaryText,
-                            focusedContainerColor = NeutralGray.copy(alpha = 0.5f),
-                            unfocusedContainerColor = NeutralGray.copy(alpha = 0.5f),
-                            errorContainerColor = NeutralGray.copy(alpha = 0.5f)
+                            focusedTextColor = TextPrimary,
+                            unfocusedTextColor = TextPrimary,
+                            cursorColor = WarningAccent,
+                            focusedBorderColor = TeamIcon, // Updated to YieldColor
+                            unfocusedBorderColor = TextSecondary,
+                            errorBorderColor = ErrorAccent,
+                            unfocusedPlaceholderColor = TextSecondary,
+                            focusedLeadingIconColor = YieldColor, // Updated to YieldColor
+                            unfocusedLeadingIconColor = TextSecondary,
+                            focusedContainerColor = LemonLight.copy(alpha = 0.5f), // Updated to LemonLight
+                            unfocusedContainerColor = LemonLight.copy(alpha = 0.5f), // Updated to LemonLight
+                            errorContainerColor = LemonLight.copy(alpha = 0.5f) // Updated to LemonLight
                         ),
                         isError = isError
                     )
@@ -157,13 +146,13 @@ fun LoginScreen(
                         "Password",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
-                        color = PrimaryText,
+                        color = TextPrimary,
                         modifier = Modifier.align(Alignment.Start)
                     )
                     OutlinedTextField(
                         value = password,
                         onValueChange = { password = it.trim() },
-                        placeholder = { Text("password", color = SecondaryText) },
+                        placeholder = { Text("password", color = TextSecondary) },
                         singleLine = true,
                         visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions.Default.copy(
@@ -174,7 +163,7 @@ fun LoginScreen(
                             Icon(
                                 imageVector = Icons.Default.Lock,
                                 contentDescription = null,
-                                tint = if (password.isNotEmpty()) AccentBlue else SecondaryText
+                                tint = if (password.isNotEmpty()) PrimaryAccent else TextSecondary // Updated to YieldColor
                             )
                         },
                         trailingIcon = {
@@ -182,7 +171,7 @@ fun LoginScreen(
                                 Icon(
                                     imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
                                     contentDescription = null,
-                                    tint = if (passwordVisible) AccentBlue else SecondaryText,
+                                    tint = if (passwordVisible) PrimaryAccent else TextSecondary, // Updated to YieldColor
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
@@ -192,20 +181,20 @@ fun LoginScreen(
                             .height(56.dp),
                         shape = RoundedCornerShape(8.dp),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = PrimaryText,
-                            unfocusedTextColor = PrimaryText,
-                            cursorColor = CursorOrange,
-                            focusedBorderColor = AccentBlue,
-                            unfocusedBorderColor = SecondaryText,
-                            errorBorderColor = ErrorRed,
-                            unfocusedPlaceholderColor = SecondaryText,
-                            focusedLeadingIconColor = AccentBlue,
-                            unfocusedLeadingIconColor = SecondaryText,
-                            focusedTrailingIconColor = AccentBlue,
-                            unfocusedTrailingIconColor = SecondaryText,
-                            focusedContainerColor = NeutralGray.copy(alpha = 0.5f),
-                            unfocusedContainerColor = NeutralGray.copy(alpha = 0.5f),
-                            errorContainerColor = NeutralGray.copy(alpha = 0.5f)
+                            focusedTextColor = TextPrimary,
+                            unfocusedTextColor = TextPrimary,
+                            cursorColor = WarningAccent,
+                            focusedBorderColor = TeamIcon, // Updated to YieldColor
+                            unfocusedBorderColor = TextSecondary,
+                            errorBorderColor = ErrorAccent,
+                            unfocusedPlaceholderColor = TextSecondary,
+                            focusedLeadingIconColor = YieldColor, // Updated to YieldColor
+                            unfocusedLeadingIconColor = TextSecondary,
+                            focusedTrailingIconColor = YieldColor, // Updated to YieldColor
+                            unfocusedTrailingIconColor = TextSecondary,
+                            focusedContainerColor = LemonLight.copy(alpha = 0.5f), // Updated to LemonLight
+                            unfocusedContainerColor = LemonLight.copy(alpha = 0.5f), // Updated to LemonLight
+                            errorContainerColor = LemonLight.copy(alpha = 0.5f) // Updated to LemonLight
                         ),
                         isError = isError
                     )
@@ -220,7 +209,7 @@ fun LoginScreen(
                         TextButton(onClick = { /* TODO: Forgot Password */ }) {
                             Text(
                                 "Forgot password?",
-                                color = AccentBlue,
+                                color = TeamIcon, // Updated to YieldColor
                                 fontSize = 12.sp
                             )
                         }
@@ -228,7 +217,7 @@ fun LoginScreen(
                             val errorMessage = (loginState as AuthViewModel.LoginState.Error).message
                             Text(
                                 text = errorMessage,
-                                color = ErrorRed,
+                                color = ErrorAccent,
                                 fontSize = 12.sp
                             )
                         }
@@ -244,18 +233,18 @@ fun LoginScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(48.dp)
-                            .border(0.5.dp, SoftTeal, RoundedCornerShape(8.dp)),
+                            .border(0.5.dp, YieldColor, RoundedCornerShape(8.dp)), // Updated border to YieldColor
                         shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = AccentBlue,
-                            contentColor = ButtonText,
-                            disabledContainerColor = SecondaryText.copy(alpha = 0.5f),
-                            disabledContentColor = SecondaryText
+                            containerColor = TeamIcon, // Updated to YieldColor
+                            contentColor = White,
+                            disabledContainerColor = TextSecondary.copy(alpha = 0.5f),
+                            disabledContentColor = TextSecondary
                         )
                     ) {
                         if (loginState is AuthViewModel.LoginState.Loading) {
                             CircularProgressIndicator(
-                                color = ButtonText,
+                                color = White,
                                 modifier = Modifier.size(18.dp)
                             )
                         } else {
@@ -268,7 +257,7 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(12.dp))
 
             Divider(
-                color = SecondaryText.copy(alpha = 0.3f),
+                color = TextSecondary.copy(alpha = 0.3f),
                 thickness = 0.5.dp,
                 modifier = Modifier.fillMaxWidth(0.8f)
             )
@@ -278,7 +267,7 @@ fun LoginScreen(
             Text(
                 text = "© 2025 Kapil Agro Scouting Hub. All Rights Reserved.",
                 fontSize = 10.sp,
-                color = SecondaryText,
+                color = TextSecondary,
                 modifier = Modifier.align(Alignment.CenterHorizontally),
                 lineHeight = 12.sp
             )

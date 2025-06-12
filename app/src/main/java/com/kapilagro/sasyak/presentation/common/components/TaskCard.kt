@@ -3,7 +3,6 @@ package com.kapilagro.sasyak.presentation.common.components
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccessTime
@@ -56,6 +55,7 @@ fun getFirstImageUrl(imagesJson: String?): String? {
         null
     }
 }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TaskCard(
@@ -75,9 +75,9 @@ fun TaskCard(
             pressedElevation = 4.dp
         ),
         colors = CardDefaults.cardColors(
-            containerColor = CardBackground // Updated to new color
+            containerColor = TaskCardBackground // Updated to new color
         ),
-        border = BorderStroke(0.5.dp, CardBorder), // Updated to new border color
+        border = BorderStroke(0.5.dp, CardBorder),
         onClick = onClick
     ) {
         Row(
@@ -91,8 +91,7 @@ fun TaskCard(
                     model = imageUrl,
                     contentDescription = "Task image",
                     modifier = Modifier
-                        .size(90.dp)
-                        .clip(RoundedCornerShape(8.dp)),
+                        .size(90.dp),
                     contentScale = ContentScale.Crop
                 )
             } ?: Box(
@@ -108,49 +107,55 @@ fun TaskCard(
                     .weight(1f),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    TaskTypeChip(taskType = task.taskType)
+                Column {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TaskTypeChip(taskType = task.taskType)
 
-                    val statusIcon = when (task.status?.lowercase()) {
-                        "pending" -> Icons.Outlined.Schedule
-                        "approved" -> Icons.Outlined.CheckCircle
-                        "rejected" -> Icons.Outlined.Close
-                        "submitted" -> Icons.Outlined.Schedule
-                        "implemented" -> Icons.Outlined.CheckCircle
-                        else -> Icons.Outlined.Schedule
+                        val statusIcon = when (task.status?.lowercase()) {
+                            "pending" -> Icons.Outlined.Schedule
+                            "approved" -> Icons.Outlined.CheckCircle
+                            "rejected" -> Icons.Outlined.Close
+                            "submitted" -> Icons.Outlined.Schedule
+                            "implemented" -> Icons.Outlined.CheckCircle
+                            else -> Icons.Outlined.Schedule
+                        }
+
+                        val statusColor = when (task.status?.lowercase()) {
+                            "pending" -> WarningAccent
+                            "approved" -> PrimaryAccent
+                            "rejected" -> ErrorAccent
+                            "submitted" -> WarningAccent
+                            "implemented" -> PrimaryAccent
+                            else -> WarningAccent
+                        }
+
+                        Icon(
+                            imageVector = statusIcon,
+                            contentDescription = "Task status: ${task.status}",
+                            tint = statusColor,
+                            modifier = Modifier.size(24.dp)
+                        )
                     }
 
-                    val statusColor = when (task.status?.lowercase()) {
-                        "pending" -> WarningAccent // Updated to new color
-                        "approved" -> PrimaryAccent // Updated to new color
-                        "rejected" -> ErrorAccent // Updated to new color
-                        "submitted" -> WarningAccent
-                        "implemented" -> PrimaryAccent
-                        else -> WarningAccent
-                    }
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                    Icon(
-                        imageVector = statusIcon,
-                        contentDescription = "Task status: ${task.status}",
-                        tint = statusColor,
-                        modifier = Modifier.size(24.dp)
+                    Text(
+                        text = task.description,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextSecondary,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
 
-                Text(
-                    text = task.description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary, // Updated to new secondary text color
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -162,12 +167,12 @@ fun TaskCard(
                             imageVector = Icons.Outlined.AccessTime,
                             contentDescription = null,
                             modifier = Modifier.size(16.dp),
-                            tint = TextSecondary // Updated to new secondary text color
+                            tint = TextSecondary
                         )
                         Text(
                             text = formatDateTime(task.createdAt ?: ""),
                             style = MaterialTheme.typography.labelMedium,
-                            color = TextSecondary // Updated to new secondary text color
+                            color = TextSecondary
                         )
                     }
                 }
@@ -175,10 +180,11 @@ fun TaskCard(
         }
     }
 }
+
 @Composable
 fun TaskTypeChip(taskType: String) {
     val (backgroundColor, textColor) = when (taskType.lowercase()) {
-        "scouting" -> Pair(ScoutingColor.copy(alpha = 0.1f), ScoutingColor) // Light background, solid text
+        "scouting" -> Pair(ScoutingColor.copy(alpha = 0.1f), ScoutingColor)
         "spraying" -> Pair(SprayingColor.copy(alpha = 0.1f), SprayingColor)
         "sowing" -> Pair(SowingColor.copy(alpha = 0.1f), SowingColor)
         "fuel" -> Pair(FuelColor.copy(alpha = 0.1f), FuelColor)

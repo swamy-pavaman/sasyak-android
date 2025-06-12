@@ -30,6 +30,7 @@ import com.kapilagro.sasyak.presentation.common.components.TaskCard
 import com.kapilagro.sasyak.presentation.common.theme.AgroPrimary
 import com.kapilagro.sasyak.presentation.common.theme.ScoutingContainer
 import com.kapilagro.sasyak.presentation.common.theme.ScoutingIcon
+import com.kapilagro.sasyak.presentation.common.theme.SoftBackground
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
@@ -72,9 +73,13 @@ fun ScoutingScreen(
     }
 
     Scaffold(
+        modifier = Modifier.background(ScoutingIcon), // Set background color
+
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text("Scouting") },
+                modifier = Modifier.background(ScoutingIcon), // Set background color
+
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")

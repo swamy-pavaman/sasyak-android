@@ -27,6 +27,7 @@ import com.kapilagro.sasyak.presentation.common.theme.AgroLight
 import com.kapilagro.sasyak.presentation.common.theme.AgroSecondary
 import com.kapilagro.sasyak.presentation.common.theme.CardBackground
 import com.kapilagro.sasyak.presentation.common.theme.CardBorder
+import com.kapilagro.sasyak.presentation.common.theme.White
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
