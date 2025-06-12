@@ -103,7 +103,9 @@ fun HomeScreen(
     }
 
     Scaffold(
+        modifier = Modifier.background(SoftBackground), // Set background color
         topBar = {
+
             TopAppBar(
                 title = {
                     Column {
@@ -186,6 +188,7 @@ fun HomeScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .background(SoftBackground) // Ensure column background matches
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
         ) {
@@ -870,8 +873,12 @@ fun TasksList(
                 tasks.forEach { task ->
                     TaskCard(
                         task = task,
-                        onClick = { onTaskClick(task.id.toString()) }
+                        onClick = { onTaskClick(task.id.toString()) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp) // Custom override
                     )
+                    Spacer(modifier = Modifier.height(8.dp))
                 }
             }
         }

@@ -27,6 +27,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.kapilagro.sasyak.domain.models.Notification
@@ -125,6 +126,7 @@ fun NotificationScreen(
                         }
                     }
                 }
+
                 is NotificationViewModel.NotificationsState.Loading -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
@@ -133,6 +135,7 @@ fun NotificationScreen(
                         CircularProgressIndicator()
                     }
                 }
+
                 is NotificationViewModel.NotificationsState.Error -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
@@ -222,6 +225,7 @@ fun NotificationItem(
                 Text(
                     text = notification.message ?: "No Message",
                     style = MaterialTheme.typography.bodyMedium,
+                    overflow = TextOverflow.Ellipsis,
                     fontWeight = if (!notification.isRead) FontWeight.Medium else FontWeight.Normal,
                     color = if (!notification.isRead)
                         MaterialTheme.colorScheme.onSurface

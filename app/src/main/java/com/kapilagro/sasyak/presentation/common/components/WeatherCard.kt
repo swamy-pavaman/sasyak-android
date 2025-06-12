@@ -2,6 +2,7 @@ package com.kapilagro.sasyak.presentation.common.components
 
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -24,6 +25,8 @@ import com.kapilagro.sasyak.domain.models.WeatherInfo
 import com.kapilagro.sasyak.presentation.common.theme.AgroPrimary
 import com.kapilagro.sasyak.presentation.common.theme.AgroLight
 import com.kapilagro.sasyak.presentation.common.theme.AgroSecondary
+import com.kapilagro.sasyak.presentation.common.theme.CardBackground
+import com.kapilagro.sasyak.presentation.common.theme.CardBorder
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -35,12 +38,19 @@ fun WeatherCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = AgroLight)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 2.dp,
+            pressedElevation = 4.dp
+        ),
+        colors = CardDefaults.cardColors(
+            containerColor = CardBackground // Updated to new color
+        ),
+        border = BorderStroke(0.5.dp, CardBorder) // Updated to new border color
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth().padding(16.dp)
         ) {
             // Main weather section with green background
             Box(
