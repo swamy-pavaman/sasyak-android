@@ -13,11 +13,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import javax.inject.Inject
 import javax.inject.Singleton
 import androidx.core.content.edit
+import com.kapilagro.sasyak.data.local.LocalDataSource
 
 @Singleton
 class AuthRepositoryImpl @Inject constructor(
     private val apiService: ApiService,
-    private val sharedPreferences: SharedPreferences
+    private val sharedPreferences: SharedPreferences,
+    private val localDataSource: LocalDataSource
 ) : AuthRepository {
 
     private val authStateFlow = MutableStateFlow(isLoggedIn())
@@ -72,6 +74,7 @@ class AuthRepositoryImpl @Inject constructor(
 
     override suspend fun logout() {
         clearAuthTokens()
+        localDataSource.deleteAllUsers()
     }
 
     override fun getAuthState(): Flow<Boolean> = authStateFlow.asStateFlow()
@@ -105,6 +108,10 @@ class AuthRepositoryImpl @Inject constructor(
 
         authStateFlow.value = false
         userRoleFlow.value = null
+    }
+
+    override suspend fun getCurrentUserId(): Int? {
+        return sharedPreferences.getInt(KEY_USER_ID, -1).takeIf { it != -1 }
     }
 
     // Moved from implementation method to interface implementation
