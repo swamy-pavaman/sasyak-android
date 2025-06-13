@@ -21,6 +21,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.kapilagro.sasyak.data.api.ImageUploadService
 import com.kapilagro.sasyak.di.IoDispatcher
+import com.kapilagro.sasyak.domain.repositories.WeatherRepository
 import com.kapilagro.sasyak.presentation.common.navigation.AppNavGraph
 import com.kapilagro.sasyak.presentation.common.navigation.Screen
 import com.kapilagro.sasyak.presentation.common.theme.SasyakTheme
@@ -38,9 +39,13 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var imageUploadService: ImageUploadService
 
+    @Inject
+    lateinit var weatherRepository: WeatherRepository
+
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        weatherRepository.resetSessionFlag()
         setContent {
             SasyakTheme {
                 MainScreen(ioDispatcher, imageUploadService)
