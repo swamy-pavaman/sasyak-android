@@ -1,7 +1,6 @@
 package com.kapilagro.sasyak.presentation.reports
 
 import android.os.Build
-import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -20,6 +19,7 @@ import com.kapilagro.sasyak.R
 import com.kapilagro.sasyak.presentation.common.theme.*
 import com.kapilagro.sasyak.presentation.reports.components.TaskCompletionChart
 import com.kapilagro.sasyak.presentation.reports.components.TaskTypeSummary
+import com.kapilagro.sasyak.presentation.home.SegmentedTaskControl
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
@@ -81,21 +81,18 @@ fun ReportScreen(
                 }
             }
 
-            TabRow(
-                selectedTabIndex = if (chartTab == ReportViewModel.ChartTab.WEEKLY) 0 else 1,
-                modifier = Modifier.padding(horizontal = 16.dp)
-            ) {
-                Tab(
-                    selected = chartTab == ReportViewModel.ChartTab.WEEKLY,
-                    onClick = { viewModel.setChartTab(ReportViewModel.ChartTab.WEEKLY) },
-                    text = { Text("Weekly") }
-                )
-                Tab(
-                    selected = chartTab == ReportViewModel.ChartTab.MONTHLY,
-                    onClick = { viewModel.setChartTab(ReportViewModel.ChartTab.MONTHLY) },
-                    text = { Text("Monthly") }
-                )
-            }
+            SegmentedTaskControl(
+                segments = listOf("Weekly", "Monthly"),
+                selectedIndex = if (chartTab == ReportViewModel.ChartTab.WEEKLY) 0 else 1,
+                onSegmentSelected = { index ->
+                    viewModel.setChartTab(
+                        if (index == 0) ReportViewModel.ChartTab.WEEKLY
+                        else ReportViewModel.ChartTab.MONTHLY
+                    )
+                },
+                modifier = Modifier.padding(horizontal = 16.dp),
+                backgroundColor = LemonLight // Use LemonLight for background
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -107,7 +104,7 @@ fun ReportScreen(
                         viewModel.getMonthlyTaskCounts()
                     }
 
-                    Log.d(
+                    android.util.Log.d(
                         "ReportScreen",
                         "Task Counts for Chart - Completed: ${taskCounts.first.size}, Created: ${taskCounts.second.size}"
                     )

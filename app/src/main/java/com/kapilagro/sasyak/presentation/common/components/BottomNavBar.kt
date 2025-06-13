@@ -1,11 +1,13 @@
 package com.kapilagro.sasyak.presentation.common.components
 
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -13,7 +15,7 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.kapilagro.sasyak.presentation.common.navigation.Screen
-import com.kapilagro.sasyak.presentation.common.theme.AgroPrimary
+import com.kapilagro.sasyak.presentation.common.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -23,9 +25,16 @@ fun BottomNavBar(
     modifier: Modifier = Modifier
 ) {
     NavigationBar(
-        modifier = modifier,
-        containerColor = MaterialTheme.colorScheme.surface, // Ensure consistent theming
-        contentColor = MaterialTheme.colorScheme.onSurface
+        modifier = modifier
+            .shadow(
+                elevation = 8.dp,
+                shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
+                clip = false
+            )
+            .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)),
+        containerColor = Card, // Pure white surface
+        contentColor = Foreground, // Professional dark gray
+        tonalElevation = 4.dp
     ) {
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentDestination = navBackStackEntry?.destination
@@ -45,8 +54,8 @@ fun BottomNavBar(
                         badge = {
                             if (badgeCount != null && badgeCount > 0) {
                                 Badge(
-                                    containerColor = MaterialTheme.colorScheme.error,
-                                    contentColor = MaterialTheme.colorScheme.onError
+                                    containerColor = Error, // Clear red for notifications
+                                    contentColor = White
                                 ) {
                                     Text(
                                         text = if (badgeCount > 99) "99+" else badgeCount.toString(),
@@ -61,8 +70,8 @@ fun BottomNavBar(
                                 painterResource(id = it)
                             } ?: return@BadgedBox,
                             contentDescription = screen.title,
-                            modifier = Modifier.size(28.dp), // Adjusted size for better visibility
-                            tint = if (selected) AgroPrimary else Color.Gray.copy(alpha = 0.6f)
+                            modifier = Modifier.size(26.dp), // Slightly smaller for elegance
+                            tint = if (selected) AgroPrimary else AgroMutedForeground // Deep forest vs muted green-gray
                         )
                     }
                 },
@@ -70,27 +79,25 @@ fun BottomNavBar(
                     Text(
                         text = screen.title,
                         style = MaterialTheme.typography.labelMedium,
-                        color = if (selected) AgroPrimary else Color.Gray.copy(alpha = 0.6f)
+                        color = if (selected) AgroPrimary else AgroMutedForeground
                     )
                 },
                 selected = selected,
                 onClick = {
                     navController.navigate(screen.route) {
-                        // Pop up to the start destination to avoid stacking destinations
                         popUpTo(navController.graph.findStartDestination().id) {
                             saveState = true
                         }
-                        // Avoid duplicates and restore state
                         launchSingleTop = true
                         restoreState = true
                     }
                 },
                 colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = AgroPrimary,
+                    selectedIconColor = AgroPrimary, // Deep forest green when selected
                     selectedTextColor = AgroPrimary,
-                    unselectedIconColor = Color.Gray.copy(alpha = 0.6f),
-                    unselectedTextColor = Color.Gray.copy(alpha = 0.6f),
-                    indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                    unselectedIconColor = AgroMutedForeground, // Muted green-gray when unselected
+                    unselectedTextColor = AgroMutedForeground,
+                    indicatorColor = AgroLight // Very light green indicator
                 )
             )
         }

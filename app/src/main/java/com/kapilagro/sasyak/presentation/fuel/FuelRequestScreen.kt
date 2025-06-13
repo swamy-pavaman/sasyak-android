@@ -31,6 +31,9 @@ import com.kapilagro.sasyak.domain.models.FuelDetails
 import com.kapilagro.sasyak.presentation.common.components.SuccessDialog
 import com.kapilagro.sasyak.presentation.common.navigation.Screen
 import com.kapilagro.sasyak.presentation.common.theme.AgroPrimary
+import com.kapilagro.sasyak.presentation.common.theme.FuelColor
+import com.kapilagro.sasyak.presentation.common.theme.FuelIcon
+import com.kapilagro.sasyak.presentation.common.theme.ScoutingColor
 import com.kapilagro.sasyak.presentation.home.HomeViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.launch
@@ -204,12 +207,14 @@ fun FuelRequestScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Fuel Entry") },
+                title = { Text("Fuel Entry", color = Color.White) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
                     }
-                }
+                }, colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = FuelIcon
+                )
             )
         }
     ) { paddingValues ->
@@ -527,7 +532,7 @@ fun FuelRequestScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                    colors = ButtonDefaults.buttonColors(containerColor = FuelIcon)
                 ) {
                     Text("Select Images")
                 }
@@ -676,7 +681,7 @@ fun FuelRequestScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = AgroPrimary)
+                colors = ButtonDefaults.buttonColors(containerColor = FuelIcon)
             ) {
                 Text("Submit")
             }

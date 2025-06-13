@@ -1,5 +1,7 @@
 package com.kapilagro.sasyak.presentation.common.theme
 
+
+// Light and Dark Color Schemes
 import android.app.Activity
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -14,15 +16,15 @@ import androidx.core.view.WindowCompat
 
 private val LightColorScheme = lightColorScheme(
     primary = AgroPrimary,
-    onPrimary = Color.White,
+    onPrimary = White, // Use the defined White
     primaryContainer = AgroLight,
     onPrimaryContainer = AgroDark,
     secondary = AgroSecondary,
-    onSecondary = Color.White,
+    onSecondary = White,
     secondaryContainer = AgroMuted,
     onSecondaryContainer = AgroDark,
     tertiary = AgroAccent,
-    onTertiary = Color.Black,
+    onTertiary = White, // Updated for better contrast on Sky Blue
     background = Background,
     onBackground = Foreground,
     surface = Card,
@@ -31,32 +33,32 @@ private val LightColorScheme = lightColorScheme(
     onSurfaceVariant = AgroMutedForeground,
     outline = Border,
     error = Error,
-    errorContainer = Color(0xFFFFDAD6),
-    onError = Color.White,
+    errorContainer = Color(0xFFFFDAD6), // Use Compose Color
+    onError = White,
     onErrorContainer = Color(0xFF410002)
 )
 
 private val DarkColorScheme = darkColorScheme(
-    primary = AgroPrimary,
-    onPrimary = Color.White,
+    primary = Color(0xFF81C784), // Lighter Green for Dark Mode
+    onPrimary = White,
     primaryContainer = AgroDark,
-    onPrimaryContainer = AgroLight,
+    onPrimaryContainer = Color(0xFF81C784),
     secondary = AgroSecondary,
-    onSecondary = Color.White,
-    secondaryContainer = Color(0xFF004D40),
-    onSecondaryContainer = AgroLight,
-    tertiary = AgroAccent,
-    onTertiary = Color.Black,
+    onSecondary = White,
+    secondaryContainer = Color(0xFF5A4037), // Darker Soil Brown
+    onSecondaryContainer = Color(0xFFE5C9B8),
+    tertiary = Color(0xFF29B6F6), // Lighter Sky Blue for Dark Mode
+    onTertiary = White,
     background = BackgroundDark,
-    onBackground = Color.White,
+    onBackground = Color(0xFFFAFAFA), // Off-White
     surface = SurfaceDark,
-    onSurface = Color.White,
+    onSurface = Color(0xFFFAFAFA),
     surfaceVariant = Color(0xFF424242),
     onSurfaceVariant = Color(0xFFBFBFBF),
     outline = Color(0xFF707070),
     error = Error,
     errorContainer = Color(0xFF93000A),
-    onError = Color.White,
+    onError = White,
     onErrorContainer = Color(0xFFFFDAD6)
 )
 
@@ -71,7 +73,7 @@ fun SasyakTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-             window.statusBarColor = colorScheme.surface.toArgb()
+            window.statusBarColor = colorScheme.surface.toArgb()
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
         }
     }

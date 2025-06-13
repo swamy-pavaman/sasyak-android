@@ -3,7 +3,6 @@ package com.kapilagro.sasyak.presentation.common.components
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccessTime
@@ -61,136 +60,121 @@ fun getFirstImageUrl(imagesJson: String?): String? {
 @Composable
 fun TaskCard(
     task: Task,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val firstImageUrl = getFirstImageUrl(task.imagesJson)
 
     Card(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .height(100.dp)
-            .padding(vertical = 4.dp, horizontal = 8.dp),
-        shape = RoundedCornerShape(8.dp),
+            .padding(vertical = 8.dp, horizontal = 12.dp),
+        shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = 1.dp,
-            pressedElevation = 3.dp
+            defaultElevation = 2.dp,
+            pressedElevation = 4.dp
         ),
         colors = CardDefaults.cardColors(
-            containerColor = White
+            containerColor = TaskCardBackground // Updated to new color
         ),
-        border = BorderStroke(0.3.dp, Border),
+        border = BorderStroke(0.5.dp, CardBorder),
         onClick = onClick
     ) {
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Image (if available)
             firstImageUrl?.let { imageUrl ->
                 AsyncImage(
                     model = imageUrl,
                     contentDescription = "Task image",
                     modifier = Modifier
-                        .size(80.dp)
-                        .clip(RoundedCornerShape(6.dp)),
+                        .size(90.dp),
                     contentScale = ContentScale.Crop
                 )
             } ?: Box(
                 modifier = Modifier
-                    .size(80.dp)
-                    .clip(RoundedCornerShape(6.dp))
+                    .size(90.dp)
+                    .clip(RoundedCornerShape(8.dp))
                     .background(AgroMuted)
             )
 
-            // Content column
             Column(
                 modifier = Modifier
                     .fillMaxHeight()
                     .weight(1f),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
-                // Title and status row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                Column {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TaskTypeChip(taskType = task.taskType)
 
-                    // kk
-                    TaskTypeChip(taskType = task.taskType)
-//                    Text(
-//                        text = task.title,
-//                        style = MaterialTheme.typography.titleSmall.copy(
-//                            fontWeight = FontWeight.Medium,
-//                            color = AgroDark
-//                        ),
-//                        maxLines = 1,
-//                        overflow = TextOverflow.Ellipsis,
-//                        modifier = Modifier.weight(1f)
-//                    )
+                        val statusIcon = when (task.status?.lowercase()) {
+                            "pending" -> Icons.Outlined.Schedule
+                            "approved" -> Icons.Outlined.CheckCircle
+                            "rejected" -> Icons.Outlined.Close
+                            "submitted" -> Icons.Outlined.Schedule
+                            "implemented" -> Icons.Outlined.CheckCircle
+                            else -> Icons.Outlined.Schedule
+                        }
 
-                    // Status indicator icon
-                    val statusIcon = when (task.status?.lowercase()) {
-                        "pending" -> Icons.Outlined.Schedule
-                        "approved" -> Icons.Outlined.CheckCircle
-                        "rejected" -> Icons.Outlined.Close
-                        "submitted" -> Icons.Outlined.Schedule
-                        "implemented" -> Icons.Outlined.CheckCircle
-                        else -> Icons.Outlined.Schedule
+                        val statusColor = when (task.status?.lowercase()) {
+                            "pending" -> WarningAccent
+                            "approved" -> PrimaryAccent
+                            "rejected" -> ErrorAccent
+                            "submitted" -> WarningAccent
+                            "implemented" -> PrimaryAccent
+                            else -> WarningAccent
+                        }
+
+                        Icon(
+                            imageVector = statusIcon,
+                            contentDescription = "Task status: ${task.status}",
+                            tint = statusColor,
+                            modifier = Modifier.size(24.dp)
+                        )
                     }
 
-                    val statusColor = when (task.status?.lowercase()) {
-                        "pending" -> StatusPending
-                        "approved" -> StatusApproved
-                        "rejected" -> StatusRejected
-                        "submitted" -> StatusPending
-                        "implemented" -> StatusApproved
-                        else -> StatusPending
-                    }
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                    Icon(
-                        imageVector = statusIcon,
-                        contentDescription = "Task status: ${task.status}",
-                        tint = statusColor,
-                        modifier = Modifier.size(20.dp)
+                    Text(
+                        text = task.description,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextSecondary,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
 
-                // Description
-                Text(
-                    text = task.description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = AgroMutedForeground,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                // Time and task type
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.AccessTime,
                             contentDescription = null,
-                            modifier = Modifier.size(14.dp),
-                            tint = AgroMutedForeground
+                            modifier = Modifier.size(16.dp),
+                            tint = TextSecondary
                         )
                         Text(
                             text = formatDateTime(task.createdAt ?: ""),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = AgroMutedForeground
+                            style = MaterialTheme.typography.labelMedium,
+                            color = TextSecondary
                         )
                     }
-//                        kk
-//                    TaskTypeChip(taskType = task.taskType)
                 }
             }
         }
@@ -200,12 +184,12 @@ fun TaskCard(
 @Composable
 fun TaskTypeChip(taskType: String) {
     val (backgroundColor, textColor) = when (taskType.lowercase()) {
-        "scouting" -> Pair(ScoutingContainer, ScoutingIcon)
-        "spraying" -> Pair(SprayingContainer, SprayingIcon)
-        "sowing" -> Pair(SowingContainer, SowingIcon)
-        "fuel" -> Pair(FuelContainer, FuelIcon)
-        "yield" -> Pair(YieldContainer, YieldIcon)
-        else -> Pair(AgroMuted, AgroMutedForeground)
+        "scouting" -> Pair(ScoutingColor.copy(alpha = 0.1f), ScoutingColor)
+        "spraying" -> Pair(SprayingColor.copy(alpha = 0.1f), SprayingColor)
+        "sowing" -> Pair(SowingColor.copy(alpha = 0.1f), SowingColor)
+        "fuel" -> Pair(FuelColor.copy(alpha = 0.1f), FuelColor)
+        "yield" -> Pair(YieldColor.copy(alpha = 0.1f), YieldColor)
+        else -> Pair(AgroMuted.copy(alpha = 0.1f), AgroMutedForeground)
     }
 
     Surface(

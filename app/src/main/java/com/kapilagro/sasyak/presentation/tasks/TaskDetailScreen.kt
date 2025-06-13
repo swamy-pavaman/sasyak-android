@@ -731,14 +731,13 @@ fun ImageSlideshow(imageUrls: List<String>) {
         }
     }
 }
-
 @Composable
 fun TaskStatusChip(taskStatus: String) {
     val (backgroundColor, textColor) = when (taskStatus.lowercase()) {
-        "submitted" -> Pair(SubmittedContainer, SubmittedText)
-        "approved" -> Pair(ApprovedContainer, ApprovedText)
-        "rejected" -> Pair(RejectedContainer, RejectedText)
-        else -> Pair(AgroMuted, AgroMutedForeground)
+        "submitted" -> Pair(WarningAccent.copy(alpha = 0.1f), WarningAccent)
+        "approved" -> Pair(PrimaryAccent.copy(alpha = 0.1f), PrimaryAccent)
+        "rejected" -> Pair(ErrorAccent.copy(alpha = 0.1f), ErrorAccent)
+        else -> Pair(AgroMuted.copy(alpha = 0.1f), AgroMutedForeground)
     }
 
     Surface(
