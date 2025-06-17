@@ -75,6 +75,11 @@ class AuthRepositoryImpl @Inject constructor(
     override suspend fun logout() {
         clearAuthTokens()
         localDataSource.deleteAllUsers()
+        sharedPreferences.edit().apply{
+            remove("current_user_id")
+            remove("manager_id")
+            apply()
+        }
     }
 
     override fun getAuthState(): Flow<Boolean> = authStateFlow.asStateFlow()
@@ -110,9 +115,6 @@ class AuthRepositoryImpl @Inject constructor(
         userRoleFlow.value = null
     }
 
-    override suspend fun getCurrentUserId(): Int? {
-        return sharedPreferences.getInt(KEY_USER_ID, -1).takeIf { it != -1 }
-    }
 
     // Moved from implementation method to interface implementation
     override fun getAccessToken(): String? {

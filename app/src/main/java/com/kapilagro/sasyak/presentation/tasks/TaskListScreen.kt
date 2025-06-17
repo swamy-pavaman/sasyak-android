@@ -27,13 +27,16 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
+import com.airbnb.lottie.compose.* // Import Lottie dependencies
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
+import com.kapilagro.sasyak.R // Import the R class to access the raw resource
 import com.kapilagro.sasyak.presentation.common.components.TaskCard
 import com.kapilagro.sasyak.presentation.common.navigation.Screen
 import com.kapilagro.sasyak.presentation.common.theme.*
 import com.kapilagro.sasyak.presentation.tasks.components.TabItem
 import com.kapilagro.sasyak.presentation.tasks.components.TaskTabRow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -473,24 +476,50 @@ fun ErrorView(
     onRetry: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // Load the Lottie animation composition
+    val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.no_internet))
+    val lottieAnimatable = rememberLottieAnimatable()
+
+    // Play the Lottie animation continuously once it's loaded
+    LaunchedEffect(composition) {
+        if (composition != null) {
+            lottieAnimatable.animate(
+                composition = composition,
+                iterations = LottieConstants.IterateForever,
+                speed = 1f
+            )
+        }
+    }
+
     Box(
         modifier = modifier,
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.TopCenter
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
             modifier = Modifier.padding(16.dp)
         ) {
-            Text(
-                text = message,
+            // Just show the Lottie animation
+            LottieAnimation(
+                composition = composition,
+                progress = { lottieAnimatable.progress },
+                modifier = Modifier.size(300.dp)
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            /*Text(
+                text = message, // use the passed `message` instead of hardcoded one
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.error,
                 textAlign = TextAlign.Center
             )
-            Spacer(modifier = Modifier.height(8.dp))
+
+            Spacer(modifier = Modifier.height(16.dp)) */
+
             Button(onClick = onRetry) {
-                Text("Retry")
+                Text("Try Again")
             }
         }
     }

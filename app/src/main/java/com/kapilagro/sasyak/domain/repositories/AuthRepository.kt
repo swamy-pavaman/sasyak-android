@@ -8,7 +8,6 @@ interface AuthRepository {
     suspend fun login(email: String, password: String): ApiResponse<AuthResponse>
     suspend fun refreshToken(): ApiResponse<AuthResponse>
     suspend fun logout()
-    suspend fun getCurrentUserId(): Int?
     fun getAuthState(): Flow<Boolean>
     fun getUserRole(): Flow<String?>
     suspend fun saveAuthTokens(authResponse: AuthResponse)

@@ -1,9 +1,10 @@
 package com.kapilagro.sasyak.data.repositories
 
+import android.content.SharedPreferences
 import android.util.Log
 import com.kapilagro.sasyak.data.api.ApiService
 import com.kapilagro.sasyak.data.api.mappers.toDomainModel
-import com.kapilagro.sasyak.data.api.mappers.toEntity
+import com.kapilagro.sasyak.data.api.mappers.toEntityModel
 import com.kapilagro.sasyak.data.api.models.requests.UpdateProfileRequest
 import com.kapilagro.sasyak.data.api.models.requests.UpdateTeamMemberRequest
 import com.kapilagro.sasyak.data.api.models.responses.SupervisorListResponse
@@ -19,28 +20,31 @@ import java.util.Date
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
+import androidx.core.content.edit
 
 @Singleton
 class UserRepositoryImpl @Inject constructor(
     private val apiService: ApiService,
     private val authRepository: AuthRepository,
-    private val localDataSource: LocalDataSource
+    private val localDataSource: LocalDataSource,
+    private val sharedPreferences: SharedPreferences
 ) : UserRepository {
 
     companion object {
         private const val TAG = "UserRepository"
-        private const val CACHE_EXPIRY_HOURS = 1 // Cache expires after 1 hour
     }
 
     override suspend fun getCurrentUser(): ApiResponse<User> {
         return try {
-            // Get current user ID from auth repository
-            val currentUserId = authRepository.getCurrentUserId() // You'll need to implement this
+            // Retrieve user ID from SharedPreferences
+            val currentUserId = sharedPreferences.getInt("current_user_id", -1).takeIf { it != -1 }
+            Log.d(TAG, "Current user ID from SharedPreferences: $currentUserId")
 
             if (currentUserId != null) {
                 Log.d(TAG, "Trying to get cached user first")
                 // Try to get from cache first
                 val cachedUser = localDataSource.getUserById(currentUserId).firstOrNull()
+                Log.d(TAG, "Cached user: $cachedUser")
 
                 // Check if cache is valid (not expired)
                 if (cachedUser != null) {
@@ -49,46 +53,32 @@ class UserRepositoryImpl @Inject constructor(
                 }
             }
 
-            Log.d(TAG, "Cache miss or expired - fetching from API")
-            // Cache miss or expired - fetch from API
+            Log.d(TAG, "Cache miss or no user ID - fetching from API")
+            // Cache miss or no user ID - fetch from API
             val response = apiService.getCurrentUser()
+            Log.d(TAG, "API call made, response: ${response.body()}")
 
             if (response.isSuccessful && response.body() != null) {
                 Log.d(TAG, "API call successful")
                 val user = response.body()!!.toDomainModel()
+
+                // Save user ID to SharedPreferences
+                sharedPreferences.edit {
+                    putInt("current_user_id", user.id)
+                }
 
                 // Save user role for future use
                 authRepository.saveUserRole(user.role)
 
                 Log.d(TAG, "Saving user to cache")
                 // Cache the user data
-                localDataSource.insertUser(user.toEntity().copy(lastSyncedAt = Date()))
+                localDataSource.insertUser(user.toEntityModel().copy(lastSyncedAt = Date()))
 
                 ApiResponse.Success(user)
             } else {
-                // If API fails, try to return cached data even if expired
-                Log.d(TAG, "API call failed, trying to return cached user")
-                if (currentUserId != null) {
-                    val cachedUser = localDataSource.getUserById(currentUserId).firstOrNull()
-                    if (cachedUser != null) {
-                        return ApiResponse.Success(cachedUser.toDomainModel())
-                    }
-                }
                 ApiResponse.Error(response.errorBody()?.string() ?: "Failed to get user")
             }
         } catch (e: Exception) {
-            // If network fails, try to return cached data
-            try {
-                val currentUserId = authRepository.getCurrentUserId()
-                if (currentUserId != null) {
-                    val cachedUser = localDataSource.getUserById(currentUserId).firstOrNull()
-                    if (cachedUser != null) {
-                        return ApiResponse.Success(cachedUser.toDomainModel())
-                    }
-                }
-            } catch (cacheException: Exception) {
-                // Ignore cache exception and return original error
-            }
             ApiResponse.Error(e.message ?: "An unknown error occurred")
         }
     }
@@ -115,7 +105,7 @@ class UserRepositoryImpl @Inject constructor(
                 val updatedUser = response.body()!!.toDomainModel()
 
                 // Update cache with new data
-                localDataSource.insertUser(updatedUser.toEntity().copy(lastSyncedAt = Date()))
+                localDataSource.insertUser(updatedUser.toEntityModel().copy(lastSyncedAt = Date()))
 
                 ApiResponse.Success(updatedUser)
             } else {
@@ -128,28 +118,38 @@ class UserRepositoryImpl @Inject constructor(
 
     override suspend fun getSupervisorManager(): ApiResponse<User> {
         return try {
-            // Get current user to find their manager
-            val currentUser = getCurrentUser()
-            if (currentUser is ApiResponse.Success && currentUser.data.managerId != null) {
-                val managerId = currentUser.data.managerId
+            // Retrieve manager ID from SharedPreferences
+            val managerId = sharedPreferences.getInt("manager_id", -1).takeIf { it != -1 }
+            Log.d(TAG, "Manager ID from SharedPreferences: $managerId")
 
+            if (managerId != null) {
+                Log.d(TAG, "Trying to get cached manager first")
                 // Try to get manager from cache first
                 val cachedManager = localDataSource.getUserById(managerId).firstOrNull()
+                Log.d(TAG, "Cached manager: $cachedManager")
 
                 // Check if cache is valid
                 if (cachedManager != null) {
+                    Log.d(TAG, "Cache hit - returning cached manager")
                     return ApiResponse.Success(cachedManager.toDomainModel())
                 }
             }
 
-            // Cache miss or expired - fetch from API
+            Log.d(TAG, "Cache miss or no manager ID - fetching from API")
+            // Cache miss or no manager ID - fetch from API
             val response = apiService.getSupervisorManager()
+            Log.d(TAG, "API call made for manager, response: ${response.body()}")
 
             if (response.isSuccessful && response.body() != null) {
                 val manager = response.body()!!.toDomainModel()
 
+                // Save manager ID to SharedPreferences
+                sharedPreferences.edit {
+                    putInt("manager_id", manager.id)
+                }
+
                 // Cache the manager data
-                localDataSource.insertUser(manager.toEntity().copy(lastSyncedAt = Date()))
+                localDataSource.insertUser(manager.toEntityModel().copy(lastSyncedAt = Date()))
 
                 ApiResponse.Success(manager)
             } else {
@@ -166,10 +166,6 @@ class UserRepositoryImpl @Inject constructor(
 
             if (response.isSuccessful && response.body() != null) {
                 val supervisor = response.body()!!.toDomainModel()
-
-                // Cache the supervisor data
-                localDataSource.insertUser(supervisor.toEntity().copy(lastSyncedAt = Date()))
-
                 ApiResponse.Success(supervisor)
             } else {
                 ApiResponse.Error(response.errorBody()?.string() ?: "Failed to get profile")
@@ -183,7 +179,7 @@ class UserRepositoryImpl @Inject constructor(
         return try {
             val response = apiService.getTeamMembers()
             if (response.isSuccessful && response.body() != null) {
-                val teamMembers = response.body()!!.employees.map {
+                ApiResponse.Success(response.body()!!.employees.map {
                     TeamMember(
                         id = it.id,
                         name = it.name,
@@ -193,15 +189,7 @@ class UserRepositoryImpl @Inject constructor(
                         phoneNumber = it.phoneNumber,
                         location = it.location
                     )
-                }
-
-                // Cache team members as users
-                val userEntities = response.body()!!.employees.map { employee ->
-                    employee.toDomainModel().toEntity().copy(lastSyncedAt = Date())
-                }
-                localDataSource.insertUsers(userEntities)
-
-                ApiResponse.Success(teamMembers)
+                })
             } else {
                 ApiResponse.Error(response.errorBody()?.string() ?: "Failed to get team members")
             }
@@ -214,7 +202,7 @@ class UserRepositoryImpl @Inject constructor(
         return try {
             val response = apiService.getAllSupervisors()
             if (response.isSuccessful && response.body() != null) {
-                val supervisors = response.body()!!.employees.map {
+                ApiResponse.Success(response.body()!!.employees.map {
                     TeamMember(
                         id = it.id,
                         name = it.name,
@@ -224,15 +212,7 @@ class UserRepositoryImpl @Inject constructor(
                         phoneNumber = it.phoneNumber,
                         location = it.location
                     )
-                }
-
-                // Cache supervisors as users
-                val userEntities = response.body()!!.employees.map { employee ->
-                    employee.toDomainModel().toEntity().copy(lastSyncedAt = Date())
-                }
-                localDataSource.insertUsers(userEntities)
-
-                ApiResponse.Success(supervisors)
+                })
             } else {
                 ApiResponse.Error(response.errorBody()?.string() ?: "Failed to get supervisors")
             }
@@ -269,53 +249,12 @@ class UserRepositoryImpl @Inject constructor(
             )
 
             if (response.isSuccessful && response.body() != null) {
-                val updatedUser = response.body()!!.toDomainModel()
-
-                // Update cache with new data
-                localDataSource.insertUser(updatedUser.toEntity().copy(lastSyncedAt = Date()))
-
-                ApiResponse.Success(updatedUser)
+                ApiResponse.Success(response.body()!!.toDomainModel())
             } else {
                 ApiResponse.Error(response.errorBody()?.string() ?: "Failed to update team member")
             }
         } catch (e: Exception) {
             ApiResponse.Error(e.message ?: "An unknown error occurred")
         }
-    }
-
-    // Helper method to check if cache is still valid
-    private fun isCacheValid(lastSyncedAt: Date): Boolean {
-        val currentTime = System.currentTimeMillis()
-        val cacheTime = lastSyncedAt.time
-        val timeDifference = currentTime - cacheTime
-        return timeDifference < TimeUnit.HOURS.toMillis(CACHE_EXPIRY_HOURS.toLong())
-    }
-
-    // Method to force refresh cache (useful for pull-to-refresh)
-    suspend fun refreshCurrentUser(): ApiResponse<User> {
-        return try {
-            val response = apiService.getCurrentUser()
-
-            if (response.isSuccessful && response.body() != null) {
-                val user = response.body()!!.toDomainModel()
-
-                // Save user role for future use
-                authRepository.saveUserRole(user.role)
-
-                // Update cache with fresh data
-                localDataSource.insertUser(user.toEntity().copy(lastSyncedAt = Date()))
-
-                ApiResponse.Success(user)
-            } else {
-                ApiResponse.Error(response.errorBody()?.string() ?: "Failed to refresh user")
-            }
-        } catch (e: Exception) {
-            ApiResponse.Error(e.message ?: "An unknown error occurred")
-        }
-    }
-
-    // Method to clear user cache
-    suspend fun clearUserCache() {
-        localDataSource.deleteAllUsers()
     }
 }
