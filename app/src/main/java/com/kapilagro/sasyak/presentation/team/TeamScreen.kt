@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -25,6 +26,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.rememberAsyncImagePainter
+import com.airbnb.lottie.compose.LottieAnimation
+import com.airbnb.lottie.compose.LottieCompositionSpec
+import com.airbnb.lottie.compose.LottieConstants
+import com.airbnb.lottie.compose.rememberLottieAnimatable
+import com.airbnb.lottie.compose.rememberLottieComposition
+import com.kapilagro.sasyak.R
 import com.kapilagro.sasyak.domain.models.TeamMember
 import com.kapilagro.sasyak.presentation.common.components.ErrorView
 
@@ -101,22 +108,30 @@ fun TeamScreen(
                     }
                     is TeamViewModel.TeamState.Error -> {
                         val errorState = state as TeamViewModel.TeamState.Error
+                        // Load the Lottie animation composition
+                        val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.no_internet))
+                        val lottieAnimatable = rememberLottieAnimatable()
+
+                        // Play the Lottie animation continuously once it's loaded
+                        LaunchedEffect(composition) {
+                            if (composition != null) {
+                                lottieAnimatable.animate(
+                                    composition = composition,
+                                    iterations = LottieConstants.IterateForever,
+                                    speed = 1f
+                                )
+                            }
+                        }
                         Box(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Icon(
-                                    imageVector = Icons.Default.Star,
-                                    contentDescription = "Error",
-                                    tint = MaterialTheme.colorScheme.error,
-                                    modifier = Modifier.size(48.dp)
-                                )
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Text(
-                                    text = errorState.message,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.error
+                                // Just show the Lottie animation
+                                LottieAnimation(
+                                    composition = composition,
+                                    progress = { lottieAnimatable.progress },
+                                    modifier = Modifier.size(300.dp)
                                 )
                                 Spacer(modifier = Modifier.height(12.dp))
                                 Button(

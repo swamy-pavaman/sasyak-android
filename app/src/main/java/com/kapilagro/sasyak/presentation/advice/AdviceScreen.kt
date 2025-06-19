@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -19,6 +20,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.airbnb.lottie.compose.LottieAnimation
+import com.airbnb.lottie.compose.LottieCompositionSpec
+import com.airbnb.lottie.compose.LottieConstants
+import com.airbnb.lottie.compose.rememberLottieAnimatable
+import com.airbnb.lottie.compose.rememberLottieComposition
+import com.kapilagro.sasyak.R
 import com.kapilagro.sasyak.domain.models.TaskAdvice
 import com.kapilagro.sasyak.presentation.common.theme.AdviceContainer
 import com.kapilagro.sasyak.presentation.common.theme.AdviceIcon
@@ -75,16 +82,32 @@ fun AdviceScreen(
                 }
             }
             is AdviceState.Error -> {
+                val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.no_internet))
+                val lottieAnimatable = rememberLottieAnimatable()
+
+                // Play the Lottie animation continuously once it's loaded
+                LaunchedEffect(composition) {
+                    if (composition != null) {
+                        lottieAnimatable.animate(
+                            composition = composition,
+                            iterations = LottieConstants.IterateForever,
+                            speed = 1f
+                        )
+                    }
+                }
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(padding),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = (state as AdviceState.Error).message,
-                        color = MaterialTheme.colorScheme.error
-                    )
+                    Column {
+                        LottieAnimation(
+                            composition = composition,
+                            progress = { lottieAnimatable.progress },
+                            modifier = Modifier.size(300.dp)
+                        )
+                    }
                 }
             }
         }

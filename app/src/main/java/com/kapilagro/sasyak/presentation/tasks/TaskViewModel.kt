@@ -89,9 +89,9 @@ class TaskViewModel @Inject constructor(
         viewModelScope.launch {
             val role = _userRole.value
             val newTab = when (role) {
-                "MANAGER" -> TaskTab.SUPERVISORS
+                "MANAGER" -> TaskTab.ME
                 "SUPERVISOR" -> TaskTab.ASSIGNED
-                else -> TaskTab.SUPERVISORS
+                else -> TaskTab.ME
             }
             if (_selectedTab.value != newTab) {
                 _selectedTab.value = newTab

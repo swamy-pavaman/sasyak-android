@@ -75,6 +75,7 @@ class AuthRepositoryImpl @Inject constructor(
     override suspend fun logout() {
         clearAuthTokens()
         localDataSource.deleteAllUsers()
+        localDataSource.deleteAllNotifications()
         sharedPreferences.edit().apply{
             remove("current_user_id")
             remove("manager_id")

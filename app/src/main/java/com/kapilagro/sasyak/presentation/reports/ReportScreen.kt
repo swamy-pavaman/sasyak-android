@@ -9,6 +9,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -16,6 +17,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.airbnb.lottie.compose.LottieAnimation
+import com.airbnb.lottie.compose.LottieCompositionSpec
+import com.airbnb.lottie.compose.LottieConstants
+import com.airbnb.lottie.compose.rememberLottieAnimatable
+import com.airbnb.lottie.compose.rememberLottieComposition
 import com.kapilagro.sasyak.R
 import com.kapilagro.sasyak.presentation.common.theme.*
 import com.kapilagro.sasyak.presentation.reports.components.TaskCompletionChart
@@ -146,25 +152,31 @@ fun ReportScreen(
                 }
 
                 is ReportViewModel.ReportState.Error -> {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(280.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = "Failed to load report data",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.error
+                    val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.no_internet))
+                    val lottieAnimatable = rememberLottieAnimatable()
+                    LaunchedEffect(composition) {
+                        if (composition != null) {
+                            lottieAnimatable.animate(
+                                composition = composition,
+                                iterations = LottieConstants.IterateForever,
+                                speed = 1f
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+                    }
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            LottieAnimation(
+                                composition = composition,
+                                progress = { lottieAnimatable.progress },
+                                modifier = Modifier.size(300.dp)
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
                             Button(onClick = { viewModel.loadTaskReport() }) {
                                 Text("Retry")
                             }
-                        }
                     }
                 }
             }
