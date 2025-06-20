@@ -1,6 +1,7 @@
 package com.kapilagro.sasyak.data.repositories
 
 import android.content.SharedPreferences
+import android.util.Log
 import com.kapilagro.sasyak.data.api.ApiService
 import com.kapilagro.sasyak.data.api.mappers.toDomainModel
 import com.kapilagro.sasyak.data.api.models.requests.RefreshTokenRequest
@@ -124,8 +125,11 @@ class AuthRepositoryImpl @Inject constructor(
 
     // Moved from implementation method to interface implementation
     override fun saveUserRole(role: String) {
-        sharedPreferences.edit() { putString(KEY_USER_ROLE, role) }
+        Log.d("AuthRepositoryImpl", "Saving user role: $role")
+        sharedPreferences.edit{ putString(KEY_USER_ROLE, role) }
+        Log.d("AuthRepositoryImpl", "User role saved: ${sharedPreferences.getString(KEY_USER_ROLE, null)}")
         userRoleFlow.value = role
+        Log.d("AuthRepositoryImpl", "User role saved: ${userRoleFlow.value}")
     }
 
     private fun isLoggedIn(): Boolean {
@@ -133,6 +137,8 @@ class AuthRepositoryImpl @Inject constructor(
     }
 
     private fun getUserRoleFromPrefs(): String? {
+        // this fun is returning "supervisor" for some reason which should be "SUPERVISOR" or "MANAGER"
+        Log.d("AuthRepositoryImpl", "Getting user role from prefs: ${sharedPreferences.getString(KEY_USER_ROLE, null)}")
         return sharedPreferences.getString(KEY_USER_ROLE, null)
     }
 }
