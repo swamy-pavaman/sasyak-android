@@ -41,7 +41,7 @@ class ProfileViewModel @Inject constructor(
         viewModelScope.launch {
             authRepository.getUserRole().collect { role ->
                 _userRole.value = role
-                if (role == "supervisor") {
+                if (role == "supervisor" || role == "Supervisor") {
                     _userRole.value = "MANAGER"
                 }
             }
