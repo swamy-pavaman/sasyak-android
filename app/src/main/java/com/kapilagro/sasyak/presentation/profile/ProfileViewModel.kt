@@ -41,16 +41,13 @@ class ProfileViewModel @Inject constructor(
         viewModelScope.launch {
             authRepository.getUserRole().collect { role ->
                 _userRole.value = role
-                if (role == "supervisor" || role == "Supervisor") {
-                    _userRole.value = "MANAGER"
-                }
             }
         }
     }
 
     init {
         loadUserProfile()
-        Log.d("ProfileViewModel", "User role from authRepo: $_userRole,$userRole")
+        Log.d("ProfileViewModel", "User role from authRepo: $_userRole,${userRole.value}")
 
         // Listen for role changes to load appropriate data
         viewModelScope.launch {

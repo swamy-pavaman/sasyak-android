@@ -26,6 +26,12 @@ class AuthRepositoryImpl @Inject constructor(
     private val authStateFlow = MutableStateFlow(isLoggedIn())
     private val userRoleFlow = MutableStateFlow<String?>(getUserRoleFromPrefs())
 
+    init {
+        sharedPreferences.all.forEach {
+            Log.d("AuthRepositoryImpl", "SharedPrefs: ${it.key} = ${it.value}")
+        }
+    }
+
     private companion object {
         const val KEY_ACCESS_TOKEN = "access_token"
         const val KEY_REFRESH_TOKEN = "refresh_token"
@@ -57,10 +63,11 @@ class AuthRepositoryImpl @Inject constructor(
 
         return try {
             val response = apiService.refreshToken(RefreshTokenRequest(refreshToken))
+            Log.d("AuthRepositoryImpl", "Refresh token response: ${response.body()}")
 
             if (response.isSuccessful && response.body() != null) {
                 val authResponse = response.body()!!.toDomainModel()
-                saveAuthTokens(authResponse)
+                saveAuthTokensForRefresh(authResponse)
                 ApiResponse.Success(authResponse)
             } else {
                 // Clear tokens if refresh fails
@@ -102,6 +109,17 @@ class AuthRepositoryImpl @Inject constructor(
         authStateFlow.value = true
         userRoleFlow.value = authResponse.role  // Update the role flow
     }
+
+    override suspend fun saveAuthTokensForRefresh(authResponse: com.kapilagro.sasyak.domain.models.AuthResponse) {
+        sharedPreferences.edit().apply {
+            putString(KEY_ACCESS_TOKEN, authResponse.accessToken)
+            putString(KEY_REFRESH_TOKEN, authResponse.refreshToken)
+            apply()
+        }
+        authStateFlow.value = true
+        userRoleFlow.value = sharedPreferences.getString(KEY_USER_ROLE, null)
+    }
+
     override suspend fun clearAuthTokens() {
         sharedPreferences.edit().apply {
             remove(KEY_ACCESS_TOKEN)
