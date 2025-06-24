@@ -70,7 +70,7 @@ class TaskViewModel @Inject constructor(
                 _userRole.value = role
                 // Set default tab based on role
                 val newTab = when (role) {
-                    "MANAGER" -> TaskTab.SUPERVISORS
+                    "MANAGER" -> TaskTab.ME
                     "SUPERVISOR" -> TaskTab.ASSIGNED // Default to ASSIGNED for supervisors
                     else -> TaskTab.SUPERVISORS
                 }
@@ -91,7 +91,7 @@ class TaskViewModel @Inject constructor(
             val newTab = when (role) {
                 "MANAGER" -> TaskTab.ME
                 "SUPERVISOR" -> TaskTab.ASSIGNED
-                else -> TaskTab.ME
+                else -> TaskTab.SUPERVISORS
             }
             if (_selectedTab.value != newTab) {
                 _selectedTab.value = newTab

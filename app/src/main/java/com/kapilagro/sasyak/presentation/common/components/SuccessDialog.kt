@@ -87,6 +87,7 @@ fun SuccessDialog(
                     color = AgroPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -100,7 +101,7 @@ fun SuccessDialog(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.fillMaxWidth()
                 )
-
+/*
                 if (details.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -138,7 +139,7 @@ fun SuccessDialog(
                             }
                         }
                     }
-                }
+                } */
 
                 Spacer(modifier = Modifier.height(24.dp))
 

@@ -92,14 +92,14 @@ fun TaskListScreen(
     val tabs: List<TabItem<TaskViewModel.TaskTab>> = when (userRole) {
         "MANAGER" -> listOf(
             TabItem(
-                id = TaskViewModel.TaskTab.SUPERVISORS,
-                title = "Supervisors",
-                count = supervisorTaskCount
-            ),
-            TabItem(
                 id = TaskViewModel.TaskTab.ME,
                 title = "Me",
                 count = createdTaskCount
+            ),
+            TabItem(
+                id = TaskViewModel.TaskTab.SUPERVISORS,
+                title = "Supervisors",
+                count = supervisorTaskCount
             )
         )
         "SUPERVISOR" -> listOf(

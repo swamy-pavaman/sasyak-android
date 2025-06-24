@@ -24,7 +24,7 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
-    private const val BASE_API_URL = "https://sasyak-backend.onrender.com/"
+    private const val BASE_API_URL = "https://sasyakapi.kapilagro.com/"
     private const val OPENWEATHER_BASE_URL = "https://api.openweathermap.org/"
     const val OPENWEATHER_API_KEY = "07c824948b0cc53ffa41bd3b23a71847"
 

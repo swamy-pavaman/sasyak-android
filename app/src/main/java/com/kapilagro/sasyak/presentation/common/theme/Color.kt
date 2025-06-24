@@ -72,3 +72,6 @@ val AdviceContainer = Color(0xFFFFF8E6)  // Light orange/yellow background
 val BackgroundDark = Color(0xFF121212)
 val SurfaceDark = Color(0xFF1E1E1E)
 
+
+val NotificationBg = Color(0xFFe7f2fe)
+val UnreadNotification = Color(0xFF0A7D3F)
