@@ -228,6 +228,8 @@ fun LoginScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+    var forgotPasswordEmail by remember { mutableStateOf("") } // State for email input in forgot password dialog
+    var showForgotPasswordDialog by remember { mutableStateOf(false) } // Control dialog visibility
 
     val colorScheme = MaterialTheme.colorScheme
 
@@ -357,7 +359,7 @@ fun LoginScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.End
                     ) {
-                        TextButton(onClick = { /* TODO: Forgot Password */ }) {
+                        TextButton(onClick = { showForgotPasswordDialog = true }) {
                             Text(
                                 "Forgot password?",
                                 color = colorScheme.primary,
@@ -404,6 +406,50 @@ fun LoginScreen(
                         }
                     }
                 }
+            }
+            // Forgot Password Dialog
+            if (showForgotPasswordDialog) {
+                AlertDialog(
+                    onDismissRequest = { showForgotPasswordDialog = false },
+                    title = { Text("Forgot Password") },
+                    text = {
+                        Column {
+                            Text("Enter your registered email to reset your password:")
+                            Spacer(modifier = Modifier.height(8.dp))
+                            OutlinedTextField(
+                                value = forgotPasswordEmail,
+                                onValueChange = { forgotPasswordEmail = it.trim() },
+                                keyboardOptions = KeyboardOptions.Default.copy(
+                                    keyboardType = KeyboardType.Email,
+                                    imeAction = ImeAction.Done
+                                ),
+                                leadingIcon = {
+                                    Icon(imageVector = Icons.Default.Email, contentDescription = null)
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                if (forgotPasswordEmail.isNotBlank()) {
+                                    viewModel.requestPasswordReset(forgotPasswordEmail.trim())
+                                    showForgotPasswordDialog = false
+                                }
+                            },
+                            enabled = forgotPasswordEmail.isNotBlank()
+                        ) {
+                            Text("Send Reset Link")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showForgotPasswordDialog = false }) {
+                            Text("Cancel")
+                        }
+                    }
+                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))

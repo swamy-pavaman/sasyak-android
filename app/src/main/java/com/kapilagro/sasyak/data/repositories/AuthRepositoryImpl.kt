@@ -128,6 +128,20 @@ class AuthRepositoryImpl @Inject constructor(
         userRoleFlow.value = role
     }
 
+    // Added implementation for forgot password
+    override suspend fun requestPasswordReset(email: String): ApiResponse<Unit> {
+        return try {
+            val response = apiService.requestPasswordReset(email) // Assuming this endpoint exists in ApiService
+            if (response.isSuccessful) {
+                ApiResponse.Success(Unit)
+            } else {
+                ApiResponse.Error(response.errorBody()?.string() ?: "Failed to request password reset")
+            }
+        } catch (e: Exception) {
+            ApiResponse.Error(e.message ?: "An unknown error occurred")
+        }
+    }
+
     private fun isLoggedIn(): Boolean {
         return !sharedPreferences.getString(KEY_ACCESS_TOKEN, null).isNullOrEmpty()
     }

@@ -13,6 +13,7 @@ interface AuthRepository {
     suspend fun saveAuthTokens(authResponse: AuthResponse)
     suspend fun clearAuthTokens()
     fun saveUserRole(role: String)
+    suspend fun requestPasswordReset(email: String): ApiResponse<Unit>
     fun getAccessToken(): String?
 
 }

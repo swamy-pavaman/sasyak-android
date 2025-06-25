@@ -28,6 +28,8 @@ interface ApiService {
 
     @POST("api/auth/login")
     suspend fun login(@Body loginRequest: LoginRequest): Response<AuthResponse>
+    @POST("api/auth/forgot-password") // Added endpoint
+    suspend fun requestPasswordReset(@Body email: String): Response<String> // Adjust return type based on backend
 
     @POST("api/auth/refresh-token")
     suspend fun refreshToken(@Body refreshTokenRequest: RefreshTokenRequest): Response<AuthResponse>
