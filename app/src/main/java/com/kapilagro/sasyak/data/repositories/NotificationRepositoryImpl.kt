@@ -28,6 +28,7 @@ class NotificationRepositoryImpl @Inject    constructor(
     ): ApiResponse<Pair<List<Notification>, Int>> {
         return try {
             val response = apiService.getNotifications(onlyUnread, page, size)
+            Log.d("NotificationRepository", "API response: $response")
 
             if (response.isSuccessful && response.body() != null) {
                 val notifications = response.body()!!.notifications.map { it.toDomainModel() }

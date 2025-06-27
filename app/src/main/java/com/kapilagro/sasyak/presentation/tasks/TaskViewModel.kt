@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import org.json.JSONArray
 import org.json.JSONObject
 import javax.inject.Inject
 
@@ -70,7 +71,7 @@ class TaskViewModel @Inject constructor(
                 _userRole.value = role
                 // Set default tab based on role
                 val newTab = when (role) {
-                    "MANAGER" -> TaskTab.SUPERVISORS
+                    "MANAGER" -> TaskTab.ME
                     "SUPERVISOR" -> TaskTab.ASSIGNED // Default to ASSIGNED for supervisors
                     else -> TaskTab.SUPERVISORS
                 }
@@ -91,7 +92,7 @@ class TaskViewModel @Inject constructor(
             val newTab = when (role) {
                 "MANAGER" -> TaskTab.ME
                 "SUPERVISOR" -> TaskTab.ASSIGNED
-                else -> TaskTab.ME
+                else -> TaskTab.SUPERVISORS
             }
             if (_selectedTab.value != newTab) {
                 _selectedTab.value = newTab
@@ -232,25 +233,56 @@ class TaskViewModel @Inject constructor(
         }
     }
 
-    fun addTaskImplementation(taskId: Int, implementationText: String) {
+    fun addTaskImplementation(taskId: Int, implementationText: String, imageUrls: List<String> = emptyList(), implementation: String? = null) {
         _updateTaskState.value = UpdateTaskState.Loading
         viewModelScope.launch(ioDispatcher) {
-            val implementationJson = JSONObject().apply {
-                put("text", implementationText)
-                put("timestamp", System.currentTimeMillis())
-            }.toString()
+            try {
+                // Parse existing implementations from implementation parameter
+                val existingImplementations = implementation?.let {
+                    try {
+                        if (it == "{}" || it.isEmpty()) {
+                            JSONArray()
+                        } else {
+                            JSONArray(it)
+                        }
+                    } catch (e: Exception) {
+                        // If it's a single JSONObject, wrap it in a JSONArray
+                        try {
+                            JSONArray().put(JSONObject(it))
+                        } catch (e2: Exception) {
+                            JSONArray()
+                        }
+                    }
+                } ?: JSONArray()
 
-            when (val response = taskRepository.updateTaskImplementation(taskId, implementationJson)) {
-                is ApiResponse.Success -> {
-                    _updateTaskState.value = UpdateTaskState.Success(response.data)
-                    loadTaskDetail(taskId)
+                // Create new implementation
+                val newImplementation = JSONObject().apply {
+                    put("text", implementationText)
+                    put("timestamp", System.currentTimeMillis())
+                    put("imageUrls", JSONArray(imageUrls))
                 }
-                is ApiResponse.Error -> {
-                    _updateTaskState.value = UpdateTaskState.Error(response.errorMessage)
+
+                // Append new implementation to existing ones
+                existingImplementations.put(newImplementation)
+                val updatedImplementationJson = existingImplementations.toString()
+
+                // Update repository with combined JSON
+                when (val response = taskRepository.updateTaskImplementation(taskId, updatedImplementationJson)) {
+                    is ApiResponse.Success -> {
+                        _updateTaskState.value = UpdateTaskState.Success(response.data)
+                        loadTaskDetail(taskId)
+                    }
+                    is ApiResponse.Error -> {
+                        _updateTaskState.value = UpdateTaskState.Error(
+                            response.errorMessage ?: "Failed to submit implementation"
+                        )
+                    }
+                    is ApiResponse.Loading -> {
+                        // No-op; loading state already set
+                    }
                 }
-                is ApiResponse.Loading -> {
-                    _updateTaskState.value = UpdateTaskState.Loading
-                }
+            } catch (e: Exception) {
+                _updateTaskState.value = UpdateTaskState.Error("Failed to submit implementation: ${e.message}")
             }
         }
     }
@@ -324,4 +356,11 @@ class TaskViewModel @Inject constructor(
     enum class TaskTab {
         SUPERVISORS, ME, ASSIGNED, CREATED
     }
+
+    data class Implementation(
+        val text: String,
+        val timestamp: Long,
+        val supervisorName: String,
+        val imageUrls: List<String>? = null
+    )
 }

@@ -11,6 +11,7 @@ interface AuthRepository {
     fun getAuthState(): Flow<Boolean>
     fun getUserRole(): Flow<String?>
     suspend fun saveAuthTokens(authResponse: AuthResponse)
+    suspend fun saveAuthTokensForRefresh(authResponse: AuthResponse)
     suspend fun clearAuthTokens()
     fun saveUserRole(role: String)
     fun getAccessToken(): String?
