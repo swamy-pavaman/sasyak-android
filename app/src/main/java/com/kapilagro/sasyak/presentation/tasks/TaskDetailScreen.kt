@@ -8,23 +8,15 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -38,27 +30,9 @@ import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.PlayArrow
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -71,23 +45,25 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import coil.compose.rememberAsyncImagePainter
+import com.kapilagro.sasyak.di.IoDispatcher
+import com.kapilagro.sasyak.data.api.ImageUploadService
+import com.kapilagro.sasyak.domain.models.ApiResponse
 import com.kapilagro.sasyak.domain.models.TaskAdvice
 import com.kapilagro.sasyak.presentation.common.components.TaskTypeChip
-import com.kapilagro.sasyak.presentation.common.theme.AgroMuted
-import com.kapilagro.sasyak.presentation.common.theme.AgroMutedForeground
-import com.kapilagro.sasyak.presentation.common.theme.ApprovedContainer
-import com.kapilagro.sasyak.presentation.common.theme.ApprovedText
-import com.kapilagro.sasyak.presentation.common.theme.RejectedContainer
-import com.kapilagro.sasyak.presentation.common.theme.RejectedText
-import com.kapilagro.sasyak.presentation.common.theme.SubmittedContainer
-import com.kapilagro.sasyak.presentation.common.theme.SubmittedText
+import com.kapilagro.sasyak.presentation.common.navigation.Screen
+import com.kapilagro.sasyak.presentation.common.theme.*
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -99,6 +75,9 @@ import kotlin.collections.isNotEmpty
 fun TaskDetailScreen(
     taskId: Int,
     onBackClick: () -> Unit,
+    navController: NavController,
+    @IoDispatcher ioDispatcher: CoroutineDispatcher,
+    imageUploadService: ImageUploadService,
     viewModel: TaskViewModel = hiltViewModel()
 ) {
     val taskDetailState by viewModel.taskDetailState.collectAsState()
@@ -107,8 +86,23 @@ fun TaskDetailScreen(
     val userRole by viewModel.userRole.collectAsState()
 
     var comment by remember { mutableStateOf("") }
-    var implementationInput by remember { mutableStateOf("") }
+    var implementationInput by rememberSaveable { mutableStateOf("") }
     var shouldRefresh by remember { mutableStateOf(false) }
+    var implementationImages by remember { mutableStateOf<List<File>?>(null) }
+    var uploadState by remember { mutableStateOf<UploadState>(UploadState.Idle) }
+    val scope = rememberCoroutineScope()
+    var imagesToPreview by remember { mutableStateOf<List<String>?>(null) }
+    var showPreviewDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(navController) {
+        navController.currentBackStackEntry?.savedStateHandle?.getStateFlow<List<File>>(
+            "selectedImages",
+            emptyList()
+        )
+            ?.collect { files ->
+                implementationImages = files
+            }
+    }
 
     LaunchedEffect(taskId, shouldRefresh) {
         viewModel.loadTaskDetail(taskId)
@@ -121,6 +115,7 @@ fun TaskDetailScreen(
     LaunchedEffect(updateTaskState) {
         if (updateTaskState is TaskViewModel.UpdateTaskState.Success) {
             viewModel.clearUpdateTaskState()
+            implementationImages = null
             delay(300)
             shouldRefresh = true
         }
@@ -172,7 +167,8 @@ fun TaskDetailScreen(
                                 .map { it.jsonPrimitive.content }
 
                             if (imageUrls.isEmpty()) {
-                                imageUrls = listOf("http://13.203.61.201:9000/sasyak/SOWING/gallery_1748631470361.jpg")
+                                imageUrls =
+                                    listOf("http://13.203.61.201:9000/sasyak/SOWING/gallery_1748631470361.jpg")
                             }
 
                             ImageSlideshow(
@@ -187,7 +183,6 @@ fun TaskDetailScreen(
 ////                                .map { it.jsonPrimitive.content }
 //                                imageUrls
 //                            )
-
 
 
                             // Title and description
@@ -251,7 +246,10 @@ fun TaskDetailScreen(
                             ) {
                                 Text(
                                     text = cropName,
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                                    modifier = Modifier.padding(
+                                        horizontal = 12.dp,
+                                        vertical = 4.dp
+                                    ),
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                             }
@@ -275,7 +273,8 @@ fun TaskDetailScreen(
                                 // Collect keys into a list for controlled iteration
                                 val keysList = details.keys().asSequence().toList()
                                 // Limit to first 4 keys when not expanded
-                                val displayKeys = if (isExpandedForDetails) keysList else keysList.take(4)
+                                val displayKeys =
+                                    if (isExpandedForDetails) keysList else keysList.take(4)
 
                                 // Display key-value pairs
                                 displayKeys.forEach { key ->
@@ -292,7 +291,9 @@ fun TaskDetailScreen(
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .clickable { isExpandedForDetails = !isExpandedForDetails }
+                                            .clickable {
+                                                isExpandedForDetails = !isExpandedForDetails
+                                            }
                                             .padding(vertical = 4.dp),
                                         horizontalArrangement = Arrangement.End,
                                         verticalAlignment = Alignment.CenterVertically
@@ -322,7 +323,7 @@ fun TaskDetailScreen(
                             colors = CardDefaults.cardColors(
                                 containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                             )
-                        ){
+                        ) {
                             Column(
                                 modifier = Modifier.padding(horizontal = 16.dp)
                             ) {
@@ -416,7 +417,9 @@ fun TaskDetailScreen(
                                     .padding(horizontal = 16.dp),
                                 shape = RoundedCornerShape(8.dp),
                                 colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(
+                                        alpha = 0.5f
+                                    )
                                 )
                             ) {
                                 Column(
@@ -444,19 +447,65 @@ fun TaskDetailScreen(
                                         text = implementation.text,
                                         style = MaterialTheme.typography.bodyMedium
                                     )
+
+                                    // Display implementation images if available
+                                    if (implementation.imageUrls?.isNotEmpty() == true) {
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .horizontalScroll(rememberScrollState()),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            implementation.imageUrls.forEach { url ->
+                                                Box(modifier = Modifier.size(80.dp)) {
+                                                    Card(
+                                                        modifier = Modifier
+                                                            .fillMaxSize()
+                                                            .clickable {
+                                                                imagesToPreview =
+                                                                    listOf(url) // Preview single image
+                                                                showPreviewDialog = true
+                                                            },
+                                                        shape = RoundedCornerShape(8.dp)
+                                                    ) {
+                                                        AsyncImage(
+                                                            model = url,
+                                                            contentDescription = "Implementation image",
+                                                            modifier = Modifier.fillMaxSize(),
+                                                            contentScale = ContentScale.Crop
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
+
                             }
                             Spacer(modifier = Modifier.height(8.dp))
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))
                     }
+                    if (showPreviewDialog && imagesToPreview != null) {
+                        Dialog(
+                            onDismissRequest = {
+                                showPreviewDialog = false
+                                imagesToPreview = null
+                            },
+                            properties = DialogProperties(usePlatformDefaultWidth = false)
+                        ) {
+                            ImageSlideshow(imageUrls = imagesToPreview!!)
+                        }
+                    }
 
                     // Role-based actions
                     when (userRole) {
                         "MANAGER" -> {
                             if (task.status.equals("submitted", ignoreCase = true) ||
-                                task.status.equals("implemented", ignoreCase = true)) {
+                                task.status.equals("implemented", ignoreCase = true)
+                            ) {
 
                                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -469,7 +518,11 @@ fun TaskDetailScreen(
                                 ) {
                                     Column(modifier = Modifier.padding(16.dp)) {
                                         Text(
-                                            text = if (task.status.equals("implemented", ignoreCase = true))
+                                            text = if (task.status.equals(
+                                                    "implemented",
+                                                    ignoreCase = true
+                                                )
+                                            )
                                                 "Add Follow-up Advice" else "Add Advice",
                                             style = MaterialTheme.typography.titleMedium,
                                             fontWeight = FontWeight.Bold
@@ -481,10 +534,15 @@ fun TaskDetailScreen(
                                             value = comment,
                                             onValueChange = { comment = it },
                                             placeholder = {
-                                                Text(if (task.status.equals("implemented", ignoreCase = true))
-                                                    "Enter follow-up advice or approve the implementation"
-                                                else
-                                                    "Enter your advice or feedback for the supervisor"
+                                                Text(
+                                                    if (task.status.equals(
+                                                            "implemented",
+                                                            ignoreCase = true
+                                                        )
+                                                    )
+                                                        "Enter follow-up advice or approve the implementation"
+                                                    else
+                                                        "Enter your advice or feedback for the supervisor"
                                                 )
                                             },
                                             modifier = Modifier.fillMaxWidth(),
@@ -532,7 +590,11 @@ fun TaskDetailScreen(
                                 Spacer(modifier = Modifier.height(16.dp))
 
                                 // Approve/Reject buttons - only show if there's an implementation
-                                if (task.status.equals("submitted", ignoreCase = true) || task.status.equals("implemented", ignoreCase = true)) {
+                                if (task.status.equals(
+                                        "submitted",
+                                        ignoreCase = true
+                                    ) || task.status.equals("implemented", ignoreCase = true)
+                                ) {
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -590,15 +652,24 @@ fun TaskDetailScreen(
                                 }
                             }
                         }
+
                         "SUPERVISOR" -> {
-                            if ((task.status.equals("submitted", ignoreCase = true) && advices.isNotEmpty()) ||
-                                task.status.equals("implemented", ignoreCase = true)) {
+                            if ((task.status.equals(
+                                    "submitted",
+                                    ignoreCase = true
+                                ) && advices.isNotEmpty()) ||
+                                task.status.equals("implemented", ignoreCase = true)
+                            ) {
 
                                 Spacer(modifier = Modifier.height(16.dp))
 
                                 Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                                     Text(
-                                        text = if (task.status.equals("implemented", ignoreCase = true))
+                                        text = if (task.status.equals(
+                                                "implemented",
+                                                ignoreCase = true
+                                            )
+                                        )
                                             "Update Implementation" else "Implementation Details",
                                         style = MaterialTheme.typography.titleMedium,
                                         fontWeight = FontWeight.Bold
@@ -610,10 +681,15 @@ fun TaskDetailScreen(
                                         value = implementationInput,
                                         onValueChange = { implementationInput = it },
                                         placeholder = {
-                                            Text(if (task.status.equals("implemented", ignoreCase = true))
-                                                "Update your implementation based on manager's feedback"
-                                            else
-                                                "Enter implementation details"
+                                            Text(
+                                                if (task.status.equals(
+                                                        "implemented",
+                                                        ignoreCase = true
+                                                    )
+                                                )
+                                                    "Update your implementation based on manager's feedback"
+                                                else
+                                                    "Enter implementation details"
                                             )
                                         },
                                         modifier = Modifier.fillMaxWidth(),
@@ -623,11 +699,150 @@ fun TaskDetailScreen(
 
                                     Spacer(modifier = Modifier.height(8.dp))
 
+                                    // Image upload section
+                                    Text(
+                                        text = "Upload Photos",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        modifier = Modifier.padding(bottom = 8.dp)
+                                    )
+
+                                    Column {
+                                        Button(
+                                            onClick = {
+                                                navController.navigate(
+                                                    Screen.ImageCapture.createRoute(
+                                                        "TASK_$taskId"
+                                                    )
+                                                ) {
+                                                    launchSingleTop = true
+                                                }
+                                            },
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(56.dp),
+                                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                                            enabled = updateTaskState !is TaskViewModel.UpdateTaskState.Loading &&
+                                                    uploadState !is UploadState.Loading
+                                        ) {
+                                            Text("Select Photos")
+                                        }
+
+                                        if (implementationImages != null && implementationImages!!.isNotEmpty()) {
+                                            Spacer(modifier = Modifier.height(8.dp))
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .horizontalScroll(rememberScrollState()),
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                implementationImages!!.forEach { file ->
+                                                    Box(modifier = Modifier.size(80.dp)) {
+                                                        Card(
+                                                            modifier = Modifier
+                                                                .fillMaxSize()
+                                                                .clickable { /* Optional: Add preview */ },
+                                                            shape = RoundedCornerShape(8.dp)
+                                                        ) {
+                                                            Image(
+                                                                painter = rememberAsyncImagePainter(
+                                                                    file
+                                                                ),
+                                                                contentDescription = "Selected image",
+                                                                modifier = Modifier.fillMaxSize(),
+                                                                contentScale = ContentScale.Crop
+                                                            )
+                                                        }
+                                                        IconButton(
+                                                            onClick = {
+                                                                implementationImages =
+                                                                    implementationImages?.filter { it != file }
+                                                            },
+                                                            modifier = Modifier
+                                                                .align(Alignment.TopEnd)
+                                                                .size(24.dp)
+                                                                .offset(x = 4.dp, y = (-4).dp)
+                                                        ) {
+                                                            Icon(
+                                                                imageVector = Icons.Default.Close,
+                                                                contentDescription = "Remove image",
+                                                                tint = Color.White,
+                                                                modifier = Modifier.background(
+                                                                    color = Color.Black.copy(alpha = 0.6f),
+                                                                    shape = RoundedCornerShape(12.dp)
+                                                                )
+                                                            )
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.height(8.dp))
+
+                                    // Loading indicator for upload
+                                    if (uploadState is UploadState.Loading) {
+                                        Box(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            CircularProgressIndicator(color = AgroPrimary)
+                                        }
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                    }
+
+                                    // Error message for upload
+                                    if (uploadState is UploadState.Error) {
+                                        Text(
+                                            text = (uploadState as UploadState.Error).message,
+                                            color = MaterialTheme.colorScheme.error,
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                    }
+
                                     Button(
                                         onClick = {
                                             if (implementationInput.isNotBlank()) {
-                                                viewModel.addTaskImplementation(taskId, implementationInput)
-                                                implementationInput = ""
+                                                scope.launch(ioDispatcher) {
+                                                    // Upload images if any
+                                                    val imageUrls =
+                                                        if (implementationImages?.isNotEmpty() == true) {
+                                                            uploadState = UploadState.Loading
+                                                            val uploadResult =
+                                                                imageUploadService.uploadImages(
+                                                                    implementationImages!!,
+                                                                    "TASK_$taskId"
+                                                                )
+                                                            when (uploadResult) {
+                                                                is ApiResponse.Success -> uploadResult.data
+                                                                is ApiResponse.Error -> {
+                                                                    uploadState =
+                                                                        UploadState.Error("Image upload failed: ${uploadResult.errorMessage}")
+                                                                    return@launch
+                                                                }
+
+                                                                is ApiResponse.Loading -> {
+                                                                    uploadState =
+                                                                        UploadState.Loading
+                                                                    return@launch
+                                                                }
+                                                            }
+                                                        } else {
+                                                            emptyList()
+                                                        }
+
+                                                    // Submit implementation with text and image URLs
+                                                    viewModel.addTaskImplementation(
+                                                        taskId,
+                                                        implementationInput,
+                                                        imageUrls,
+                                                        task.implementationJson
+                                                    )
+                                                    implementationInput = ""
+                                                    implementationImages = null
+                                                    uploadState = UploadState.Idle
+                                                }
                                             }
                                         },
                                         enabled = implementationInput.isNotBlank() && updateTaskState !is TaskViewModel.UpdateTaskState.Loading,
@@ -644,8 +859,13 @@ fun TaskDetailScreen(
                                                 contentDescription = null
                                             )
                                             Spacer(modifier = Modifier.width(8.dp))
-                                            Text(if (task.status.equals("implemented", ignoreCase = true))
-                                                "Update Implementation" else "Submit Implementation"
+                                            Text(
+                                                if (task.status.equals(
+                                                        "implemented",
+                                                        ignoreCase = true
+                                                    )
+                                                )
+                                                    "Update Implementation" else "Submit Implementation"
                                             )
                                         }
                                     }
@@ -666,6 +886,7 @@ fun TaskDetailScreen(
                     Spacer(modifier = Modifier.height(16.dp))
                 }
             }
+
             is TaskViewModel.TaskDetailState.Loading -> {
                 Box(
                     modifier = Modifier
@@ -676,6 +897,7 @@ fun TaskDetailScreen(
                     CircularProgressIndicator()
                 }
             }
+
             is TaskViewModel.TaskDetailState.Error -> {
                 Box(
                     modifier = Modifier
@@ -1033,32 +1255,35 @@ private fun getImplementationsFromJson(implementationJson: String?): List<Implem
         return emptyList()
     }
     return try {
-        // First try to parse as array (new format)
         val jsonArray = JSONArray(implementationJson)
         val implementations = mutableListOf<Implementation>()
         for (i in 0 until jsonArray.length()) {
             val obj = jsonArray.getJSONObject(i)
+            val imageUrls = obj.optJSONArray("imageUrls")?.let { array ->
+                List(array.length()) { array.getString(it) }
+            }
             implementations.add(
                 Implementation(
                     text = obj.optString("text"),
                     timestamp = obj.optLong("timestamp"),
-                    supervisorName = obj.optString(
-                        "supervisorName",
-                        "Supervisor"
-                    ) // fallback if not available
+                    supervisorName = obj.optString("supervisorName", "Supervisor"),
+                    imageUrls = imageUrls
                 )
             )
         }
-        implementations.sortedByDescending { it.timestamp } // Show newest first
+        implementations.sortedByDescending { it.timestamp }
     } catch (e: Exception) {
         try {
-            // Fallback: try to parse as single object (current format)
             val jsonObject = JSONObject(implementationJson)
+            val imageUrls = jsonObject.optJSONArray("imageUrls")?.let { array ->
+                List(array.length()) { array.getString(it) }
+            }
             listOf(
                 Implementation(
                     text = jsonObject.optString("text"),
                     timestamp = jsonObject.optLong("timestamp"),
-                    supervisorName = "Supervisor"
+                    supervisorName = jsonObject.optString("supervisorName", "Supervisor"),
+                    imageUrls = imageUrls
                 )
             )
         } catch (e2: Exception) {
@@ -1070,14 +1295,16 @@ private fun getImplementationsFromJson(implementationJson: String?): List<Implem
 data class Implementation(
     val text: String,
     val timestamp: Long,
-    val supervisorName: String
+    val supervisorName: String,
+    val imageUrls: List<String>? = null
 )
 
 private fun formatTimestamp(timestamp: Long): String {
     return try {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val instant = java.time.Instant.ofEpochMilli(timestamp)
-            val dateTime = java.time.LocalDateTime.ofInstant(instant, java.time.ZoneId.systemDefault())
+            val dateTime =
+                java.time.LocalDateTime.ofInstant(instant, java.time.ZoneId.systemDefault())
             dateTime.format(DateTimeFormatter.ofPattern("MMM dd, yyyy - HH:mm a"))
         } else {
             val date = java.util.Date(timestamp)
@@ -1087,4 +1314,10 @@ private fun formatTimestamp(timestamp: Long): String {
     } catch (e: Exception) {
         "Unknown time"
     }
+}
+
+private sealed class UploadState {
+    object Idle : UploadState()
+    object Loading : UploadState()
+    data class Error(val message: String) : UploadState()
 }
