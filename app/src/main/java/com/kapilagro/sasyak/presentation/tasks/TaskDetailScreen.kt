@@ -352,11 +352,20 @@ fun TaskDetailScreen(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     val implementations = getImplementationsFromJson(task.implementationJson)
+                    // Replace the entire "Activity History" section in TaskDetailScreen
                     if (advices.isNotEmpty() || implementations.isNotEmpty()) {
-                        val combinedItems = (advices.map { it as ChatItem.Advice } + implementations.map { it as ChatItem.Implementation })
-                            .sortedByDescending { it.timestamp }
+                        // Pair advices and implementations by index
+                        val pairedItems = mutableListOf<Pair<TaskAdvice?, Implementation?>>()
+                        val maxSize = maxOf(advices.size, implementations.size)
+                        for (i in 0 until maxSize) {
+                            val advice = if (i < advices.size) advices[i] else null
+                            val implementation = if (i < implementations.size) implementations[i] else null
+                            pairedItems.add(Pair(advice, implementation))
+                        }
+                        pairedItems.reverse() // Reverse to show newest first
+
                         Text(
-                            text = "Chat History",
+                            text = "Activity History",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(horizontal = 16.dp)
@@ -365,14 +374,42 @@ fun TaskDetailScreen(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp)
-                                .verticalScroll(rememberScrollState()),
+                                .padding(horizontal = 16.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            combinedItems.forEach { item ->
-                                when (item) {
-                                    is ChatItem.Advice -> AdviceChatItem(item.advice)
-                                    is ChatItem.Implementation -> ImplementationChatItem(item.implementation)
+                            pairedItems.forEach { pair ->
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                                    shape = RoundedCornerShape(8.dp),
+                                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF0F4F8))
+                                ) {
+                                    Column(modifier = Modifier.padding(12.dp)) {
+                                        pair.first?.let { advice ->
+                                            AdviceChatItem(
+                                                advice = advice,
+                                                modifier = Modifier.fillMaxWidth()
+                                            )
+                                        }
+                                        if (pair.first != null && pair.second != null) {
+                                            Divider(
+                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f),
+                                                thickness = 1.dp,
+                                                modifier = Modifier.padding(vertical = 8.dp)
+                                            )
+                                        }
+                                        pair.second?.let { implementation ->
+                                            ImplementationChatItem(
+                                                implementation = implementation,
+                                                showPreviewDialog = { showPreviewDialog = it },
+                                                imagesToPreview = { imagesToPreview = it },
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(start = 40.dp) // Indent implementation
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -803,8 +840,6 @@ fun TaskDetailScreen(
     }
 }
 
-private fun ColumnScope.ImplementationChatItem(implementation: Implementation) {}
-
 @Composable
 fun ImageSlideshow(imageUrls: List<String>) {
     var currentImageIndex by remember { mutableStateOf(0) }
@@ -1042,118 +1077,105 @@ fun FormattedScoutingFields(detailsJson: String?) {
         color = MaterialTheme.colorScheme.error
     )
 }
+
 @Composable
-fun AdviceChatItem(advice: TaskAdvice) {
+fun AdviceChatItem(advice: TaskAdvice, modifier: Modifier = Modifier) {
     var isAdviceExpanded by remember { mutableStateOf(false) }
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp),
-        shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFF0F4F8))
-    ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = advice.managerName ?: "Unknown",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = formatDateTime(advice.createdAt ?: ""),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+    Column(modifier = modifier.padding(12.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = advice.managerName ?: "Unknown",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = formatDateTime(advice.createdAt ?: ""),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = advice.adviceText,
+            style = MaterialTheme.typography.bodyMedium,
+            maxLines = if (isAdviceExpanded) Int.MAX_VALUE else 3,
+            overflow = if (isAdviceExpanded) TextOverflow.Visible else TextOverflow.Ellipsis,
+            modifier = Modifier.animateContentSize()
+        )
+        val isTextLongEnough = advice.adviceText.length > 150 || advice.adviceText.lines().size > 3
+        if (isTextLongEnough) {
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = advice.adviceText,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = if (isAdviceExpanded) Int.MAX_VALUE else 3,
-                overflow = if (isAdviceExpanded) TextOverflow.Visible else TextOverflow.Ellipsis,
-                modifier = Modifier.animateContentSize()
+                text = if (isAdviceExpanded) "Show Less" else "Show More",
+                color = MaterialTheme.colorScheme.primary,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.clickable { isAdviceExpanded = !isAdviceExpanded }
             )
-            val isTextLongEnough = advice.adviceText.length > 150 || advice.adviceText.lines().size > 3
-            if (isTextLongEnough) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = if (isAdviceExpanded) "Show Less" else "Show More",
-                    color = MaterialTheme.colorScheme.primary,
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.clickable { isAdviceExpanded = !isAdviceExpanded }
-                )
-            }
         }
     }
 }
+
 @Composable
 fun ImplementationChatItem(
     implementation: com.kapilagro.sasyak.presentation.tasks.Implementation,
     showPreviewDialog: (Boolean) -> Unit,
-    imagesToPreview: (List<String>?) -> Unit
+    imagesToPreview: (List<String>?) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     var isImplementationExpanded by remember { mutableStateOf(false) }
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 4.dp)
-            .padding(start = 40.dp), // Indent to show as a reply to advice
-        shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FAFC))
-    ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Text(
-                text = implementation.supervisorName,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Bold
-            )
+    Column(modifier = modifier.padding(12.dp)) {
+        Text(
+            text = implementation.supervisorName,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        AsyncImage(
+            model = implementation.imageUrls?.firstOrNull() ?: "https://via.placeholder.com/150",
+            contentDescription = "Implementation image",
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f)
+                .clip(RoundedCornerShape(8.dp))
+                .clickable {
+                    imagesToPreview(implementation.imageUrls)
+                    showPreviewDialog(true)
+                },
+            contentScale = ContentScale.Crop
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = implementation.text,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium,
+            color = Color(0xFF0E141B),
+            maxLines = if (isImplementationExpanded) Int.MAX_VALUE else 2,
+            overflow = if (isImplementationExpanded) TextOverflow.Visible else TextOverflow.Ellipsis,
+            modifier = Modifier.animateContentSize()
+        )
+        Text(
+            text = formatTimestamp(implementation.timestamp),
+            style = MaterialTheme.typography.bodySmall,
+            color = Color(0xFF4E7397)
+        )
+        val isTextLongEnough = implementation.text.length > 50 || implementation.text.lines().size > 2
+        if (isTextLongEnough) {
             Spacer(modifier = Modifier.height(4.dp))
-            AsyncImage(
-                model = implementation.imageUrls?.firstOrNull() ?: "https://via.placeholder.com/150",
-                contentDescription = "Implementation image",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(1f)
-                    .clip(RoundedCornerShape(8.dp))
-                    .clickable {
-                        imagesToPreview(implementation.imageUrls)
-                        showPreviewDialog(true)
-                    },
-                contentScale = ContentScale.Crop
-            )
-            Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = implementation.text,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium,
-                color = Color(0xFF0E141B),
-                maxLines = if (isImplementationExpanded) Int.MAX_VALUE else 2,
-                overflow = if (isImplementationExpanded) TextOverflow.Visible else TextOverflow.Ellipsis,
-                modifier = Modifier.animateContentSize()
-            )
-            Text(
-                text = formatTimestamp(implementation.timestamp),
+                text = if (isImplementationExpanded) "Show Less" else "Show More",
+                color = MaterialTheme.colorScheme.primary,
                 style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFF4E7397)
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.clickable { isImplementationExpanded = !isImplementationExpanded }
             )
-            val isTextLongEnough = implementation.text.length > 50 || implementation.text.lines().size > 2
-            if (isTextLongEnough) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = if (isImplementationExpanded) "Show Less" else "Show More",
-                    color = MaterialTheme.colorScheme.primary,
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.clickable { isImplementationExpanded = !isImplementationExpanded }
-                )
-            }
         }
     }
 }
+
 private fun formatDateTime(dateTime: String): String {
     return try {
         val date = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).parse(dateTime) ?: Date()
@@ -1246,6 +1268,7 @@ private sealed class UploadState {
     object Loading : UploadState()
     data class Error(val message: String) : UploadState()
 }
+
 sealed interface ChatItem {
     val timestamp: Long
     data class Advice(val advice: TaskAdvice) : ChatItem {
