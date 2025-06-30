@@ -1,9 +1,7 @@
 package com.kapilagro.sasyak.presentation.tasks
 
-
 import android.os.Build
 import android.util.Log
-import androidx.annotation.RequiresApi
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
@@ -54,7 +52,15 @@ import com.kapilagro.sasyak.domain.models.ApiResponse
 import com.kapilagro.sasyak.domain.models.TaskAdvice
 import com.kapilagro.sasyak.presentation.common.components.TaskTypeChip
 import com.kapilagro.sasyak.presentation.common.navigation.Screen
-import com.kapilagro.sasyak.presentation.common.theme.*
+import com.kapilagro.sasyak.presentation.common.theme.AgroMuted
+import com.kapilagro.sasyak.presentation.common.theme.AgroMutedForeground
+import com.kapilagro.sasyak.presentation.common.theme.AgroPrimary
+import com.kapilagro.sasyak.presentation.common.theme.ApprovedContainer
+import com.kapilagro.sasyak.presentation.common.theme.ApprovedText
+import com.kapilagro.sasyak.presentation.common.theme.RejectedContainer
+import com.kapilagro.sasyak.presentation.common.theme.RejectedText
+import com.kapilagro.sasyak.presentation.common.theme.SubmittedContainer
+import com.kapilagro.sasyak.presentation.common.theme.SubmittedText
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -64,12 +70,11 @@ import kotlinx.serialization.json.jsonPrimitive
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 import kotlin.collections.isNotEmpty
 
-@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TaskDetailScreen(
@@ -94,16 +99,7 @@ fun TaskDetailScreen(
     var imagesToPreview by remember { mutableStateOf<List<String>?>(null) }
     var showPreviewDialog by remember { mutableStateOf(false) }
 
-    LaunchedEffect(navController) {
-        navController.currentBackStackEntry?.savedStateHandle?.getStateFlow<List<File>>(
-            "selectedImages",
-            emptyList()
-        )
-            ?.collect { files ->
-                implementationImages = files
-            }
-    }
-
+    // [CHANGE] Updated LaunchedEffect for real-time updates
     LaunchedEffect(taskId, shouldRefresh) {
         viewModel.loadTaskDetail(taskId)
         viewModel.getCurrentUserRole()
@@ -175,41 +171,20 @@ fun TaskDetailScreen(
                                 imageUrls = imageUrls
                             )
 
-                            // Image slideshow with dots
-//                            ImageSlideshow(
-//
-////                                imageUrls = Json.parseToJsonElement(task.imagesJson.toString())
-////                                .jsonArray
-////                                .map { it.jsonPrimitive.content }
-//                                imageUrls
-//                            )
-
-
                             // Title and description
                             Column(modifier = Modifier.padding(16.dp)) {
-//                                Text(
-//                                    text = task.taskType,
-//                                    style = MaterialTheme.typography.headlineSmall,
-//                                    fontWeight = FontWeight.Bold
-//                                )
-//
-//                                Spacer(modifier = Modifier.height(8.dp))
-
                                 task.description.takeIf { it.isNotBlank() }?.let {
                                     Text(
                                         text = it,
                                         style = MaterialTheme.typography.bodyMedium,
-                                        maxLines = if (isExpanded) Int.MAX_VALUE else 3, // Limit to 2 lines when not expanded
-                                        overflow = if (isExpanded) TextOverflow.Visible else TextOverflow.Ellipsis, // Ellipsis for truncation
-                                        modifier = Modifier.animateContentSize() // Smooth animation for expansion/collapse
+                                        maxLines = if (isExpanded) Int.MAX_VALUE else 3,
+                                        overflow = if (isExpanded) TextOverflow.Visible else TextOverflow.Ellipsis,
+                                        modifier = Modifier.animateContentSize()
                                     )
 
-                                    // Check if text is long enough to need a Show More button
                                     val isTextLongEnough = it.length > 100 || it.lines().size > 2
                                     if (isTextLongEnough) {
                                         Spacer(modifier = Modifier.height(8.dp))
-
-                                        // Show More/Less button
                                         Text(
                                             text = if (isExpanded) "Show Less" else "Show More",
                                             color = MaterialTheme.colorScheme.primary,
@@ -227,7 +202,7 @@ fun TaskDetailScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Chips at the bottom of images
+                    // Chips
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -270,13 +245,10 @@ fun TaskDetailScreen(
                             }
 
                             if (details != null) {
-                                // Collect keys into a list for controlled iteration
                                 val keysList = details.keys().asSequence().toList()
-                                // Limit to first 4 keys when not expanded
                                 val displayKeys =
                                     if (isExpandedForDetails) keysList else keysList.take(4)
 
-                                // Display key-value pairs
                                 displayKeys.forEach { key ->
                                     val value = details.optString(key, "")
                                     DetailRow(
@@ -285,7 +257,6 @@ fun TaskDetailScreen(
                                     )
                                 }
 
-                                // Show arrow icon if there are more than 4 keys
                                 if (keysList.size > 4) {
                                     Spacer(modifier = Modifier.height(8.dp))
                                     Row(
@@ -374,118 +345,37 @@ fun TaskDetailScreen(
                                     )
                                 }
                                 Spacer(modifier = Modifier.height(8.dp))
-
                             }
                         }
                     }
-
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    if (advices.isNotEmpty()) {
-                        Text(
-                            text = "Task Advice",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 16.dp)
-                        )
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        advices.reversed().forEach { advice ->
-                            SimpleAdviceItem(advice = advice)
-                            Spacer(modifier = Modifier.height(8.dp))
-                        }
-                    }
-
                     val implementations = getImplementationsFromJson(task.implementationJson)
-                    Log.d("implementations", implementations.toString())
-                    if (implementations.isNotEmpty()) {
+                    if (advices.isNotEmpty() || implementations.isNotEmpty()) {
+                        val combinedItems = (advices.map { it as ChatItem.Advice } + implementations.map { it as ChatItem.Implementation })
+                            .sortedByDescending { it.timestamp }
                         Text(
-                            text = if (implementations.size == 1) "Implementation" else "Implementation History",
+                            text = "Chat History",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(horizontal = 16.dp)
                         )
-
                         Spacer(modifier = Modifier.height(8.dp))
-
-                        implementations.forEach { implementation ->
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp),
-                                shape = RoundedCornerShape(8.dp),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(
-                                        alpha = 0.5f
-                                    )
-                                )
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(16.dp)
-                                ) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Text(
-                                            text = implementation.supervisorName,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                        Text(
-                                            text = formatTimestamp(implementation.timestamp),
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-
-                                    Spacer(modifier = Modifier.height(8.dp))
-
-                                    Text(
-                                        text = implementation.text,
-                                        style = MaterialTheme.typography.bodyMedium
-                                    )
-
-                                    // Display implementation images if available
-                                    if (implementation.imageUrls?.isNotEmpty() == true) {
-                                        Spacer(modifier = Modifier.height(8.dp))
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .horizontalScroll(rememberScrollState()),
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                        ) {
-                                            implementation.imageUrls.forEach { url ->
-                                                Box(modifier = Modifier.size(80.dp)) {
-                                                    Card(
-                                                        modifier = Modifier
-                                                            .fillMaxSize()
-                                                            .clickable {
-                                                                imagesToPreview =
-                                                                    listOf(url) // Preview single image
-                                                                showPreviewDialog = true
-                                                            },
-                                                        shape = RoundedCornerShape(8.dp)
-                                                    ) {
-                                                        AsyncImage(
-                                                            model = url,
-                                                            contentDescription = "Implementation image",
-                                                            modifier = Modifier.fillMaxSize(),
-                                                            contentScale = ContentScale.Crop
-                                                        )
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp)
+                                .verticalScroll(rememberScrollState()),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            combinedItems.forEach { item ->
+                                when (item) {
+                                    is ChatItem.Advice -> AdviceChatItem(item.advice)
+                                    is ChatItem.Implementation -> ImplementationChatItem(item.implementation)
                                 }
-
                             }
-                            Spacer(modifier = Modifier.height(8.dp))
                         }
-
                         Spacer(modifier = Modifier.height(16.dp))
                     }
                     if (showPreviewDialog && imagesToPreview != null) {
@@ -506,10 +396,7 @@ fun TaskDetailScreen(
                             if (task.status.equals("submitted", ignoreCase = true) ||
                                 task.status.equals("implemented", ignoreCase = true)
                             ) {
-
                                 Spacer(modifier = Modifier.height(16.dp))
-
-                                // Advice input section
                                 Card(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -589,7 +476,6 @@ fun TaskDetailScreen(
 
                                 Spacer(modifier = Modifier.height(16.dp))
 
-                                // Approve/Reject buttons - only show if there's an implementation
                                 if (task.status.equals(
                                         "submitted",
                                         ignoreCase = true
@@ -660,9 +546,7 @@ fun TaskDetailScreen(
                                 ) && advices.isNotEmpty()) ||
                                 task.status.equals("implemented", ignoreCase = true)
                             ) {
-
                                 Spacer(modifier = Modifier.height(16.dp))
-
                                 Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                                     Text(
                                         text = if (task.status.equals(
@@ -699,7 +583,6 @@ fun TaskDetailScreen(
 
                                     Spacer(modifier = Modifier.height(8.dp))
 
-                                    // Image upload section
                                     Text(
                                         text = "Upload Photos",
                                         style = MaterialTheme.typography.bodyLarge,
@@ -780,7 +663,6 @@ fun TaskDetailScreen(
 
                                     Spacer(modifier = Modifier.height(8.dp))
 
-                                    // Loading indicator for upload
                                     if (uploadState is UploadState.Loading) {
                                         Box(
                                             modifier = Modifier.fillMaxWidth(),
@@ -791,7 +673,6 @@ fun TaskDetailScreen(
                                         Spacer(modifier = Modifier.height(8.dp))
                                     }
 
-                                    // Error message for upload
                                     if (uploadState is UploadState.Error) {
                                         Text(
                                             text = (uploadState as UploadState.Error).message,
@@ -805,7 +686,6 @@ fun TaskDetailScreen(
                                         onClick = {
                                             if (implementationInput.isNotBlank()) {
                                                 scope.launch(ioDispatcher) {
-                                                    // Upload images if any
                                                     val imageUrls =
                                                         if (implementationImages?.isNotEmpty() == true) {
                                                             uploadState = UploadState.Loading
@@ -821,7 +701,6 @@ fun TaskDetailScreen(
                                                                         UploadState.Error("Image upload failed: ${uploadResult.errorMessage}")
                                                                     return@launch
                                                                 }
-
                                                                 is ApiResponse.Loading -> {
                                                                     uploadState =
                                                                         UploadState.Loading
@@ -832,7 +711,6 @@ fun TaskDetailScreen(
                                                             emptyList()
                                                         }
 
-                                                    // Submit implementation with text and image URLs
                                                     viewModel.addTaskImplementation(
                                                         taskId,
                                                         implementationInput,
@@ -925,19 +803,19 @@ fun TaskDetailScreen(
     }
 }
 
+private fun ColumnScope.ImplementationChatItem(implementation: Implementation) {}
+
 @Composable
 fun ImageSlideshow(imageUrls: List<String>) {
     var currentImageIndex by remember { mutableStateOf(0) }
     var showPreview by remember { mutableStateOf(false) }
     val numberOfImages = imageUrls.size
 
-    // Auto-scroll effect
     LaunchedEffect(currentImageIndex) {
         delay(3000)
         currentImageIndex = (currentImageIndex + 1) % numberOfImages
     }
 
-    // Smooth transition animation
     val animatedOffset by animateFloatAsState(
         targetValue = -currentImageIndex.toFloat(),
         animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
@@ -949,26 +827,21 @@ fun ImageSlideshow(imageUrls: List<String>) {
             .fillMaxWidth()
             .height(250.dp)
     ) {
-        // Image container with swipe support
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .pointerInput(numberOfImages) {
                     detectDragGestures(
-                        onDragEnd = {
-                            // Handle swipe completion if needed
-                        }
+                        onDragEnd = {}
                     ) { _, dragAmount ->
                         val swipeThreshold = 50f
                         if (dragAmount.x > swipeThreshold) {
-                            // Swipe right - previous image
                             currentImageIndex = if (currentImageIndex > 0) {
                                 currentImageIndex - 1
                             } else {
                                 numberOfImages - 1
                             }
                         } else if (dragAmount.x < -swipeThreshold) {
-                            // Swipe left - next image
                             currentImageIndex = (currentImageIndex + 1) % numberOfImages
                         }
                     }
@@ -985,7 +858,6 @@ fun ImageSlideshow(imageUrls: List<String>) {
             )
         }
 
-        // Indicator dots with smooth transitions
         Row(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -1018,7 +890,6 @@ fun ImageSlideshow(imageUrls: List<String>) {
         }
     }
 
-    // Full-screen preview dialog
     if (showPreview) {
         Dialog(
             onDismissRequest = { showPreview = false },
@@ -1034,7 +905,6 @@ fun ImageSlideshow(imageUrls: List<String>) {
             ) {
                 var previewIndex by remember { mutableStateOf(currentImageIndex) }
 
-                // Full screen image with swipe support
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -1061,7 +931,6 @@ fun ImageSlideshow(imageUrls: List<String>) {
                     )
                 }
 
-                // Close button
                 IconButton(
                     onClick = { showPreview = false },
                     modifier = Modifier
@@ -1079,7 +948,6 @@ fun ImageSlideshow(imageUrls: List<String>) {
                     )
                 }
 
-                // Preview indicator dots
                 Row(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
@@ -1174,19 +1042,17 @@ fun FormattedScoutingFields(detailsJson: String?) {
         color = MaterialTheme.colorScheme.error
     )
 }
-
-@RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun SimpleAdviceItem(advice: TaskAdvice) {
+fun AdviceChatItem(advice: TaskAdvice) {
+    var isAdviceExpanded by remember { mutableStateOf(false) }
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        shape = RoundedCornerShape(8.dp)
+            .padding(horizontal = 8.dp),
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFF0F4F8))
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
+        Column(modifier = Modifier.padding(12.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -1202,27 +1068,96 @@ fun SimpleAdviceItem(advice: TaskAdvice) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
+            Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = advice.adviceText,
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = if (isAdviceExpanded) Int.MAX_VALUE else 3,
+                overflow = if (isAdviceExpanded) TextOverflow.Visible else TextOverflow.Ellipsis,
+                modifier = Modifier.animateContentSize()
             )
+            val isTextLongEnough = advice.adviceText.length > 150 || advice.adviceText.lines().size > 3
+            if (isTextLongEnough) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = if (isAdviceExpanded) "Show Less" else "Show More",
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.clickable { isAdviceExpanded = !isAdviceExpanded }
+                )
+            }
         }
     }
 }
-
-@RequiresApi(Build.VERSION_CODES.O)
+@Composable
+fun ImplementationChatItem(
+    implementation: com.kapilagro.sasyak.presentation.tasks.Implementation,
+    showPreviewDialog: (Boolean) -> Unit,
+    imagesToPreview: (List<String>?) -> Unit
+) {
+    var isImplementationExpanded by remember { mutableStateOf(false) }
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 4.dp)
+            .padding(start = 40.dp), // Indent to show as a reply to advice
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FAFC))
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(
+                text = implementation.supervisorName,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            AsyncImage(
+                model = implementation.imageUrls?.firstOrNull() ?: "https://via.placeholder.com/150",
+                contentDescription = "Implementation image",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1f)
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable {
+                        imagesToPreview(implementation.imageUrls)
+                        showPreviewDialog(true)
+                    },
+                contentScale = ContentScale.Crop
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = implementation.text,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                color = Color(0xFF0E141B),
+                maxLines = if (isImplementationExpanded) Int.MAX_VALUE else 2,
+                overflow = if (isImplementationExpanded) TextOverflow.Visible else TextOverflow.Ellipsis,
+                modifier = Modifier.animateContentSize()
+            )
+            Text(
+                text = formatTimestamp(implementation.timestamp),
+                style = MaterialTheme.typography.bodySmall,
+                color = Color(0xFF4E7397)
+            )
+            val isTextLongEnough = implementation.text.length > 50 || implementation.text.lines().size > 2
+            if (isTextLongEnough) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = if (isImplementationExpanded) "Show Less" else "Show More",
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.clickable { isImplementationExpanded = !isImplementationExpanded }
+                )
+            }
+        }
+    }
+}
 private fun formatDateTime(dateTime: String): String {
     return try {
-        val dt = if (dateTime.contains(".")) {
-            val trimmed = dateTime.split(".")[0]
-            LocalDateTime.parse(trimmed)
-        } else {
-            LocalDateTime.parse(dateTime)
-        }
-        dt.format(DateTimeFormatter.ofPattern("MMM dd, yyyy - HH:mm a"))
+        val date = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).parse(dateTime) ?: Date()
+        SimpleDateFormat("MMM dd, yyyy - hh:mm a", Locale.getDefault()).format(date)
     } catch (e: Exception) {
         dateTime
     }
@@ -1251,21 +1186,19 @@ private fun getCropNameFromJson(detailsJson: String?): String? {
 }
 
 private fun getImplementationsFromJson(implementationJson: String?): List<Implementation> {
-    if (implementationJson == null || implementationJson == "{}" || implementationJson.isEmpty()) {
-        return emptyList()
-    }
+    if (implementationJson.isNullOrEmpty() || implementationJson == "{}") return emptyList()
     return try {
         val jsonArray = JSONArray(implementationJson)
         val implementations = mutableListOf<Implementation>()
         for (i in 0 until jsonArray.length()) {
             val obj = jsonArray.getJSONObject(i)
             val imageUrls = obj.optJSONArray("imageUrls")?.let { array ->
-                List(array.length()) { array.getString(it) }
-            }
+                (0 until array.length()).map { array.getString(it) }
+            } ?: emptyList()
             implementations.add(
                 Implementation(
-                    text = obj.optString("text"),
-                    timestamp = obj.optLong("timestamp"),
+                    text = obj.optString("text", ""),
+                    timestamp = obj.optLong("timestamp", 0L),
                     supervisorName = obj.optString("supervisorName", "Supervisor"),
                     imageUrls = imageUrls
                 )
@@ -1276,12 +1209,12 @@ private fun getImplementationsFromJson(implementationJson: String?): List<Implem
         try {
             val jsonObject = JSONObject(implementationJson)
             val imageUrls = jsonObject.optJSONArray("imageUrls")?.let { array ->
-                List(array.length()) { array.getString(it) }
-            }
+                (0 until array.length()).map { array.getString(it) }
+            } ?: emptyList()
             listOf(
                 Implementation(
-                    text = jsonObject.optString("text"),
-                    timestamp = jsonObject.optLong("timestamp"),
+                    text = jsonObject.optString("text", ""),
+                    timestamp = jsonObject.optLong("timestamp", 0L),
                     supervisorName = jsonObject.optString("supervisorName", "Supervisor"),
                     imageUrls = imageUrls
                 )
@@ -1301,16 +1234,8 @@ data class Implementation(
 
 private fun formatTimestamp(timestamp: Long): String {
     return try {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val instant = java.time.Instant.ofEpochMilli(timestamp)
-            val dateTime =
-                java.time.LocalDateTime.ofInstant(instant, java.time.ZoneId.systemDefault())
-            dateTime.format(DateTimeFormatter.ofPattern("MMM dd, yyyy - HH:mm a"))
-        } else {
-            val date = java.util.Date(timestamp)
-            val format = java.text.SimpleDateFormat("MMM dd, yyyy - HH:mm a", Locale.getDefault())
-            format.format(date)
-        }
+        val date = Date(timestamp)
+        SimpleDateFormat("MMM dd, yyyy - hh:mm a", Locale.getDefault()).format(date)
     } catch (e: Exception) {
         "Unknown time"
     }
@@ -1320,4 +1245,22 @@ private sealed class UploadState {
     object Idle : UploadState()
     object Loading : UploadState()
     data class Error(val message: String) : UploadState()
+}
+sealed interface ChatItem {
+    val timestamp: Long
+    data class Advice(val advice: TaskAdvice) : ChatItem {
+        override val timestamp: Long
+            get() = advice.createdAt?.let {
+                try {
+                    SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).parse(it)?.time ?: 0L
+                } catch (e: Exception) {
+                    Log.e("ChatItem", "Failed to parse date: ${e.message}")
+                    0L
+                }
+            } ?: 0L
+    }
+    data class Implementation(val implementation: com.kapilagro.sasyak.presentation.tasks.Implementation) : ChatItem {
+        override val timestamp: Long
+            get() = implementation.timestamp
+    }
 }
