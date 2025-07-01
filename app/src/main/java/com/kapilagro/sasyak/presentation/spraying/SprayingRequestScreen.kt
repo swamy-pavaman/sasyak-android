@@ -1,6 +1,7 @@
 package com.kapilagro.sasyak.presentation.spraying
 
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -37,6 +38,8 @@ import kotlinx.coroutines.launch
 import java.io.File
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import com.kapilagro.sasyak.presentation.common.catalog.CategoryViewModel
+import com.kapilagro.sasyak.presentation.common.catalog.CategoriesState
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
@@ -47,6 +50,7 @@ fun SprayingRequestScreen(
     navController: NavController,
     viewModel: SprayingListViewModel = hiltViewModel(),
     homeViewModel: HomeViewModel = hiltViewModel(),
+    categoryViewModel: CategoryViewModel = hiltViewModel(),
     @IoDispatcher ioDispatcher: CoroutineDispatcher,
     imageUploadService: ImageUploadService
 ) {
@@ -54,6 +58,7 @@ fun SprayingRequestScreen(
     val userRole by homeViewModel.userRole.collectAsState()
     val supervisorsListState by homeViewModel.supervisorsListState.collectAsState()
     val scope = rememberCoroutineScope()
+    val categoriesStates by categoryViewModel.categoriesStates.collectAsState()
 
     // Dialog state
     var showSuccessDialog by remember { mutableStateOf(false) }
@@ -106,20 +111,35 @@ fun SprayingRequestScreen(
         }
     }
 
-    val crops = listOf(
-        "Wheat", "Rice", "Maize", "Barley", "Sorghum",
-        "Mango", "Banana", "Apple", "Papaya", "Guava",
-        "Tomato", "Potato", "Onion", "Brinjal", "Cabbage",
-        "Sugarcane", "Groundnut", "Cotton", "Soybean", "Mustard"
-    )
+    LaunchedEffect(Unit) {
+        categoryViewModel.fetchCategories("Crop")
+        categoryViewModel.fetchCategories("Chemical")
+    }
+
+    val crops = when (val state = categoriesStates["Crop"]) {
+        is CategoriesState.Success -> state.categories.map { it.value }
+        else -> listOf(
+            "Wheat", "Rice", "Maize", "Barley", "Sorghum",
+            "Mango", "Banana", "Apple", "Papaya", "Guava",
+            "Tomato", "Potato", "Onion", "Brinjal", "Cabbage",
+            "Sugarcane", "Groundnut", "Cotton", "Soybean", "Mustard"
+        )
+    }
+    val chemicals = when (val state = categoriesStates["Chemical"]) {
+        is CategoriesState.Success -> state.categories.map { it.value }
+        else -> listOf(
+            "Glyphosate", "2,4-D", "Atrazine", "Paraquat", "Pendimethalin",
+            "Chlorpyrifos", "Cypermethrin", "Lambda-cyhalothrin", "Carbofuran", "Imidacloprid",
+            "Mancozeb", "Copper Oxychloride", "Carbendazim", "Metalaxyl", "Thiram"
+        )
+    }
+
+    // Log states for debugging
+    LaunchedEffect(categoriesStates) {
+        Log.d("Categories", "Crops: $crops, Chemicals : $chemicals")
+    }
 
     val rows = (1..20).map { it.toString() }
-
-    val chemicals = listOf(
-        "Glyphosate", "2,4-D", "Atrazine", "Paraquat", "Pendimethalin",
-        "Chlorpyrifos", "Cypermethrin", "Lambda-cyhalothrin", "Carbofuran", "Imidacloprid",
-        "Mancozeb", "Copper Oxychloride", "Carbendazim", "Metalaxyl", "Thiram"
-    )
 
     val sprayingMethods = listOf(
         "Backpack Sprayer", "Boom Sprayer", "Aerial Spraying", "Drip Application",
@@ -232,6 +252,7 @@ fun SprayingRequestScreen(
             ) {
                 OutlinedTextField(
                     value = cropName,
+                    readOnly = true,
                     onValueChange = { newValue ->
                         cropName = newValue
                         cropNameExpanded = true
@@ -266,40 +287,16 @@ fun SprayingRequestScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Row Dropdown
-            ExposedDropdownMenuBox(
-                expanded = rowExpanded,
-                onExpandedChange = { rowExpanded = it },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                OutlinedTextField(
-                    value = row,
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Row *") },
-                    trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = rowExpanded)
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .menuAnchor(),
-                    shape = RoundedCornerShape(8.dp)
-                )
+            OutlinedTextField(
+                value = row,
+                onValueChange = { newValue ->
+                    row = newValue
+                },
+                label = { Text("Row *") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp)
+            )
 
-                ExposedDropdownMenu(
-                    expanded = rowExpanded,
-                    onDismissRequest = { rowExpanded = false }
-                ) {
-                    rows.forEach { rowNumber ->
-                        DropdownMenuItem(
-                            text = { Text(rowNumber) },
-                            onClick = {
-                                row = rowNumber
-                                rowExpanded = false
-                            }
-                        )
-                    }
-                }
-            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -323,6 +320,7 @@ fun SprayingRequestScreen(
             ) {
                 OutlinedTextField(
                     value = chemicalName,
+                    readOnly = true,
                     onValueChange = { newValue ->
                         chemicalName = newValue
                         chemicalNameExpanded = true
@@ -376,6 +374,7 @@ fun SprayingRequestScreen(
             ) {
                 OutlinedTextField(
                     value = sprayingMethod,
+                    readOnly = true,
                     onValueChange = { newValue ->
                         sprayingMethod = newValue
                         sprayingMethodExpanded = true

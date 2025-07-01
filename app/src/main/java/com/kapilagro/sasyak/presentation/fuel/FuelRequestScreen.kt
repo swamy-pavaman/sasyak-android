@@ -1,6 +1,7 @@
 package com.kapilagro.sasyak.presentation.fuel
 
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -37,6 +38,8 @@ import kotlinx.coroutines.launch
 import java.io.File
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import com.kapilagro.sasyak.presentation.common.catalog.CategoryViewModel
+import com.kapilagro.sasyak.presentation.common.catalog.CategoriesState
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
@@ -47,6 +50,7 @@ fun FuelRequestScreen(
     navController: NavController,
     viewModel: FuelListViewModel = hiltViewModel(),
     homeViewModel: HomeViewModel = hiltViewModel(),
+    categoryViewModel: CategoryViewModel = hiltViewModel(),
     @IoDispatcher ioDispatcher: CoroutineDispatcher,
     imageUploadService: ImageUploadService
 ) {
@@ -54,6 +58,7 @@ fun FuelRequestScreen(
     val userRole by homeViewModel.userRole.collectAsState()
     val supervisorsListState by homeViewModel.supervisorsListState.collectAsState()
     val scope = rememberCoroutineScope()
+    val categoriesStates by categoryViewModel.categoriesStates.collectAsState()
 
     // Dialog state
     var showSuccessDialog by remember { mutableStateOf(false) }
@@ -69,6 +74,7 @@ fun FuelRequestScreen(
     var vehicleName by remember { mutableStateOf(savedStateHandle?.get<String>("vehicleName") ?: "") }
     var vehicleNameExpanded by remember { mutableStateOf(false) }
     var vehicleNumber by remember { mutableStateOf(savedStateHandle?.get<String>("vehicleNumber") ?: "") }
+    var vehicleNumberExpanded by remember { mutableStateOf(false) }
     var fuelType by remember { mutableStateOf(savedStateHandle?.get<String>("fuelType") ?: "") }
     var fuelTypeExpanded by remember { mutableStateOf(false) }
     var quantity by remember { mutableStateOf(savedStateHandle?.get<String>("quantity") ?: "") }
@@ -77,6 +83,7 @@ fun FuelRequestScreen(
     var costPerUnit by remember { mutableStateOf(savedStateHandle?.get<String>("costPerUnit") ?: "") }
     var totalCost by remember { mutableStateOf(savedStateHandle?.get<String>("totalCost") ?: "") }
     var driverName by remember { mutableStateOf(savedStateHandle?.get<String>("driverName") ?: "") }
+    var driverNameExpanded by remember { mutableStateOf(false) }
     var odometer by remember { mutableStateOf(savedStateHandle?.get<String>("odometer") ?: "") }
     var purposeOfFuel by remember { mutableStateOf(savedStateHandle?.get<String>("purposeOfFuel") ?: "") }
     var refillLocation by remember { mutableStateOf(savedStateHandle?.get<String>("refillLocation") ?: "") }
@@ -113,17 +120,42 @@ fun FuelRequestScreen(
         }
     }
 
-    val vehicles = listOf(
-        "Tractor - John Deere",
-        "Tractor - Mahindra",
-        "Truck - Tata",
-        "Harvester",
-        "Water Pump",
-        "Generator",
-        "Sprayer",
-        "Pickup Truck",
-        "Farm Utility Vehicle"
-    )
+    LaunchedEffect(Unit) {
+        categoryViewModel.fetchCategories("Vehicle")
+        categoryViewModel.fetchCategories("Vehicle-no")
+        categoryViewModel.fetchCategories("Driver")
+    }
+
+    val vehicles = when (val state = categoriesStates["Vehicle"]) {
+        is CategoriesState.Success -> state.categories.map { it.value }
+        else -> listOf(
+            "Tractor - John Deere",
+            "Tractor - Mahindra",
+            "Truck - Tata",
+            "Harvester",
+            "Water Pump",
+            "Generator",
+            "Sprayer",
+            "Pickup Truck",
+            "Farm Utility Vehicle"
+        )
+    }
+    val vehicleNumbers = when (val state = categoriesStates["Vehicle-no"]) {
+        is CategoriesState.Success -> state.categories.map { it.value }
+        else -> listOf(
+            "TS-01-1234"
+        )
+    }
+    val drivers = when (val state = categoriesStates["Driver"]) {
+        is CategoriesState.Success -> state.categories.map { it.value }
+        else -> listOf(
+            "Default"
+        )
+    }
+    LaunchedEffect(categoriesStates) {
+        Log.d("Categories", "Vehicles: $vehicles, VehicleNumbers: $vehicleNumbers, Drivers: $drivers")
+    }
+
 
     val fuelTypes = listOf(
         "Diesel", "Petrol", "CNG", "LPG", "Bio-diesel", "Electric"
@@ -240,6 +272,7 @@ fun FuelRequestScreen(
             ) {
                 OutlinedTextField(
                     value = vehicleName,
+                    readOnly = true,
                     onValueChange = { newValue ->
                         vehicleName = newValue
                         vehicleNameExpanded = true
@@ -274,13 +307,46 @@ fun FuelRequestScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Vehicle Number
-            OutlinedTextField(
-                value = vehicleNumber,
-                onValueChange = { vehicleNumber = it },
-                label = { Text("Vehicle number") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp)
-            )
+            ExposedDropdownMenuBox(
+                expanded = vehicleNumberExpanded,
+                onExpandedChange = { vehicleNumberExpanded = it },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    value = vehicleNumber,
+                    readOnly = true,
+                    onValueChange = { newValue ->
+                        vehicleNumber = newValue
+                        vehicleNumberExpanded = true
+                    },
+                    label = { Text("Vehicle number") },
+                    trailingIcon = {
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = vehicleNumberExpanded)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(),
+                    shape = RoundedCornerShape(8.dp)
+                )
+
+                ExposedDropdownMenu(
+                    expanded = vehicleNumberExpanded,
+                    onDismissRequest = { vehicleNumberExpanded = false }
+                ) {
+                    vehicleNumbers
+                        .filter { it.contains(vehicleNumber, ignoreCase = true) }
+                        .forEach { number ->
+                            DropdownMenuItem(
+                                text = { Text(number) },
+                                onClick = {
+                                    vehicleNumber = number
+                                    vehicleNumberExpanded = false
+                                }
+                            )
+                        }
+                }
+            }
+
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -292,6 +358,7 @@ fun FuelRequestScreen(
             ) {
                 OutlinedTextField(
                     value = fuelType,
+                    readOnly = true,
                     onValueChange = { newValue ->
                         fuelType = newValue
                         fuelTypeExpanded = true
@@ -416,13 +483,46 @@ fun FuelRequestScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Driver Name
-            OutlinedTextField(
-                value = driverName,
-                onValueChange = { driverName = it },
-                label = { Text("Driver name") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp)
-            )
+            ExposedDropdownMenuBox(
+                expanded = driverNameExpanded,
+                onExpandedChange = { driverNameExpanded = it },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    value = driverName,
+                    readOnly = true,
+                    onValueChange = { newValue ->
+                        driverName = newValue
+                        driverNameExpanded = true
+                    },
+                    label = { Text("Driver name") },
+                    trailingIcon = {
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = driverNameExpanded)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(),
+                    shape = RoundedCornerShape(8.dp)
+                )
+
+                ExposedDropdownMenu(
+                    expanded = driverNameExpanded,
+                    onDismissRequest = { driverNameExpanded = false }
+                ) {
+                    drivers
+                        .filter { it.contains(driverName, ignoreCase = true) }
+                        .forEach { driver ->
+                            DropdownMenuItem(
+                                text = { Text(driver) },
+                                onClick = {
+                                    driverName = driver
+                                    driverNameExpanded = false
+                                }
+                            )
+                        }
+                }
+            }
+
 
             Spacer(modifier = Modifier.height(16.dp))
 

@@ -1,6 +1,7 @@
 package com.kapilagro.sasyak.presentation.yield
 
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -28,6 +29,8 @@ import com.kapilagro.sasyak.data.api.ImageUploadService
 import com.kapilagro.sasyak.di.IoDispatcher
 import com.kapilagro.sasyak.domain.models.ApiResponse
 import com.kapilagro.sasyak.domain.models.YieldDetails
+import com.kapilagro.sasyak.presentation.common.catalog.CropViewModel
+import com.kapilagro.sasyak.presentation.common.catalog.CropsState
 import com.kapilagro.sasyak.presentation.common.components.SuccessDialog
 import com.kapilagro.sasyak.presentation.common.navigation.Screen
 import com.kapilagro.sasyak.presentation.common.theme.AgroPrimary
@@ -47,12 +50,14 @@ fun YieldRequestScreen(
     navController: NavController,
     viewModel: YieldListViewModel = hiltViewModel(),
     homeViewModel: HomeViewModel = hiltViewModel(),
+    cropViewModel: CropViewModel = hiltViewModel(),
     @IoDispatcher ioDispatcher: CoroutineDispatcher,
     imageUploadService: ImageUploadService
 ) {
     val createYieldState by viewModel.createYieldState.collectAsState()
     val userRole by homeViewModel.userRole.collectAsState()
     val supervisorsListState by homeViewModel.supervisorsListState.collectAsState()
+    val cropsState by cropViewModel.cropsState.collectAsState()
     val scope = rememberCoroutineScope()
 
     // Dialog state
@@ -108,13 +113,23 @@ fun YieldRequestScreen(
             }
         }
     }
+    Log.d("CropViewModel", "cropsState: $cropsState")
+    val crops = when (cropsState) {
+        is CropsState.Success -> (cropsState as CropsState.Success).crops.map { it.value }
+        else -> listOf(
+            "Wheat", "Rice", "Maize", "Barley", "Sorghum",
+            "Mango", "Banana", "Apple", "Papaya", "Guava",
+            "Tomato", "Potato", "Onion", "Brinjal", "Cabbage",
+            "Sugarcane", "Groundnut", "Cotton", "Soybean", "Mustard"
+        )
+    }
 
-    val crops = listOf(
+   /* val crops = listOf(
         "Wheat", "Rice", "Maize", "Barley", "Sorghum",
         "Mango", "Banana", "Apple", "Papaya", "Guava",
         "Tomato", "Potato", "Onion", "Brinjal", "Cabbage",
         "Sugarcane", "Groundnut", "Cotton", "Soybean", "Mustard"
-    )
+    )*/
 
     val rows = (1..20).map { it.toString() }
 
@@ -232,6 +247,7 @@ fun YieldRequestScreen(
             ) {
                 OutlinedTextField(
                     value = cropName,
+                    readOnly = true,
                     onValueChange = { newValue ->
                         cropName = newValue
                         cropNameExpanded = true
@@ -266,40 +282,15 @@ fun YieldRequestScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Row Dropdown
-            ExposedDropdownMenuBox(
-                expanded = rowExpanded,
-                onExpandedChange = { rowExpanded = it },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                OutlinedTextField(
-                    value = row,
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Row *") },
-                    trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = rowExpanded)
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .menuAnchor(),
-                    shape = RoundedCornerShape(8.dp)
-                )
+            OutlinedTextField(
+                value = row,
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("Row *") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp)
+            )
 
-                ExposedDropdownMenu(
-                    expanded = rowExpanded,
-                    onDismissRequest = { rowExpanded = false }
-                ) {
-                    rows.forEach { rowNumber ->
-                        DropdownMenuItem(
-                            text = { Text(rowNumber) },
-                            onClick = {
-                                row = rowNumber
-                                rowExpanded = false
-                            }
-                        )
-                    }
-                }
-            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -428,6 +419,7 @@ fun YieldRequestScreen(
             ) {
                 OutlinedTextField(
                     value = harvestMethod,
+                    readOnly = true,
                     onValueChange = { newValue ->
                         harvestMethod = newValue
                         harvestMethodExpanded = true
