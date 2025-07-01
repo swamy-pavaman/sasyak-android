@@ -1,6 +1,26 @@
 package com.kapilagro.sasyak.presentation.tasks
 
 import android.os.Build
+import android.graphics.BitmapFactory
+import android.widget.ImageView
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.unit.dp
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.*
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import java.io.IOException
 import android.util.Log
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -37,6 +57,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -46,6 +68,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
+import coil.request.ImageRequest
 import com.kapilagro.sasyak.di.IoDispatcher
 import com.kapilagro.sasyak.data.api.ImageUploadService
 import com.kapilagro.sasyak.domain.models.ApiResponse
@@ -98,8 +121,18 @@ fun TaskDetailScreen(
     val scope = rememberCoroutineScope()
     var imagesToPreview by remember { mutableStateOf<List<String>?>(null) }
     var showPreviewDialog by remember { mutableStateOf(false) }
+    var isActivityExpanded by remember { mutableStateOf(false) }
 
-    // [CHANGE] Updated LaunchedEffect for real-time updates
+    LaunchedEffect(navController) {
+        navController.currentBackStackEntry?.savedStateHandle?.getStateFlow<List<File>>(
+            "selectedImages",
+            emptyList()
+        )
+            ?.collect { files ->
+                implementationImages = files
+            }
+    }
+
     LaunchedEffect(taskId, shouldRefresh) {
         viewModel.loadTaskDetail(taskId)
         viewModel.getCurrentUserRole()
@@ -352,7 +385,6 @@ fun TaskDetailScreen(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     val implementations = getImplementationsFromJson(task.implementationJson)
-                    // Replace the entire "Activity History" section in TaskDetailScreen
                     if (advices.isNotEmpty() || implementations.isNotEmpty()) {
                         // Pair advices and implementations by index
                         val pairedItems = mutableListOf<Pair<TaskAdvice?, Implementation?>>()
@@ -362,7 +394,8 @@ fun TaskDetailScreen(
                             val implementation = if (i < implementations.size) implementations[i] else null
                             pairedItems.add(Pair(advice, implementation))
                         }
-                        pairedItems.reverse() // Reverse to show newest first
+
+
 
                         Text(
                             text = "Activity History",
@@ -371,13 +404,17 @@ fun TaskDetailScreen(
                             modifier = Modifier.padding(horizontal = 16.dp)
                         )
                         Spacer(modifier = Modifier.height(8.dp))
+
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            pairedItems.forEach { pair ->
+                            // Limit to 2 items initially, show all if expanded
+                            val displayItems = if (isActivityExpanded) pairedItems else pairedItems.take(2)
+
+                            displayItems.forEach { pair ->
                                 Card(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -410,6 +447,31 @@ fun TaskDetailScreen(
                                             )
                                         }
                                     }
+                                }
+                            }
+
+                            // Show More/Show Less toggle
+                            if (pairedItems.size > 2) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { isActivityExpanded = !isActivityExpanded }
+                                        .padding(vertical = 4.dp),
+                                    horizontalArrangement = Arrangement.End,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = if (isActivityExpanded) "Show Less" else "Show More",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.padding(end = 4.dp)
+                                    )
+                                    Icon(
+                                        imageVector = if (isActivityExpanded) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
+                                        contentDescription = if (isActivityExpanded) "Collapse history" else "Expand history",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
                                 }
                             }
                         }
@@ -842,6 +904,24 @@ fun TaskDetailScreen(
 
 @Composable
 fun ImageSlideshow(imageUrls: List<String>) {
+    // Handle empty imageUrls case
+    if (imageUrls.isEmpty()) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(250.dp)
+                .background(Color.Gray),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "No images available",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.White
+            )
+        }
+        return
+    }
+
     var currentImageIndex by remember { mutableStateOf(0) }
     var showPreview by remember { mutableStateOf(false) }
     val numberOfImages = imageUrls.size
@@ -1118,7 +1198,6 @@ fun AdviceChatItem(advice: TaskAdvice, modifier: Modifier = Modifier) {
         }
     }
 }
-
 @Composable
 fun ImplementationChatItem(
     implementation: com.kapilagro.sasyak.presentation.tasks.Implementation,
@@ -1127,6 +1206,8 @@ fun ImplementationChatItem(
     modifier: Modifier = Modifier
 ) {
     var isImplementationExpanded by remember { mutableStateOf(false) }
+    Log.d("ImplementationChatItem", "Rendering implementation: text=${implementation.text}, imageUrls=${implementation.imageUrls}, size=${implementation.imageUrls?.size ?: 0}")
+
     Column(modifier = modifier.padding(12.dp)) {
         Text(
             text = implementation.supervisorName,
@@ -1134,48 +1215,180 @@ fun ImplementationChatItem(
             fontWeight = FontWeight.Bold
         )
         Spacer(modifier = Modifier.height(4.dp))
-        AsyncImage(
-            model = implementation.imageUrls?.firstOrNull() ?: "https://via.placeholder.com/150",
-            contentDescription = "Implementation image",
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(1f)
-                .clip(RoundedCornerShape(8.dp))
-                .clickable {
-                    imagesToPreview(implementation.imageUrls)
-                    showPreviewDialog(true)
-                },
-            contentScale = ContentScale.Crop
-        )
+
+        // Handle image display with horizontal scrolling
+        val imageUrls = implementation.imageUrls?.take(5) ?: emptyList()
+        if (imageUrls.isNotEmpty()) {
+            Row(
+                modifier = Modifier
+                    .heightIn(max = 100.dp)
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                imageUrls.forEach { url ->
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(url)
+                            .build(),
+                        contentDescription = "Implementation image",
+                        modifier = Modifier
+                            .size(100.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable {
+                                Log.d("ImplementationChatItem", "Opening preview dialog with ${implementation.imageUrls?.size} images")
+                                imagesToPreview(implementation.imageUrls)
+                                showPreviewDialog(true)
+                            },
+                        contentScale = ContentScale.Crop,
+                        placeholder = painterResource(id = android.R.drawable.ic_menu_gallery),
+                        error = painterResource(id = android.R.drawable.stat_sys_warning)
+                    )
+                }
+                if ((implementation.imageUrls?.size ?: 0) > 5) {
+                    Text(
+                        text = "View ${implementation.imageUrls!!.size - 5} more image(s)",
+                        color = MaterialTheme.colorScheme.primary,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier
+                            .align(Alignment.CenterVertically)
+                            .padding(start = 8.dp)
+                            .clickable {
+                                Log.d("ImplementationChatItem", "Opening preview dialog with ${implementation.imageUrls?.size} images")
+                                imagesToPreview(implementation.imageUrls)
+                                showPreviewDialog(true)
+                            }
+                    )
+                }
+            }
+        } else {
+            Text(
+                text = "No implementation images available",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
         Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = implementation.text,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium,
-            color = Color(0xFF0E141B),
-            maxLines = if (isImplementationExpanded) Int.MAX_VALUE else 2,
-            overflow = if (isImplementationExpanded) TextOverflow.Visible else TextOverflow.Ellipsis,
-            modifier = Modifier.animateContentSize()
-        )
+
+        // Handle text display with show more/less
+        implementation.text.takeIf { it.isNotBlank() }?.let { text ->
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                color = Color(0xFF0E141B),
+                maxLines = if (isImplementationExpanded) Int.MAX_VALUE else 3,
+                overflow = if (isImplementationExpanded) TextOverflow.Visible else TextOverflow.Ellipsis,
+                modifier = Modifier.animateContentSize()
+            )
+
+            // Check if the text is long enough to show the toggle
+            val isTextLongEnough = text.length > 100 || text.lines().size > 2
+            if (isTextLongEnough) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = if (isImplementationExpanded) "Show Less" else "Show More",
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier
+                        .clickable { isImplementationExpanded = !isImplementationExpanded }
+                        .padding(vertical = 4.dp)
+                )
+            }
+        }
+
         Text(
             text = formatTimestamp(implementation.timestamp),
             style = MaterialTheme.typography.bodySmall,
             color = Color(0xFF4E7397)
         )
-        val isTextLongEnough = implementation.text.length > 50 || implementation.text.lines().size > 2
-        if (isTextLongEnough) {
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = if (isImplementationExpanded) "Show Less" else "Show More",
-                color = MaterialTheme.colorScheme.primary,
-                style = MaterialTheme.typography.bodySmall,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.clickable { isImplementationExpanded = !isImplementationExpanded }
-            )
-        }
     }
 }
+@Composable
+fun ImageLoader(
+    url: String,
+    modifier: Modifier = Modifier
+) {
+    var bitmap by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
+    var error by remember { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
+    val density = LocalDensity.current // Access density for dp-to-px conversion
 
+    LaunchedEffect(url) {
+        withContext(Dispatchers.IO) {
+            try {
+                val client = OkHttpClient()
+                val request = Request.Builder().url(url).build()
+                val response = client.newCall(request).execute()
+                if (response.isSuccessful) {
+                    response.body?.byteStream()?.use { inputStream ->
+                        val loadedBitmap = BitmapFactory.decodeStream(inputStream)
+                        if (loadedBitmap != null) {
+                            withContext(Dispatchers.Main) {
+                                bitmap = loadedBitmap
+                                Log.d("ImageLoader", "Successfully loaded image: $url")
+                            }
+                        } else {
+                            withContext(Dispatchers.Main) {
+                                error = "Failed to decode bitmap: $url"
+                                Log.e("ImageLoader", "Failed to decode bitmap: $url")
+                            }
+                        }
+                    }
+                } else {
+                    withContext(Dispatchers.Main) {
+                        error = "HTTP ${response.code}: $url"
+                        Log.e("ImageLoader", "Failed to load image: HTTP ${response.code} - $url")
+                    }
+                }
+            } catch (e: IOException) {
+                withContext(Dispatchers.Main) {
+                    error = "Network error: ${e.message}"
+                    Log.e("ImageLoader", "Failed to load image $url: ${e.message}")
+                }
+            }
+        }
+    }
+
+    AndroidView(
+        factory = { ctx ->
+            ImageView(ctx).apply {
+                scaleType = ImageView.ScaleType.CENTER_CROP
+                clipToOutline = true
+                // Use LocalDensity to convert 8.dp to pixels
+                val cornerRadiusPx = with(density) { 8.dp.toPx() }
+                background = android.graphics.drawable.ShapeDrawable(
+                    android.graphics.drawable.shapes.RoundRectShape(
+                        FloatArray(8) { cornerRadiusPx },
+                        null,
+                        null
+                    )
+                )
+            }
+        },
+        modifier = modifier,
+        update = { imageView ->
+            when {
+                bitmap != null -> {
+                    imageView.setImageBitmap(bitmap)
+                    Log.d("ImageLoader", "Displaying bitmap for: $url")
+                }
+                error != null -> {
+                    imageView.setImageResource(android.R.drawable.stat_sys_warning)
+                    Log.d("ImageLoader", "Displaying error drawable for: $url")
+                }
+                else -> {
+                    imageView.setImageResource(android.R.drawable.ic_menu_gallery) // Placeholder while loading
+                    Log.d("ImageLoader", "Showing placeholder for: $url")
+                }
+            }
+        }
+    )
+}
 private fun formatDateTime(dateTime: String): String {
     return try {
         val date = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).parse(dateTime) ?: Date()
@@ -1208,15 +1421,30 @@ private fun getCropNameFromJson(detailsJson: String?): String? {
 }
 
 private fun getImplementationsFromJson(implementationJson: String?): List<Implementation> {
-    if (implementationJson.isNullOrEmpty() || implementationJson == "{}") return emptyList()
+    // Log the input JSON for debugging
+    Log.d("getImplementationsFromJson", "Input JSON: $implementationJson")
+
+    if (implementationJson.isNullOrEmpty() || implementationJson == "{}" || implementationJson == "[]") {
+        Log.d("getImplementationsFromJson", "JSON is null, empty, or invalid, returning empty list")
+        return emptyList()
+    }
+
     return try {
         val jsonArray = JSONArray(implementationJson)
         val implementations = mutableListOf<Implementation>()
         for (i in 0 until jsonArray.length()) {
             val obj = jsonArray.getJSONObject(i)
             val imageUrls = obj.optJSONArray("imageUrls")?.let { array ->
-                (0 until array.length()).map { array.getString(it) }
+                (0 until array.length()).mapNotNull { index ->
+                    try {
+                        array.getString(index).takeIf { it.isNotEmpty() }
+                    } catch (e: Exception) {
+                        Log.e("getImplementationsFromJson", "Error parsing image URL at index $index: ${e.message}")
+                        null
+                    }
+                }
             } ?: emptyList()
+            Log.d("getImplementationsFromJson", "Parsed imageUrls for object $i: $imageUrls")
             implementations.add(
                 Implementation(
                     text = obj.optString("text", ""),
@@ -1226,13 +1454,23 @@ private fun getImplementationsFromJson(implementationJson: String?): List<Implem
                 )
             )
         }
+        Log.d("getImplementationsFromJson", "Parsed ${implementations.size} implementations")
         implementations.sortedByDescending { it.timestamp }
     } catch (e: Exception) {
+        Log.e("getImplementationsFromJson", "Error parsing JSON array: ${e.message}")
         try {
             val jsonObject = JSONObject(implementationJson)
             val imageUrls = jsonObject.optJSONArray("imageUrls")?.let { array ->
-                (0 until array.length()).map { array.getString(it) }
+                (0 until array.length()).mapNotNull { index ->
+                    try {
+                        array.getString(index).takeIf { it.isNotEmpty() }
+                    } catch (e: Exception) {
+                        Log.e("getImplementationsFromJson", "Error parsing single image URL at index $index: ${e.message}")
+                        null
+                    }
+                }
             } ?: emptyList()
+            Log.d("getImplementationsFromJson", "Parsed single object imageUrls: $imageUrls")
             listOf(
                 Implementation(
                     text = jsonObject.optString("text", ""),
@@ -1242,16 +1480,16 @@ private fun getImplementationsFromJson(implementationJson: String?): List<Implem
                 )
             )
         } catch (e2: Exception) {
+            Log.e("getImplementationsFromJson", "Error parsing single JSON object: ${e2.message}")
             emptyList()
         }
     }
 }
-
 data class Implementation(
     val text: String,
     val timestamp: Long,
     val supervisorName: String,
-    val imageUrls: List<String>? = null
+    val imageUrls: List<String>?
 )
 
 private fun formatTimestamp(timestamp: Long): String {
