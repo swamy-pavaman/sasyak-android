@@ -189,7 +189,7 @@ fun SprayingRequestScreen(
 
         SuccessDialog(
             title = "Spraying Report Sent!",
-            message = "Your manager will be notified when they take action on it.",
+            message = if (userRole=="MANAGER") "This report has been sent to the supervisor." else "This report has been sent to the manager.",
             details = details,
             description = description,
             primaryButtonText = "OK",
@@ -289,6 +289,7 @@ fun SprayingRequestScreen(
             // Row Dropdown
             OutlinedTextField(
                 value = row,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 onValueChange = { newValue ->
                     row = newValue
                 },
@@ -480,7 +481,7 @@ fun SprayingRequestScreen(
 
             // Upload Section
             Text(
-                text = "Upload *",
+                text = if (userRole == "MANAGER") "Upload" else "Upload *",
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
@@ -590,7 +591,7 @@ fun SprayingRequestScreen(
             Button(
                 onClick = {
                     if (cropName.isNotBlank() && row.isNotBlank() && chemicalName.isNotBlank() &&
-                        sprayingMethod.isNotBlank() && imageFiles != null &&
+                        sprayingMethod.isNotBlank() && (userRole == "MANAGER" || imageFiles != null) &&
                         (userRole != "MANAGER" || assignedTo != null)) {
                         scope.launch(ioDispatcher) {
                             // Upload images

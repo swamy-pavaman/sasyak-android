@@ -118,7 +118,7 @@ class ScoutingListViewModel @Inject constructor(
                     description = description,
                     detailsJson = detailsJson,
                     imagesJson = imagesJson,
-                    assignedToId = null
+                    assignedToId = assignedToId
                 )) {
                     is ApiResponse.Success -> {
                         _createScoutingState.value = CreateScoutingState.Success(response.data)

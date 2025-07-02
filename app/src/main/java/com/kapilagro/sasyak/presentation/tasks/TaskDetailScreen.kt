@@ -274,7 +274,7 @@ fun TaskDetailScreen(
                                 val keysList = details.keys().asSequence().toList()
                                 // Limit to first 4 keys when not expanded
                                 val displayKeys =
-                                    if (isExpandedForDetails) keysList else keysList.take(4)
+                                    if (isExpandedForDetails) keysList else keysList.take(6)
 
                                 // Display key-value pairs
                                 displayKeys.forEach { key ->
@@ -286,7 +286,7 @@ fun TaskDetailScreen(
                                 }
 
                                 // Show arrow icon if there are more than 4 keys
-                                if (keysList.size > 4) {
+                                if (keysList.size > 6) {
                                     Spacer(modifier = Modifier.height(8.dp))
                                     Row(
                                         modifier = Modifier
@@ -381,7 +381,97 @@ fun TaskDetailScreen(
 
 
                     Spacer(modifier = Modifier.height(16.dp))
-
+                    val implementations = getImplementationsFromJson(task.implementationJson)
+                    val communications = mergeAndSortCommunications(advices, implementations)
+                    if (communications.isNotEmpty()) {
+                        Text(
+                            text = "Action Log",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(12.dp)
+                        )
+                    }
+                    communications.reversed().forEach { item ->
+                        when (item) {
+                            is CommunicationItem.Advice -> SimpleAdviceItem(advice = item.advice)
+                            is CommunicationItem.Implementation -> {
+                                // Reuse or adapt the existing Implementation Card Composable
+                                Row (
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.End
+                                ){
+                                    Card(
+                                        modifier = Modifier
+                                            .fillMaxWidth(0.9f)
+                                            .padding(horizontal = 16.dp),
+                                        shape = RoundedCornerShape(8.dp),
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(
+                                                alpha = 0.5f
+                                            )
+                                        )
+                                    ) {
+                                        Column(modifier = Modifier.padding(16.dp)) {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                Text(
+                                                    text = item.implementation.supervisorName,
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                                Text(
+                                                    text = formatTimestamp(item.implementation.timestamp),
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.height(8.dp))
+                                            Text(
+                                                text = item.implementation.text,
+                                                style = MaterialTheme.typography.bodyMedium
+                                            )
+                                            // Display implementation images if available
+                                            if (item.implementation.imageUrls?.isNotEmpty() == true) {
+                                                Spacer(modifier = Modifier.height(8.dp))
+                                                Row(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .horizontalScroll(rememberScrollState()),
+                                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                                ) {
+                                                    item.implementation.imageUrls.forEach { url ->
+                                                        Box(modifier = Modifier.size(80.dp)) {
+                                                            Card(
+                                                                modifier = Modifier
+                                                                    .fillMaxSize()
+                                                                    .clickable {
+                                                                        imagesToPreview =
+                                                                            listOf(url) // Preview single image
+                                                                        showPreviewDialog = true
+                                                                    },
+                                                                shape = RoundedCornerShape(8.dp)
+                                                            ) {
+                                                                AsyncImage(
+                                                                    model = url,
+                                                                    contentDescription = "Implementation image",
+                                                                    modifier = Modifier.fillMaxSize(),
+                                                                    contentScale = ContentScale.Crop
+                                                                )
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                   /* Log.d("advices", advices.toString())
                     if (advices.isNotEmpty()) {
                         Text(
                             text = "Task Advice",
@@ -487,7 +577,7 @@ fun TaskDetailScreen(
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))
-                    }
+                    }*/
                     if (showPreviewDialog && imagesToPreview != null) {
                         Dialog(
                             onDismissRequest = {
@@ -670,7 +760,7 @@ fun TaskDetailScreen(
                                                 ignoreCase = true
                                             )
                                         )
-                                            "Update Implementation" else "Implementation Details",
+                                            "Implementation Details" else "Implementation Details",
                                         style = MaterialTheme.typography.titleMedium,
                                         fontWeight = FontWeight.Bold
                                     )
@@ -687,7 +777,7 @@ fun TaskDetailScreen(
                                                         ignoreCase = true
                                                     )
                                                 )
-                                                    "Update your implementation based on manager's feedback"
+                                                    "Add your implementation based on manager's feedback"
                                                 else
                                                     "Enter implementation details"
                                             )
@@ -1180,9 +1270,10 @@ fun FormattedScoutingFields(detailsJson: String?) {
 fun SimpleAdviceItem(advice: TaskAdvice) {
     Card(
         modifier = Modifier
-            .fillMaxWidth()
+            .fillMaxWidth(0.9f)
             .padding(horizontal = 16.dp),
-        shape = RoundedCornerShape(8.dp)
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
@@ -1216,13 +1307,11 @@ fun SimpleAdviceItem(advice: TaskAdvice) {
 @RequiresApi(Build.VERSION_CODES.O)
 private fun formatDateTime(dateTime: String): String {
     return try {
-        val dt = if (dateTime.contains(".")) {
-            val trimmed = dateTime.split(".")[0]
-            LocalDateTime.parse(trimmed)
-        } else {
-            LocalDateTime.parse(dateTime)
-        }
-        dt.format(DateTimeFormatter.ofPattern("MMM dd, yyyy - HH:mm a"))
+        val inputFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+        val parsedDateTime = LocalDateTime.parse(dateTime, inputFormatter)
+        val outputFormatter = DateTimeFormatter.ofPattern("MMM dd, yyyy - hh:mm a")
+        parsedDateTime.format(outputFormatter)
+
     } catch (e: Exception) {
         dateTime
     }
@@ -1314,6 +1403,38 @@ private fun formatTimestamp(timestamp: Long): String {
     } catch (e: Exception) {
         "Unknown time"
     }
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
+fun mergeAndSortCommunications(
+    advices: List<TaskAdvice>,
+    implementations: List<Implementation>
+): List<CommunicationItem> {
+    // Function to convert TaskAdvice.createdAt (string) to milliseconds
+    fun parseAdviceTimestamp(createdAt: String): Long {
+        return try {
+            val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+            val dateTime = LocalDateTime.parse(createdAt, formatter)
+            dateTime.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+        } catch (e: Exception) {
+            Log.e("CommunicationMerge", "Error parsing advice timestamp: $createdAt, ${e.message}")
+            0L // Fallback to 0 to avoid crashes, will sort to earliest
+        }
+    }
+    val adviceItems = advices.map { advice ->
+        CommunicationItem.Advice(advice) to parseAdviceTimestamp(advice.createdAt ?: "")
+    }
+    val implementationItems = implementations.map { implementation ->
+        CommunicationItem.Implementation(implementation) to implementation.timestamp
+    }
+    return (adviceItems + implementationItems)
+        .sortedByDescending { it.second } // Sort by timestamp
+        .map { it.first } // Extract the CommunicationItem
+}
+
+sealed class CommunicationItem {
+    data class Advice(val advice: TaskAdvice) : CommunicationItem()
+    data class Implementation(val implementation: com.kapilagro.sasyak.presentation.tasks.Implementation) : CommunicationItem()
 }
 
 private sealed class UploadState {

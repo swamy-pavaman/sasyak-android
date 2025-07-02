@@ -205,7 +205,7 @@ fun FuelRequestScreen(
 
         SuccessDialog(
             title = "Fuel Entry Sent!",
-            message = "Your manager will be notified when they take action on it.",
+            message = if (userRole=="MANAGER") "This report has been sent to the supervisor." else "This report has been sent to the manager.",
             details = details,
             description = description,
             primaryButtonText = "OK",
@@ -472,6 +472,7 @@ fun FuelRequestScreen(
 
                 OutlinedTextField(
                     value = totalCost,
+                    readOnly = true,
                     onValueChange = { totalCost = it },
                     label = { Text("Total cost (₹)") },
                     modifier = Modifier.weight(1f),
@@ -612,7 +613,7 @@ fun FuelRequestScreen(
 
             // Upload Section
             Text(
-                text = "Upload *",
+                text = if (userRole == "MANAGER") "Upload" else "Upload *",
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
@@ -722,7 +723,7 @@ fun FuelRequestScreen(
             Button(
                 onClick = {
                     if (vehicleName.isNotBlank() && fuelType.isNotBlank() && quantity.isNotBlank() &&
-                        imageFiles != null && (userRole != "MANAGER" || assignedTo != null)) {
+                        (userRole == "MANAGER" || imageFiles != null) && (userRole != "MANAGER" || assignedTo != null)) {
                         scope.launch(ioDispatcher) {
                             // Upload images
                             uploadState = UploadState.Loading

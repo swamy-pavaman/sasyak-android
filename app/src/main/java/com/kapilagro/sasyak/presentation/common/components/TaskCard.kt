@@ -1,6 +1,5 @@
 package com.kapilagro.sasyak.presentation.common.components
 
-import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -55,6 +54,7 @@ import com.kapilagro.sasyak.presentation.common.theme.White
 import com.kapilagro.sasyak.presentation.common.theme.YieldContainer
 import com.kapilagro.sasyak.presentation.common.theme.YieldIcon
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -64,32 +64,50 @@ import java.util.Locale
 fun formatDateTime(dateTimeString: String): String {
     if (dateTimeString.isBlank()) return "N/A"
     return try {
-        // List of possible input formats (without 'T')
         val inputFormats = listOf(
-            SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()),         // e.g., 2025-07-01 11:17:10
-            SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSSSSS", Locale.getDefault())   // e.g., 2025-06-26 05:29:44.934236
+            SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()),
+            SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSSSSS", Locale.getDefault())
         )
 
-        // Try parsing with each format
         var date: Date? = null
         for (format in inputFormats) {
             try {
                 date = format.parse(dateTimeString)
                 if (date != null) break
-            } catch (e: Exception) {
-                // Continue to next format
-            }
+            } catch (_: Exception) { }
         }
 
-        // Format the output
         date?.let {
-            val outputFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
-            outputFormat.format(it)
+            // Get today's date at midnight
+            val today = Calendar.getInstance()
+            today.set(Calendar.HOUR_OF_DAY, 0)
+            today.set(Calendar.MINUTE, 0)
+            today.set(Calendar.SECOND, 0)
+            today.set(Calendar.MILLISECOND, 0)
+
+            // Get input date at midnight
+            val inputCal = Calendar.getInstance()
+            inputCal.time = it
+            inputCal.set(Calendar.HOUR_OF_DAY, 0)
+            inputCal.set(Calendar.MINUTE, 0)
+            inputCal.set(Calendar.SECOND, 0)
+            inputCal.set(Calendar.MILLISECOND, 0)
+
+            return if (today.time == inputCal.time) {
+                // Same day → show time
+                val outputTimeFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
+                outputTimeFormat.format(it)
+            } else {
+                // Different day → show date
+                val outputDateFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+                outputDateFormat.format(it)
+            }
         } ?: "N/A"
     } catch (e: Exception) {
         "N/A"
     }
 }
+
 
 /**
  * Extracts the first image URL from the imagesJson string
