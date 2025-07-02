@@ -202,7 +202,7 @@ fun SowingRequestScreen(
 
         SuccessDialog(
             title = "Sowing Report Sent!",
-            message = "Your manager will be notified when they take action on it.",
+            message = if (userRole=="MANAGER") "This report has been sent to the supervisor." else "This report has been sent to the manager.",
             details = details,
             description = description,
             primaryButtonText = "OK",
@@ -307,8 +307,9 @@ fun SowingRequestScreen(
             // Row Dropdown
             OutlinedTextField(
                 value = row,
-                onValueChange = {},
-                readOnly = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                onValueChange = {newValue ->
+                    row = newValue},
                 label = { Text("Row *") },
                 modifier = Modifier
                     .fillMaxWidth(),
@@ -577,7 +578,7 @@ fun SowingRequestScreen(
 
             // Upload Section
             Text(
-                text = "Upload *",
+                text = if (userRole == "MANAGER") "Upload" else "Upload *",
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
@@ -706,7 +707,7 @@ fun SowingRequestScreen(
             Button(
                 onClick = {
                     if (cropName.isNotBlank() && row.isNotBlank() && seedVariety.isNotBlank() &&
-                        sowingMethod.isNotBlank() && imageFiles != null &&
+                        sowingMethod.isNotBlank() && (userRole == "MANAGER" || imageFiles != null) &&
                         (userRole != "MANAGER" || assignedTo != null)) {
 
                         scope.launch(ioDispatcher) {
