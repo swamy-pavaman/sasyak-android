@@ -103,7 +103,7 @@ class ScoutingListViewModel @Inject constructor(
     fun createScoutingTask(
         scoutingDetails: ScoutingDetails,
         description: String,
-        imagesJson:List<String>,
+        imagesJson:List<String>?=null,
         assignedToId:Int?=null
     ) {
         _createScoutingState.value = CreateScoutingState.Loading

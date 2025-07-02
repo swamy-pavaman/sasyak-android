@@ -611,7 +611,7 @@ fun FuelRequestScreen(
 
             // Upload Section
             Text(
-                text = if (userRole == "MANAGER") "Upload" else "Upload *",
+                text = "Upload",
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
@@ -720,56 +720,67 @@ fun FuelRequestScreen(
             // Submit Button
             Button(
                 onClick = {
-                    if (vehicleName.isNotBlank() && fuelType.isNotBlank() && quantity.isNotBlank() &&
-                        (userRole == "MANAGER" || imageFiles != null) && (userRole != "MANAGER" || assignedTo != null)) {
+                    if (vehicleName.isNotBlank() && fuelType.isNotBlank() && quantity.isNotBlank()
+                        && (userRole != "MANAGER" || assignedTo != null)) {
                         scope.launch(ioDispatcher) {
-                            // Upload images
-                            uploadState = UploadState.Loading
-                            val uploadResult = imageUploadService.uploadImages(imageFiles!!, "FUEL")
-                            when (uploadResult) {
-                                is ApiResponse.Success -> {
-                                    val imageUrls = uploadResult.data
-                                    if (imageUrls.isEmpty()) {
-                                        uploadState = UploadState.Error("Image upload failed, no URLs received")
-                                        return@launch
+                            val fuelDetails = FuelDetails(
+                                fuelDate = fuelDate,
+                                vehicleName = vehicleName,
+                                vehicleNumber = vehicleNumber.ifBlank { null },
+                                fuelType = fuelType,
+                                quantity = quantity,
+                                unit = unit,
+                                costPerUnit = costPerUnit.ifBlank { null },
+                                totalCost = totalCost.ifBlank { null },
+                                driverName = driverName.ifBlank { null },
+                                odometer = odometer.ifBlank { null },
+                                purposeOfFuel = purposeOfFuel.ifBlank { null },
+                                refillLocation = refillLocation.ifBlank { null },
+                                notes = notes.ifBlank { null },
+                            )
+                            submittedEntry = fuelDetails
+
+                            if (imageFiles.isNullOrEmpty()) {
+                                // No images to upload, proceed with task creation with empty image list
+                                viewModel.createFuelTask(
+                                    fuelDetails = fuelDetails,
+                                    description = description,
+                                    imagesJson = emptyList<String>(), // Pass empty list instead of null
+                                    assignedToId = if (userRole == "MANAGER") assignedTo else null
+                                )
+                                uploadState = UploadState.Idle
+                            } else {
+                                // Upload images
+                                uploadState = UploadState.Loading
+                                val uploadResult = imageUploadService.uploadImages(imageFiles!!, "FUEL")
+                                when (uploadResult) {
+                                    is ApiResponse.Success -> {
+                                        val imageUrls = uploadResult.data
+                                        if (imageUrls.isEmpty()) {
+                                            uploadState = UploadState.Error("Image upload failed, no URLs received")
+                                            return@launch
+                                        }
+                                        viewModel.createFuelTask(
+                                            fuelDetails = fuelDetails,
+                                            description = description,
+                                            imagesJson = imageUrls,
+                                            assignedToId = if (userRole == "MANAGER") assignedTo else null
+                                        )
+                                        uploadState = UploadState.Idle
                                     }
-                                    val fuelDetails = FuelDetails(
-                                        fuelDate = fuelDate,
-                                        vehicleName = vehicleName,
-                                        vehicleNumber = vehicleNumber.ifBlank { null },
-                                        fuelType = fuelType,
-                                        quantity = quantity,
-                                        unit = unit,
-                                        costPerUnit = costPerUnit.ifBlank { null },
-                                        totalCost = totalCost.ifBlank { null },
-                                        driverName = driverName.ifBlank { null },
-                                        odometer = odometer.ifBlank { null },
-                                        purposeOfFuel = purposeOfFuel.ifBlank { null },
-                                        refillLocation = refillLocation.ifBlank { null },
-                                        notes = notes.ifBlank { null },
-                                       // uploadedFiles = imageUrls
-                                    )
-                                    submittedEntry = fuelDetails
-                                    viewModel.createFuelTask(
-                                        fuelDetails = fuelDetails,
-                                        description = description,
-                                         imageUrls,
-                                        assignedToId = if (userRole == "MANAGER") assignedTo else null
-                                    )
-                                    uploadState = UploadState.Idle
-                                }
-                                is ApiResponse.Error -> {
-                                    uploadState = UploadState.Error("Image upload failed: ${uploadResult.errorMessage}")
-                                }
-                                is ApiResponse.Loading -> {
-                                    uploadState = UploadState.Loading
+                                    is ApiResponse.Error -> {
+                                        uploadState = UploadState.Error("Image upload failed: ${uploadResult.errorMessage}")
+                                    }
+                                    is ApiResponse.Loading -> {
+                                        uploadState = UploadState.Loading
+                                    }
                                 }
                             }
                         }
                     }
                 },
-                enabled = vehicleName.isNotBlank() && fuelType.isNotBlank() && quantity.isNotBlank() &&
-                        imageFiles != null && (userRole != "MANAGER" || assignedTo != null) &&
+                enabled = vehicleName.isNotBlank() && fuelType.isNotBlank() && quantity.isNotBlank()
+                        && (userRole != "MANAGER" || assignedTo != null) &&
                         createFuelState !is FuelListViewModel.CreateFuelState.Loading &&
                         uploadState !is UploadState.Loading,
                 modifier = Modifier

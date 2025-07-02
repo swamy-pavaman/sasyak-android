@@ -289,7 +289,6 @@ fun SprayingRequestScreen(
             // Row Dropdown
             OutlinedTextField(
                 value = row,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 onValueChange = { newValue ->
                     row = newValue
                 },
@@ -481,7 +480,7 @@ fun SprayingRequestScreen(
 
             // Upload Section
             Text(
-                text = if (userRole == "MANAGER") "Upload" else "Upload *",
+                text = "Upload",
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
@@ -591,52 +590,63 @@ fun SprayingRequestScreen(
             Button(
                 onClick = {
                     if (cropName.isNotBlank() && row.isNotBlank() && chemicalName.isNotBlank() &&
-                        sprayingMethod.isNotBlank() && (userRole == "MANAGER" || imageFiles != null) &&
+                        sprayingMethod.isNotBlank() &&
                         (userRole != "MANAGER" || assignedTo != null)) {
                         scope.launch(ioDispatcher) {
-                            // Upload images
-                            uploadState = UploadState.Loading
-                            val uploadResult = imageUploadService.uploadImages(imageFiles!!, "SPRAYING")
-                            when (uploadResult) {
-                                is ApiResponse.Success -> {
-                                    val imageUrls = uploadResult.data
-                                    if (imageUrls.isEmpty()) {
-                                        uploadState = UploadState.Error("Image upload failed, no URLs received")
-                                        return@launch
+                            val sprayingDetails = SprayingDetails(
+                                sprayingDate = sprayingDate,
+                                cropName = cropName,
+                                row = row.toInt(),
+                                fieldArea = fieldArea.ifBlank { null },
+                                chemicalName = chemicalName,
+                                dosage = dosage.ifBlank { null },
+                                sprayingMethod = sprayingMethod,
+                                targetPest = targetPest.ifBlank { null },
+                                weatherCondition = weatherCondition.ifBlank { null },
+                            )
+                            submittedEntry = sprayingDetails
+
+                            if (imageFiles.isNullOrEmpty()) {
+                                // No images to upload, proceed with task creation with empty image list
+                                viewModel.createSprayingTask(
+                                    sprayingDetails = sprayingDetails,
+                                    description = description,
+                                    imagesJson = emptyList<String>(), // Pass empty list instead of null
+                                    assignedToId = if (userRole == "MANAGER") assignedTo else null
+                                )
+                                uploadState = UploadState.Idle
+                            } else {
+                                // Upload images
+                                uploadState = UploadState.Loading
+                                val uploadResult = imageUploadService.uploadImages(imageFiles!!, "SPRAYING")
+                                when (uploadResult) {
+                                    is ApiResponse.Success -> {
+                                        val imageUrls = uploadResult.data
+                                        if (imageUrls.isEmpty()) {
+                                            uploadState = UploadState.Error("Image upload failed, no URLs received")
+                                            return@launch
+                                        }
+                                        viewModel.createSprayingTask(
+                                            sprayingDetails = sprayingDetails,
+                                            description = description,
+                                            imagesJson = imageUrls,
+                                            assignedToId = if (userRole == "MANAGER") assignedTo else null
+                                        )
+                                        uploadState = UploadState.Idle
                                     }
-                                    val sprayingDetails = SprayingDetails(
-                                        sprayingDate = sprayingDate,
-                                        cropName = cropName,
-                                        row = row.toInt(),
-                                        fieldArea = fieldArea.ifBlank { null },
-                                        chemicalName = chemicalName,
-                                        dosage = dosage.ifBlank { null },
-                                        sprayingMethod = sprayingMethod,
-                                        targetPest = targetPest.ifBlank { null },
-                                        weatherCondition = weatherCondition.ifBlank { null },
-                                        //uploadedFiles = imageUrls
-                                    )
-                                    submittedEntry = sprayingDetails
-                                    viewModel.createSprayingTask(
-                                        sprayingDetails = sprayingDetails,
-                                        description = description,
-                                         imageUrls,
-                                        assignedToId = if (userRole == "MANAGER") assignedTo else null
-                                    )
-                                    uploadState = UploadState.Idle
-                                }
-                                is ApiResponse.Error -> {
-                                    uploadState = UploadState.Error("Image upload failed: ${uploadResult.errorMessage}")
-                                }
-                                is ApiResponse.Loading -> {
-                                    uploadState = UploadState.Loading
+                                    is ApiResponse.Error -> {
+                                        uploadState = UploadState.Error("Image upload failed: ${uploadResult.errorMessage}")
+                                    }
+                                    is ApiResponse.Loading -> {
+                                        uploadState = UploadState.Loading
+                                    }
                                 }
                             }
                         }
                     }
                 },
                 enabled = cropName.isNotBlank() && row.isNotBlank() && chemicalName.isNotBlank() &&
-                        sprayingMethod.isNotBlank() && imageFiles != null &&
+                        sprayingMethod.isNotBlank() &&
                         (userRole != "MANAGER" || assignedTo != null) &&
                         createSprayingState !is SprayingListViewModel.CreateSprayingState.Loading &&
                         uploadState !is UploadState.Loading,

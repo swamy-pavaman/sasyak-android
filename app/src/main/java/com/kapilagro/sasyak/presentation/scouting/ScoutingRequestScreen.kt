@@ -282,7 +282,6 @@ fun ScoutingRequestScreen(
             // Row Dropdown
             OutlinedTextField(
                 value = row,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 onValueChange = { newValue ->
                     row = newValue
                 },
@@ -296,7 +295,6 @@ fun ScoutingRequestScreen(
             // Tree No Dropdown
             OutlinedTextField(
                 value = treeNo,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 onValueChange = { newValue ->
                     treeNo = newValue
                 },
@@ -549,39 +547,52 @@ fun ScoutingRequestScreen(
                     if (cropName.isNotBlank() && row.isNotBlank() && treeNo.isNotBlank() &&
                         (userRole != "MANAGER" || assignedTo != null)) {
                         scope.launch(ioDispatcher) {
-                            uploadState = UploadState.Loading
-                            val uploadResult = imageUploadService.uploadImages(imageFiles!!, "SCOUTING")
-                            when (uploadResult) {
-                                is ApiResponse.Success -> {
-                                    val imageUrls = uploadResult.data
-                                    if (imageUrls.isEmpty()) {
-                                        uploadState = UploadState.Error("Image upload failed, no URLs received")
-                                        return@launch
+                            val scoutingDetails = ScoutingDetails(
+                                scoutingDate = scoutingDate,
+                                cropName = cropName,
+                                row = row.toInt(),
+                                treeNo = treeNo.toInt(),
+                                noOfFruitSeen = noOfFruitSeen.ifBlank { null },
+                                noOfFlowersSeen = noOfFlowersSeen.ifBlank { null },
+                                noOfFruitsDropped = noOfFruitsDropped.ifBlank { null },
+                                nameOfDisease = nameOfDisease.ifBlank { null }
+                            )
+                            submittedEntry = scoutingDetails
+
+                            if (imageFiles.isNullOrEmpty()) {
+                                // No images to upload, proceed with task creation
+                                viewModel.createScoutingTask(
+                                    scoutingDetails = scoutingDetails,
+                                    description = description,
+                                    imagesJson = emptyList<String>(), // Pass null for imagesJson
+                                    assignedToId = if (userRole == "MANAGER") assignedTo else null
+                                )
+                                uploadState = UploadState.Idle
+                            } else {
+                                // Upload images
+                                uploadState = UploadState.Loading
+                                val uploadResult = imageUploadService.uploadImages(imageFiles!!, "SCOUTING")
+                                when (uploadResult) {
+                                    is ApiResponse.Success -> {
+                                        val imageUrls = uploadResult.data
+                                        if (imageUrls.isEmpty()) {
+                                            uploadState = UploadState.Error("Image upload failed, no URLs received")
+                                            return@launch
+                                        }
+                                        viewModel.createScoutingTask(
+                                            scoutingDetails = scoutingDetails,
+                                            description = description,
+                                            imagesJson = imageUrls,
+                                            assignedToId = if (userRole == "MANAGER") assignedTo else null
+                                        )
+                                        uploadState = UploadState.Idle
                                     }
-                                    val scoutingDetails = ScoutingDetails(
-                                        scoutingDate = scoutingDate,
-                                        cropName = cropName,
-                                        row = row.toInt(),
-                                        treeNo = treeNo.toInt(),
-                                        noOfFruitSeen = noOfFruitSeen.ifBlank { null },
-                                        noOfFlowersSeen = noOfFlowersSeen.ifBlank { null },
-                                        noOfFruitsDropped = noOfFruitsDropped.ifBlank { null },
-                                        nameOfDisease = nameOfDisease.ifBlank { null }
-                                    )
-                                    submittedEntry = scoutingDetails
-                                    viewModel.createScoutingTask(
-                                        scoutingDetails,
-                                        description,
-                                        imageUrls,
-                                        assignedToId = if (userRole == "MANAGER") assignedTo else null
-                                    )
-                                    uploadState = UploadState.Idle
-                                }
-                                is ApiResponse.Error -> {
-                                    uploadState = UploadState.Error("Image upload failed: ${uploadResult.errorMessage}")
-                                }
-                                is ApiResponse.Loading -> {
-                                    uploadState = UploadState.Loading
+                                    is ApiResponse.Error -> {
+                                        uploadState = UploadState.Error("Image upload failed: ${uploadResult.errorMessage}")
+                                    }
+                                    is ApiResponse.Loading -> {
+                                        uploadState = UploadState.Loading
+                                    }
                                 }
                             }
                         }

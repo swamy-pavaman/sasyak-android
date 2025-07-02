@@ -283,7 +283,6 @@ fun YieldRequestScreen(
             // Row Dropdown
             OutlinedTextField(
                 value = row,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 onValueChange = {newValue ->
                     row = newValue
                 },
@@ -505,7 +504,7 @@ fun YieldRequestScreen(
 
             // Upload Section
             Text(
-                text = if (userRole == "MANAGER") "Upload" else "Upload *",
+                text ="Upload",
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
@@ -615,53 +614,64 @@ fun YieldRequestScreen(
             Button(
                 onClick = {
                     if (cropName.isNotBlank() && row.isNotBlank() && yieldQuantity.isNotBlank() &&
-                        yieldUnit.isNotBlank() && (userRole == "MANAGER" || imageFiles != null) &&
+                        yieldUnit.isNotBlank() &&
                         (userRole != "MANAGER" || assignedTo != null)) {
                         scope.launch(ioDispatcher) {
-                            // Upload images
-                            uploadState = UploadState.Loading
-                            val uploadResult = imageUploadService.uploadImages(imageFiles!!, "YIELD")
-                            when (uploadResult) {
-                                is ApiResponse.Success -> {
-                                    val imageUrls = uploadResult.data
-                                    if (imageUrls.isEmpty()) {
-                                        uploadState = UploadState.Error("Image upload failed, no URLs received")
-                                        return@launch
+                            val yieldDetails = YieldDetails(
+                                harvestDate = harvestDate,
+                                cropName = cropName,
+                                row = row.toInt(),
+                                fieldArea = fieldArea.ifBlank { null },
+                                yieldQuantity = yieldQuantity,
+                                yieldUnit = yieldUnit,
+                                qualityGrade = qualityGrade.ifBlank { null },
+                                moistureContent = moistureContent.ifBlank { null },
+                                harvestMethod = harvestMethod.ifBlank { null },
+                                notes = notes.ifBlank { null },
+                            )
+                            submittedEntry = yieldDetails
+
+                            if (imageFiles.isNullOrEmpty()) {
+                                // No images to upload, proceed with task creation with empty image list
+                                viewModel.createYieldTask(
+                                    yieldDetails = yieldDetails,
+                                    description = description,
+                                    imagesJson = emptyList<String>(), // Pass empty list instead of null
+                                    assignedToId = if (userRole == "MANAGER") assignedTo else null
+                                )
+                                uploadState = UploadState.Idle
+                            } else {
+                                // Upload images
+                                uploadState = UploadState.Loading
+                                val uploadResult = imageUploadService.uploadImages(imageFiles!!, "YIELD")
+                                when (uploadResult) {
+                                    is ApiResponse.Success -> {
+                                        val imageUrls = uploadResult.data
+                                        if (imageUrls.isEmpty()) {
+                                            uploadState = UploadState.Error("Image upload failed, no URLs received")
+                                            return@launch
+                                        }
+                                        viewModel.createYieldTask(
+                                            yieldDetails = yieldDetails,
+                                            description = description,
+                                            imagesJson = imageUrls,
+                                            assignedToId = if (userRole == "MANAGER") assignedTo else null
+                                        )
+                                        uploadState = UploadState.Idle
                                     }
-                                    val yieldDetails = YieldDetails(
-                                        harvestDate = harvestDate,
-                                        cropName = cropName,
-                                        row = row.toInt(),
-                                        fieldArea = fieldArea.ifBlank { null },
-                                        yieldQuantity = yieldQuantity,
-                                        yieldUnit = yieldUnit,
-                                        qualityGrade = qualityGrade.ifBlank { null },
-                                        moistureContent = moistureContent.ifBlank { null },
-                                        harvestMethod = harvestMethod.ifBlank { null },
-                                        notes = notes.ifBlank { null },
-                                       // uploadedFiles = imageUrls
-                                    )
-                                    submittedEntry = yieldDetails
-                                    viewModel.createYieldTask(
-                                        yieldDetails = yieldDetails,
-                                        description = description,
-                                         imageUrls,
-                                        assignedToId = if (userRole == "MANAGER") assignedTo else null
-                                    )
-                                    uploadState = UploadState.Idle
-                                }
-                                is ApiResponse.Error -> {
-                                    uploadState = UploadState.Error("Image upload failed: ${uploadResult.errorMessage}")
-                                }
-                                is ApiResponse.Loading -> {
-                                    uploadState = UploadState.Loading
+                                    is ApiResponse.Error -> {
+                                        uploadState = UploadState.Error("Image upload failed: ${uploadResult.errorMessage}")
+                                    }
+                                    is ApiResponse.Loading -> {
+                                        uploadState = UploadState.Loading
+                                    }
                                 }
                             }
                         }
                     }
                 },
                 enabled = cropName.isNotBlank() && row.isNotBlank() && yieldQuantity.isNotBlank() &&
-                        yieldUnit.isNotBlank() && imageFiles != null &&
+                        yieldUnit.isNotBlank() &&
                         (userRole != "MANAGER" || assignedTo != null) &&
                         createYieldState !is YieldListViewModel.CreateYieldState.Loading &&
                         uploadState !is UploadState.Loading,

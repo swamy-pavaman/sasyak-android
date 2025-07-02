@@ -307,7 +307,6 @@ fun SowingRequestScreen(
             // Row Dropdown
             OutlinedTextField(
                 value = row,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 onValueChange = {newValue ->
                     row = newValue},
                 label = { Text("Row *") },
@@ -577,7 +576,7 @@ fun SowingRequestScreen(
 
             // Upload Section
             Text(
-                text = if (userRole == "MANAGER") "Upload" else "Upload *",
+                text = "Upload",
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
@@ -706,58 +705,67 @@ fun SowingRequestScreen(
             Button(
                 onClick = {
                     if (cropName.isNotBlank() && row.isNotBlank() && seedVariety.isNotBlank() &&
-                        sowingMethod.isNotBlank() && (userRole == "MANAGER" || imageFiles != null) &&
+                        sowingMethod.isNotBlank() &&
                         (userRole != "MANAGER" || assignedTo != null)) {
-
                         scope.launch(ioDispatcher) {
-                            // Upload images
-                            uploadState = UploadState.Loading
-                            val uploadResult = imageUploadService.uploadImages(imageFiles!!, "SOWING")
-                            when (uploadResult) {
-                                is ApiResponse.Success -> {
-                                    val imageUrls = uploadResult.data
-                                    if (imageUrls.isEmpty()) {
-                                        uploadState = UploadState.Error("Image upload failed, no URLs received")
-                                        return@launch
-                                    }
-                                    val sowingDetails = SowingDetails(
-                                        sowingDate = sowingDate,
-                                        cropName = cropName,
-                                        row = row.toInt(),
-                                        fieldArea = fieldArea.ifBlank { null },
-                                        seedVariety = seedVariety,
-                                        seedQuantity = seedQuantity.ifBlank { null },
-                                        seedUnit = seedUnit.takeIf { seedQuantity.isNotBlank() },
-                                        sowingMethod = sowingMethod,
-                                        seedTreatment = seedTreatment.ifBlank { null },
-                                        spacingBetweenRows = spacingBetweenRows.ifBlank { null },
-                                        spacingBetweenPlants = spacingBetweenPlants.ifBlank { null },
-                                        soilCondition = soilCondition.ifBlank { null },
-                                        weatherCondition = weatherCondition.ifBlank { null },
-                                        //imageUrls = imageUrls
-                                    )
+                            val sowingDetails = SowingDetails(
+                                sowingDate = sowingDate,
+                                cropName = cropName,
+                                row = row.toInt(),
+                                fieldArea = fieldArea.ifBlank { null },
+                                seedVariety = seedVariety,
+                                seedQuantity = seedQuantity.ifBlank { null },
+                                seedUnit = seedUnit.takeIf { seedQuantity.isNotBlank() },
+                                sowingMethod = sowingMethod,
+                                seedTreatment = seedTreatment.ifBlank { null },
+                                spacingBetweenRows = spacingBetweenRows.ifBlank { null },
+                                spacingBetweenPlants = spacingBetweenPlants.ifBlank { null },
+                                soilCondition = soilCondition.ifBlank { null },
+                                weatherCondition = weatherCondition.ifBlank { null },
+                            )
+                            submittedEntry = sowingDetails
 
-                                    submittedEntry = sowingDetails
-                                    viewModel.createSowingTask(
-                                        sowingDetails,
-                                        description,
-                                        imageUrls,
-                                        assignedToId = if (userRole == "MANAGER") assignedTo else null
-                                    )
-                                    uploadState = UploadState.Idle
-                                }
-                                is ApiResponse.Error -> {
-                                    uploadState = UploadState.Error("Image upload failed: ${uploadResult.errorMessage}")
-                                }
-                                is ApiResponse.Loading -> {
-                                    uploadState = UploadState.Loading
+                            if (imageFiles.isNullOrEmpty()) {
+                                // No images to upload, proceed with task creation with empty image list
+                                viewModel.createSowingTask(
+                                    sowingDetails = sowingDetails,
+                                    description = description,
+                                    imagesJson = emptyList<String>(), // Pass empty list instead of null
+                                    assignedToId = if (userRole == "MANAGER") assignedTo else null
+                                )
+                                uploadState = UploadState.Idle
+                            } else {
+                                // Upload images
+                                uploadState = UploadState.Loading
+                                val uploadResult = imageUploadService.uploadImages(imageFiles!!, "SOWING")
+                                when (uploadResult) {
+                                    is ApiResponse.Success -> {
+                                        val imageUrls = uploadResult.data
+                                        if (imageUrls.isEmpty()) {
+                                            uploadState = UploadState.Error("Image upload failed, no URLs received")
+                                            return@launch
+                                        }
+                                        viewModel.createSowingTask(
+                                            sowingDetails = sowingDetails,
+                                            description = description,
+                                            imagesJson = imageUrls,
+                                            assignedToId = if (userRole == "MANAGER") assignedTo else null
+                                        )
+                                        uploadState = UploadState.Idle
+                                    }
+                                    is ApiResponse.Error -> {
+                                        uploadState = UploadState.Error("Image upload failed: ${uploadResult.errorMessage}")
+                                    }
+                                    is ApiResponse.Loading -> {
+                                        uploadState = UploadState.Loading
+                                    }
                                 }
                             }
                         }
                     }
                 },
                 enabled = cropName.isNotBlank() && row.isNotBlank() && seedVariety.isNotBlank() &&
-                        sowingMethod.isNotBlank() && imageFiles != null &&
+                        sowingMethod.isNotBlank() &&
                         createSowingState !is SowingListViewModel.CreateSowingState.Loading &&
                         uploadState !is UploadState.Loading,
                 modifier = Modifier

@@ -101,7 +101,7 @@ class FuelListViewModel @Inject constructor(
     fun createFuelTask(
         fuelDetails: FuelDetails,
         description: String,
-        imagesJson:List<String>,
+        imagesJson:List<String>?=null,
         assignedToId : Int? =null
     ) {
         _createFuelState.value = CreateFuelState.Loading
