@@ -113,7 +113,7 @@ fun SprayingRequestScreen(
 
     LaunchedEffect(Unit) {
         categoryViewModel.fetchCategories("Crop")
-        categoryViewModel.fetchCategories("Chemical")
+        categoryViewModel.fetchCategories("Fertilizer")
     }
 
     val crops = when (val state = categoriesStates["Crop"]) {
@@ -125,7 +125,7 @@ fun SprayingRequestScreen(
             "Sugarcane", "Groundnut", "Cotton", "Soybean", "Mustard"
         )
     }
-    val chemicals = when (val state = categoriesStates["Chemical"]) {
+    val chemicals = when (val state = categoriesStates["Fertilizer"]) {
         is CategoriesState.Success -> state.categories.map { it.value }
         else -> listOf(
             "Glyphosate", "2,4-D", "Atrazine", "Paraquat", "Pendimethalin",
@@ -189,7 +189,7 @@ fun SprayingRequestScreen(
 
         SuccessDialog(
             title = "Spraying Report Sent!",
-            message = "Your manager will be notified when they take action on it.",
+            message = if (userRole=="MANAGER") "This report has been sent to the supervisor." else "This report has been sent to the manager.",
             details = details,
             description = description,
             primaryButtonText = "OK",
@@ -271,7 +271,7 @@ fun SprayingRequestScreen(
                     expanded = cropNameExpanded,
                     onDismissRequest = { cropNameExpanded = false }
                 ) {
-                    crops.filter { it.contains(cropName, ignoreCase = true) }
+                    crops
                         .forEach { crop ->
                             DropdownMenuItem(
                                 text = { Text(crop) },
@@ -289,6 +289,7 @@ fun SprayingRequestScreen(
             // Row Dropdown
             OutlinedTextField(
                 value = row,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 onValueChange = { newValue ->
                     row = newValue
                 },
@@ -339,7 +340,7 @@ fun SprayingRequestScreen(
                     expanded = chemicalNameExpanded,
                     onDismissRequest = { chemicalNameExpanded = false }
                 ) {
-                    chemicals.filter { it.contains(chemicalName, ignoreCase = true) }
+                    chemicals
                         .forEach { chemical ->
                             DropdownMenuItem(
                                 text = { Text(chemical) },
@@ -393,7 +394,7 @@ fun SprayingRequestScreen(
                     expanded = sprayingMethodExpanded,
                     onDismissRequest = { sprayingMethodExpanded = false }
                 ) {
-                    sprayingMethods.filter { it.contains(sprayingMethod, ignoreCase = true) }
+                    sprayingMethods
                         .forEach { method ->
                             DropdownMenuItem(
                                 text = { Text(method) },
@@ -480,7 +481,7 @@ fun SprayingRequestScreen(
 
             // Upload Section
             Text(
-                text = "Upload *",
+                text = if (userRole == "MANAGER") "Upload" else "Upload *",
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
@@ -590,7 +591,7 @@ fun SprayingRequestScreen(
             Button(
                 onClick = {
                     if (cropName.isNotBlank() && row.isNotBlank() && chemicalName.isNotBlank() &&
-                        sprayingMethod.isNotBlank() && imageFiles != null &&
+                        sprayingMethod.isNotBlank() && (userRole == "MANAGER" || imageFiles != null) &&
                         (userRole != "MANAGER" || assignedTo != null)) {
                         scope.launch(ioDispatcher) {
                             // Upload images

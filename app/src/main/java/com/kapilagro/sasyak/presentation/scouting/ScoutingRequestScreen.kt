@@ -184,7 +184,7 @@ fun ScoutingRequestScreen(
 
         SuccessDialog(
             title = "Scouting Report Sent!",
-            message = "Your manager will be notified when they take action on it.",
+            message = if (userRole=="MANAGER") "This report has been sent to the supervisor." else "This report has been sent to the manager.",
             details = details,
             description = description,
             primaryButtonText = "OK",
@@ -264,7 +264,7 @@ fun ScoutingRequestScreen(
                     expanded = cropNameExpanded,
                     onDismissRequest = { cropNameExpanded = false }
                 ) {
-                    crops.filter { it.contains(cropName, ignoreCase = true) }
+                    crops
                         .forEach { crop ->
                             DropdownMenuItem(
                                 text = { Text(crop) },
@@ -282,6 +282,7 @@ fun ScoutingRequestScreen(
             // Row Dropdown
             OutlinedTextField(
                 value = row,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 onValueChange = { newValue ->
                     row = newValue
                 },
@@ -295,6 +296,7 @@ fun ScoutingRequestScreen(
             // Tree No Dropdown
             OutlinedTextField(
                 value = treeNo,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 onValueChange = { newValue ->
                     treeNo = newValue
                 },
@@ -370,7 +372,6 @@ fun ScoutingRequestScreen(
                     onDismissRequest = { nameOfDiseaseExpanded = false }
                 ) {
                     diseases
-                        .filter { it.contains(nameOfDisease, ignoreCase = true) }
                         .forEach { disease ->
                             DropdownMenuItem(
                                 text = { Text(disease) },
@@ -436,7 +437,7 @@ fun ScoutingRequestScreen(
 
             // Upload Section
             Text(
-                text = "Upload *",
+                text = "Upload",
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
@@ -545,7 +546,7 @@ fun ScoutingRequestScreen(
             // Submit Button
             Button(
                 onClick = {
-                    if (cropName.isNotBlank() && row.isNotBlank() && treeNo.isNotBlank() && imageFiles != null &&
+                    if (cropName.isNotBlank() && row.isNotBlank() && treeNo.isNotBlank() &&
                         (userRole != "MANAGER" || assignedTo != null)) {
                         scope.launch(ioDispatcher) {
                             uploadState = UploadState.Loading
@@ -586,7 +587,7 @@ fun ScoutingRequestScreen(
                         }
                     }
                 },
-                enabled = cropName.isNotBlank() && row.isNotBlank() && treeNo.isNotBlank() && imageFiles != null &&
+                enabled = cropName.isNotBlank() && row.isNotBlank() && treeNo.isNotBlank() &&
                         (userRole != "MANAGER" || assignedTo != null) &&
                         createScoutingState !is ScoutingListViewModel.CreateScoutingState.Loading &&
                         uploadState !is UploadState.Loading,

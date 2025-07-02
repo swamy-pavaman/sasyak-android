@@ -205,7 +205,7 @@ fun FuelRequestScreen(
 
         SuccessDialog(
             title = "Fuel Entry Sent!",
-            message = "Your manager will be notified when they take action on it.",
+            message = if (userRole=="MANAGER") "This report has been sent to the supervisor." else "This report has been sent to the manager.",
             details = details,
             description = description,
             primaryButtonText = "OK",
@@ -291,7 +291,7 @@ fun FuelRequestScreen(
                     expanded = vehicleNameExpanded,
                     onDismissRequest = { vehicleNameExpanded = false }
                 ) {
-                    vehicles.filter { it.contains(vehicleName, ignoreCase = true) }
+                    vehicles
                         .forEach { vehicle ->
                             DropdownMenuItem(
                                 text = { Text(vehicle) },
@@ -334,7 +334,6 @@ fun FuelRequestScreen(
                     onDismissRequest = { vehicleNumberExpanded = false }
                 ) {
                     vehicleNumbers
-                        .filter { it.contains(vehicleNumber, ignoreCase = true) }
                         .forEach { number ->
                             DropdownMenuItem(
                                 text = { Text(number) },
@@ -377,7 +376,7 @@ fun FuelRequestScreen(
                     expanded = fuelTypeExpanded,
                     onDismissRequest = { fuelTypeExpanded = false }
                 ) {
-                    fuelTypes.filter { it.contains(fuelType, ignoreCase = true) }
+                    fuelTypes
                         .forEach { type ->
                             DropdownMenuItem(
                                 text = { Text(type) },
@@ -472,6 +471,7 @@ fun FuelRequestScreen(
 
                 OutlinedTextField(
                     value = totalCost,
+                    readOnly = true,
                     onValueChange = { totalCost = it },
                     label = { Text("Total cost (₹)") },
                     modifier = Modifier.weight(1f),
@@ -510,7 +510,6 @@ fun FuelRequestScreen(
                     onDismissRequest = { driverNameExpanded = false }
                 ) {
                     drivers
-                        .filter { it.contains(driverName, ignoreCase = true) }
                         .forEach { driver ->
                             DropdownMenuItem(
                                 text = { Text(driver) },
@@ -612,7 +611,7 @@ fun FuelRequestScreen(
 
             // Upload Section
             Text(
-                text = "Upload *",
+                text = if (userRole == "MANAGER") "Upload" else "Upload *",
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
@@ -722,7 +721,7 @@ fun FuelRequestScreen(
             Button(
                 onClick = {
                     if (vehicleName.isNotBlank() && fuelType.isNotBlank() && quantity.isNotBlank() &&
-                        imageFiles != null && (userRole != "MANAGER" || assignedTo != null)) {
+                        (userRole == "MANAGER" || imageFiles != null) && (userRole != "MANAGER" || assignedTo != null)) {
                         scope.launch(ioDispatcher) {
                             // Upload images
                             uploadState = UploadState.Loading

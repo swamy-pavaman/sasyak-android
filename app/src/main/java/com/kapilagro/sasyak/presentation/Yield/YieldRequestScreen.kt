@@ -131,7 +131,6 @@ fun YieldRequestScreen(
         "Sugarcane", "Groundnut", "Cotton", "Soybean", "Mustard"
     )*/
 
-    val rows = (1..20).map { it.toString() }
 
     val units = listOf("kg", "tonnes", "quintals", "bags")
 
@@ -183,7 +182,7 @@ fun YieldRequestScreen(
 
         SuccessDialog(
             title = "Yield Report Sent!",
-            message = "Your manager will be notified when they take action on it.",
+            message = if (userRole=="MANAGER") "This report has been sent to the supervisor." else "This report has been sent to the manager.",
             details = details,
             description = description,
             primaryButtonText = "OK",
@@ -266,7 +265,7 @@ fun YieldRequestScreen(
                     expanded = cropNameExpanded,
                     onDismissRequest = { cropNameExpanded = false }
                 ) {
-                    crops.filter { it.contains(cropName, ignoreCase = true) }
+                    crops
                         .forEach { crop ->
                             DropdownMenuItem(
                                 text = { Text(crop) },
@@ -284,8 +283,10 @@ fun YieldRequestScreen(
             // Row Dropdown
             OutlinedTextField(
                 value = row,
-                onValueChange = {},
-                readOnly = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                onValueChange = {newValue ->
+                    row = newValue
+                },
                 label = { Text("Row *") },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(8.dp)
@@ -366,6 +367,7 @@ fun YieldRequestScreen(
             ) {
                 OutlinedTextField(
                     value = qualityGrade,
+                    readOnly = true,
                     onValueChange = { newValue ->
                         qualityGrade = newValue
                         qualityGradeExpanded = true
@@ -384,7 +386,7 @@ fun YieldRequestScreen(
                     expanded = qualityGradeExpanded,
                     onDismissRequest = { qualityGradeExpanded = false }
                 ) {
-                    grades.filter { it.contains(qualityGrade, ignoreCase = true) }
+                    grades
                         .forEach { grade ->
                             DropdownMenuItem(
                                 text = { Text(grade) },
@@ -438,7 +440,7 @@ fun YieldRequestScreen(
                     expanded = harvestMethodExpanded,
                     onDismissRequest = { harvestMethodExpanded = false }
                 ) {
-                    harvestMethods.filter { it.contains(harvestMethod, ignoreCase = true) }
+                    harvestMethods
                         .forEach { method ->
                             DropdownMenuItem(
                                 text = { Text(method) },
@@ -503,7 +505,7 @@ fun YieldRequestScreen(
 
             // Upload Section
             Text(
-                text = "Upload *",
+                text = if (userRole == "MANAGER") "Upload" else "Upload *",
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
@@ -613,7 +615,7 @@ fun YieldRequestScreen(
             Button(
                 onClick = {
                     if (cropName.isNotBlank() && row.isNotBlank() && yieldQuantity.isNotBlank() &&
-                        yieldUnit.isNotBlank() && imageFiles != null &&
+                        yieldUnit.isNotBlank() && (userRole == "MANAGER" || imageFiles != null) &&
                         (userRole != "MANAGER" || assignedTo != null)) {
                         scope.launch(ioDispatcher) {
                             // Upload images
