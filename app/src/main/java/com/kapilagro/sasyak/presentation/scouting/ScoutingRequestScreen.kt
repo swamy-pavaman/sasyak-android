@@ -102,7 +102,8 @@ fun ScoutingRequestScreen(
                 "noOfFruitsDropped" to noOfFruitsDropped,
                 "nameOfDisease" to nameOfDisease,
                 "description" to description,
-                "assignedTo" to assignedTo
+                "assignedTo" to assignedTo,
+                "valveName" to valveName
             )
         }.collect { state ->
             state.forEach { (key, value) ->

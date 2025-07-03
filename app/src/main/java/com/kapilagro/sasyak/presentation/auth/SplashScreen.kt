@@ -48,25 +48,25 @@ fun SplashScreen(
 
     LaunchedEffect(true) {
         // Animate logo
-        logoScale.animateTo(1f, tween(500, easing = EaseOutBack))
-        logoAlpha.animateTo(1f, tween(700))
-        fieldDarkness.animateTo(0.6f, tween(1000))
+        logoScale.animateTo(1f, tween(200, easing = EaseOutBack))
+        logoAlpha.animateTo(1f, tween(200))
+        fieldDarkness.animateTo(0.6f, tween(500))
 
         // Animate green fill inside circle
-        fieldFill.animateTo(1f, tween(1200))
+        fieldFill.animateTo(1f, tween(1100))
 
         // Sun animation (moves and scales)
-        sunOffsetX.animateTo(-25f, tween(800))
-        sunOffsetY.animateTo(-25f, tween(800))
-        sunScale.animateTo(1.3f, tween(800))
+        sunOffsetX.animateTo(-25f, tween(700))
+        sunOffsetY.animateTo(-25f, tween(700))
+        sunScale.animateTo(1.3f, tween(700))
 
-        delay(600)
+        delay(500)
         showPlant = true
 
         // Animate progress bar below text
-        progressLine.animateTo(1f, tween(1500))
+        progressLine.animateTo(1f, tween(1300))
 
-        delay(600)
+        delay(500)
 
         if (authState) onNavigateToHome()
         else onNavigateToLogin()
