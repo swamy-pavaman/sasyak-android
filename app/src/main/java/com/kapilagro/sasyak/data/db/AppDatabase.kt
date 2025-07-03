@@ -8,15 +8,18 @@ import com.kapilagro.sasyak.data.db.converters.DateConverters
 import com.kapilagro.sasyak.data.db.dao.TaskDao
 import com.kapilagro.sasyak.data.db.dao.NotificationDao
 import com.kapilagro.sasyak.data.db.dao.UserDao
+import com.kapilagro.sasyak.data.db.dao.WeatherDao
 import com.kapilagro.sasyak.data.db.entities.TaskEntity
 import com.kapilagro.sasyak.data.db.entities.NotificationEntity
 import com.kapilagro.sasyak.data.db.entities.UserEntity
+import com.kapilagro.sasyak.data.db.entities.WeatherEntity
 
 @Database(
     entities = [
         TaskEntity::class,
         NotificationEntity::class,
-        UserEntity::class
+        UserEntity::class,
+        WeatherEntity::class
     ],
     version = 1,
     exportSchema = false
@@ -26,6 +29,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun taskDao(): TaskDao
     abstract fun notificationDao(): NotificationDao
     abstract fun userDao(): UserDao
+    abstract fun weatherDao(): WeatherDao
+
 
     companion object {
         @Volatile

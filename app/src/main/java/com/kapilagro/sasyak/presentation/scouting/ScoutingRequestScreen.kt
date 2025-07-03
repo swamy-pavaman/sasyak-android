@@ -1,6 +1,7 @@
 package com.kapilagro.sasyak.presentation.scouting
 
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -28,6 +29,8 @@ import com.kapilagro.sasyak.data.api.ImageUploadService
 import com.kapilagro.sasyak.di.IoDispatcher
 import com.kapilagro.sasyak.domain.models.ApiResponse
 import com.kapilagro.sasyak.domain.models.ScoutingDetails
+import com.kapilagro.sasyak.presentation.common.catalog.CategoryViewModel
+import com.kapilagro.sasyak.presentation.common.catalog.CategoriesState
 import com.kapilagro.sasyak.presentation.common.components.SuccessDialog
 import com.kapilagro.sasyak.presentation.common.navigation.Screen
 import com.kapilagro.sasyak.presentation.common.theme.AgroPrimary
@@ -47,14 +50,14 @@ fun ScoutingRequestScreen(
     navController: NavController,
     viewModel: ScoutingListViewModel = hiltViewModel(),
     homeViewModel: HomeViewModel = hiltViewModel(),
+    categoryViewModel: CategoryViewModel = hiltViewModel(),
     @IoDispatcher ioDispatcher: CoroutineDispatcher,
     imageUploadService: ImageUploadService
 ) {
     val createScoutingState by viewModel.createScoutingState.collectAsState()
-//    val userRole by homeviewModel.userRole.collectAsState()
-    val userRole by homeViewModel.userRole.collectAsState(
-    )
+    val userRole by homeViewModel.userRole.collectAsState()
     val supervisorsListState by homeViewModel.supervisorsListState.collectAsState()
+    val categoriesStates by categoryViewModel.categoriesStates.collectAsState()
     val scope = rememberCoroutineScope()
 
     // Dialog state
@@ -69,7 +72,9 @@ fun ScoutingRequestScreen(
             ?: LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))
     ) }
     var cropName by remember { mutableStateOf(savedStateHandle?.get<String>("cropName") ?: "") }
+    var valveName by remember { mutableStateOf(savedStateHandle?.get<String>("valveName") ?: "") }
     var cropNameExpanded by remember { mutableStateOf(false) }
+    var valveNameExpanded by remember { mutableStateOf(false) }
     var row by remember { mutableStateOf(savedStateHandle?.get<String>("row") ?: "") }
     var rowExpanded by remember { mutableStateOf(false) }
     var treeNo by remember { mutableStateOf(savedStateHandle?.get<String>("treeNo") ?: "") }
@@ -78,6 +83,7 @@ fun ScoutingRequestScreen(
     var noOfFlowersSeen by remember { mutableStateOf(savedStateHandle?.get<String>("noOfFlowersSeen") ?: "") }
     var noOfFruitsDropped by remember { mutableStateOf(savedStateHandle?.get<String>("noOfFruitsDropped") ?: "") }
     var nameOfDisease by remember { mutableStateOf(savedStateHandle?.get<String>("nameOfDisease") ?: "") }
+    var nameOfDiseaseExpanded by remember { mutableStateOf(false) }
     var description by remember { mutableStateOf(savedStateHandle?.get<String>("description") ?: "") }
     var imageFiles by remember { mutableStateOf<List<File>?>(null) }
     var assignedTo by remember { mutableStateOf<Int?>(savedStateHandle?.get<Int>("assignedTo")) }
@@ -96,7 +102,8 @@ fun ScoutingRequestScreen(
                 "noOfFruitsDropped" to noOfFruitsDropped,
                 "nameOfDisease" to nameOfDisease,
                 "description" to description,
-                "assignedTo" to assignedTo
+                "assignedTo" to assignedTo,
+                "valveName" to valveName
             )
         }.collect { state ->
             state.forEach { (key, value) ->
@@ -105,12 +112,43 @@ fun ScoutingRequestScreen(
         }
     }
 
-    val crops = listOf(
-        "Wheat", "Rice", "Maize", "Barley", "Sorghum",
-        "Mango", "Banana", "Apple", "Papaya", "Guava",
-        "Tomato", "Potato", "Onion", "Brinjal", "Cabbage",
-        "Sugarcane", "Groundnut", "Cotton", "Soybean", "Mustard"
-    )
+    // Fetch crops and diseases
+    LaunchedEffect(Unit) {
+        categoryViewModel.fetchCategories("Crop")
+        categoryViewModel.fetchCategories("Disease")
+        categoryViewModel.fetchCategories("Valve")
+    }
+
+    // Extract crops and diseases
+    val crops = when (val state = categoriesStates["Crop"]) {
+        is CategoriesState.Success -> state.categories.map { it.value }
+        else -> listOf(
+            "Wheat", "Rice", "Maize", "Barley", "Sorghum",
+            "Mango", "Banana", "Apple", "Papaya", "Guava",
+            "Tomato", "Potato", "Onion", "Brinjal", "Cabbage",
+            "Sugarcane", "Groundnut", "Cotton", "Soybean", "Mustard"
+        )
+    }
+    val diseases = when (val state = categoriesStates["Disease"]) {
+        is CategoriesState.Success -> state.categories.map { it.value }
+        else -> listOf(
+            "Powdery mildew", "Downy mildew", "Late blight", "Early blight", "Rust", "Fusarium wilt",
+            "Verticillium wilt", "Anthracnose", "Leaf spot", "Damping-off", "Fire blight",
+            "Bacterial blight", "Mosaic virus", "Black spot", "Citrus canker"
+        )
+    }
+    val valves = when (val state = categoriesStates["Valve"]) {
+        is CategoriesState.Success -> state.categories.map { it.value }
+        else -> listOf(
+            "Valve 1", "Valve 2", "Valve 3"
+        )
+    }
+
+    // Log states for debugging
+    LaunchedEffect(categoriesStates) {
+        Log.d("Categories", "Crops: $crops, Diseases: $diseases")
+    }
+
     val rows = (1..20).map { it.toString() }
     val trees = (1..50).map { it.toString() }
 
@@ -156,7 +194,7 @@ fun ScoutingRequestScreen(
 
         SuccessDialog(
             title = "Scouting Report Sent!",
-            message = "Your manager will be notified when they take action on it.",
+            message = if (userRole=="MANAGER") "This report has been sent to the supervisor." else "This report has been sent to the manager.",
             details = details,
             description = description,
             primaryButtonText = "OK",
@@ -164,7 +202,6 @@ fun ScoutingRequestScreen(
                 showSuccessDialog = false
                 viewModel.clearCreateScoutingState()
                 onTaskCreated()
-                // Clear saved state after successful submission
                 savedStateHandle?.remove<String>("scoutingDate")
                 savedStateHandle?.remove<String>("cropName")
                 savedStateHandle?.remove<String>("row")
@@ -210,6 +247,48 @@ fun ScoutingRequestScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Valve Name Dropdown
+            ExposedDropdownMenuBox(
+                expanded = valveNameExpanded,
+                onExpandedChange = { valveNameExpanded = it },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    value = valveName,
+                    readOnly = true,
+                    onValueChange = { newValue ->
+                        valveName = newValue
+                        valveNameExpanded = true
+                    },
+                    label = { Text("Valve name *") },
+                    trailingIcon = {
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = valveNameExpanded)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(),
+                    shape = RoundedCornerShape(8.dp)
+                )
+
+                ExposedDropdownMenu(
+                    expanded = valveNameExpanded,
+                    onDismissRequest = { valveNameExpanded = false }
+                ) {
+                    valves
+                        .forEach { valve ->
+                            DropdownMenuItem(
+                                text = { Text(valve)},
+                                onClick = {
+                                    valveName = valve
+                                    valveNameExpanded = false
+                                }
+                            )
+                        }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             // Crop Name Dropdown
             ExposedDropdownMenuBox(
                 expanded = cropNameExpanded,
@@ -218,6 +297,7 @@ fun ScoutingRequestScreen(
             ) {
                 OutlinedTextField(
                     value = cropName,
+                    readOnly = true,
                     onValueChange = { newValue ->
                         cropName = newValue
                         cropNameExpanded = true
@@ -236,7 +316,7 @@ fun ScoutingRequestScreen(
                     expanded = cropNameExpanded,
                     onDismissRequest = { cropNameExpanded = false }
                 ) {
-                    crops.filter { it.contains(cropName, ignoreCase = true) }
+                    crops
                         .forEach { crop ->
                             DropdownMenuItem(
                                 text = { Text(crop) },
@@ -252,78 +332,30 @@ fun ScoutingRequestScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Row Dropdown
-            ExposedDropdownMenuBox(
-                expanded = rowExpanded,
-                onExpandedChange = { rowExpanded = it },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                OutlinedTextField(
-                    value = row,
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Row *") },
-                    trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = rowExpanded)
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .menuAnchor(),
-                    shape = RoundedCornerShape(8.dp)
-                )
-
-                ExposedDropdownMenu(
-                    expanded = rowExpanded,
-                    onDismissRequest = { rowExpanded = false }
-                ) {
-                    rows.forEach { rowNumber ->
-                        DropdownMenuItem(
-                            text = { Text(rowNumber) },
-                            onClick = {
-                                row = rowNumber
-                                rowExpanded = false
-                            }
-                        )
-                    }
-                }
-            }
+            OutlinedTextField(
+                value = row,
+                onValueChange = { newValue ->
+                    row = newValue
+                },
+                label = { Text("Row *") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp)
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
 
             // Tree No Dropdown
-            ExposedDropdownMenuBox(
-                expanded = treeNoExpanded,
-                onExpandedChange = { treeNoExpanded = it },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                OutlinedTextField(
-                    value = treeNo,
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Tree no *") },
-                    trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = treeNoExpanded)
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .menuAnchor(),
-                    shape = RoundedCornerShape(8.dp)
-                )
+            OutlinedTextField(
+                value = treeNo,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                onValueChange = { newValue ->
+                    treeNo = newValue
+                },
+                label = { Text("Tree no *") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp)
+            )
 
-                ExposedDropdownMenu(
-                    expanded = treeNoExpanded,
-                    onDismissRequest = { treeNoExpanded = false }
-                ) {
-                    trees.forEach { treeNumber ->
-                        DropdownMenuItem(
-                            text = { Text(treeNumber) },
-                            onClick = {
-                                treeNo = treeNumber
-                                treeNoExpanded = false
-                            }
-                        )
-                    }
-                }
-            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -363,14 +395,46 @@ fun ScoutingRequestScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Name of the Disease
-            OutlinedTextField(
-                value = nameOfDisease,
-                onValueChange = { nameOfDisease = it },
-                label = { Text("Name of the Disease") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp)
-            )
+            // Name of the Disease Dropdown
+            ExposedDropdownMenuBox(
+                expanded = nameOfDiseaseExpanded,
+                onExpandedChange = { nameOfDiseaseExpanded = it },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    value = nameOfDisease,
+                    readOnly = true,
+                    onValueChange = { newValue ->
+                        nameOfDisease = newValue
+                        nameOfDiseaseExpanded = true
+                    },
+                    label = { Text("Name of the Disease") },
+                    trailingIcon = {
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = nameOfDiseaseExpanded)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(),
+                    shape = RoundedCornerShape(8.dp)
+                )
+
+                ExposedDropdownMenu(
+                    expanded = nameOfDiseaseExpanded,
+                    onDismissRequest = { nameOfDiseaseExpanded = false }
+                ) {
+                    diseases
+                        .forEach { disease ->
+                            DropdownMenuItem(
+                                text = { Text(disease) },
+                                onClick = {
+                                    nameOfDisease = disease
+                                    nameOfDiseaseExpanded = false
+                                }
+                            )
+                        }
+                }
+            }
+
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -424,7 +488,7 @@ fun ScoutingRequestScreen(
 
             // Upload Section
             Text(
-                text = "Upload *",
+                text = "Upload",
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
@@ -533,51 +597,63 @@ fun ScoutingRequestScreen(
             // Submit Button
             Button(
                 onClick = {
-                    if (cropName.isNotBlank() && row.isNotBlank() && treeNo.isNotBlank() && imageFiles != null &&
-                        (userRole != "MANAGER" || assignedTo != null)) {
+                    if (cropName.isNotBlank() && row.isNotBlank() && valveName.isNotBlank() && treeNo.isNotBlank() &&
+                        (userRole != "MANAGER" || assignedTo != null)){
                         scope.launch(ioDispatcher) {
-                            // Upload images
-                            uploadState = UploadState.Loading
-                            val uploadResult = imageUploadService.uploadImages(imageFiles!!, "SCOUTING")
-                            when (uploadResult) {
-                                is ApiResponse.Success -> {
-                                    val imageUrls = uploadResult.data
-                                    if (imageUrls.isEmpty()) {
-                                        uploadState = UploadState.Error("Image upload failed, no URLs received")
-                                        return@launch
+                            val scoutingDetails = ScoutingDetails(
+                                scoutingDate = scoutingDate,
+                                cropName = cropName,
+                                row = row.toString(),
+                                treeNo = treeNo.toInt(),
+                                noOfFruitSeen = noOfFruitSeen.ifBlank { null },
+                                noOfFlowersSeen = noOfFlowersSeen.ifBlank { null },
+                                noOfFruitsDropped = noOfFruitsDropped.ifBlank { null },
+                                nameOfDisease = nameOfDisease.ifBlank { null },
+                                valveName = valveName
+                            )
+                            submittedEntry = scoutingDetails
+
+                            if (imageFiles.isNullOrEmpty()) {
+                                // No images to upload, proceed with task creation
+                                viewModel.createScoutingTask(
+                                    scoutingDetails = scoutingDetails,
+                                    description = description,
+                                    imagesJson = emptyList<String>(), // Pass null for imagesJson
+                                    assignedToId = if (userRole == "MANAGER") assignedTo else null
+                                )
+                                uploadState = UploadState.Idle
+                            } else {
+                                // Upload images
+                                uploadState = UploadState.Loading
+                                val uploadResult = imageUploadService.uploadImages(imageFiles!!, "SCOUTING")
+                                when (uploadResult) {
+                                    is ApiResponse.Success -> {
+                                        val imageUrls = uploadResult.data
+                                        if (imageUrls.isEmpty()) {
+                                            uploadState = UploadState.Error("Image upload failed, no URLs received")
+                                            return@launch
+                                        }
+                                        viewModel.createScoutingTask(
+                                            scoutingDetails = scoutingDetails,
+                                            description = description,
+                                            imagesJson = imageUrls,
+                                            assignedToId = if (userRole == "MANAGER") assignedTo else null
+                                        )
+                                        uploadState = UploadState.Idle
                                     }
-                                    val scoutingDetails = ScoutingDetails(
-                                        scoutingDate = scoutingDate,
-                                        cropName = cropName,
-                                        row = row.toInt(),
-                                        treeNo = treeNo.toInt(),
-                                        noOfFruitSeen = noOfFruitSeen.ifBlank { null },
-                                        noOfFlowersSeen = noOfFlowersSeen.ifBlank { null },
-                                        noOfFruitsDropped = noOfFruitsDropped.ifBlank { null },
-                                        nameOfDisease = nameOfDisease.ifBlank { null },
-                                        //uploadedFiles = imageUrls
-                                    )
-                                    submittedEntry = scoutingDetails
-                                    viewModel.createScoutingTask(
-                                          scoutingDetails,
-                                         description,
-                                         imageUrls,
-                                        assignedToId = if (userRole == "MANAGER") assignedTo else null
-                                    )
-                                    uploadState = UploadState.Idle
-                                }
-                                is ApiResponse.Error -> {
-                                    uploadState = UploadState.Error("Image upload failed: ${uploadResult.errorMessage}")
-                                }
-                                is ApiResponse.Loading -> {
-                                    uploadState = UploadState.Loading
+                                    is ApiResponse.Error -> {
+                                        uploadState = UploadState.Error("Image upload failed: ${uploadResult.errorMessage}")
+                                    }
+                                    is ApiResponse.Loading -> {
+                                        uploadState = UploadState.Loading
+                                    }
                                 }
                             }
                         }
                     }
                 },
-                enabled = cropName.isNotBlank() && row.isNotBlank() && treeNo.isNotBlank() && imageFiles != null &&
-                        (userRole != "MANAGER" || assignedTo != null) &&
+                enabled = cropName.isNotBlank() && row.isNotBlank() && treeNo.isNotBlank() &&
+                        (userRole != "MANAGER" || assignedTo != null) && valveName.isNotBlank() &&
                         createScoutingState !is ScoutingListViewModel.CreateScoutingState.Loading &&
                         uploadState !is UploadState.Loading,
                 modifier = Modifier

@@ -2,45 +2,112 @@ package com.kapilagro.sasyak.presentation.common.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccessTime
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Schedule
-import androidx.compose.material3.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.kapilagro.sasyak.domain.models.Task
-import com.kapilagro.sasyak.presentation.common.theme.*
+import com.kapilagro.sasyak.presentation.common.theme.AgroMuted
+import com.kapilagro.sasyak.presentation.common.theme.AgroMutedForeground
+import com.kapilagro.sasyak.presentation.common.theme.Border
+import com.kapilagro.sasyak.presentation.common.theme.FuelContainer
+import com.kapilagro.sasyak.presentation.common.theme.FuelIcon
+import com.kapilagro.sasyak.presentation.common.theme.ScoutingContainer
+import com.kapilagro.sasyak.presentation.common.theme.ScoutingIcon
+import com.kapilagro.sasyak.presentation.common.theme.SowingContainer
+import com.kapilagro.sasyak.presentation.common.theme.SowingIcon
+import com.kapilagro.sasyak.presentation.common.theme.SprayingContainer
+import com.kapilagro.sasyak.presentation.common.theme.SprayingIcon
+import com.kapilagro.sasyak.presentation.common.theme.StatusApproved
+import com.kapilagro.sasyak.presentation.common.theme.StatusPending
+import com.kapilagro.sasyak.presentation.common.theme.StatusRejected
+import com.kapilagro.sasyak.presentation.common.theme.White
+import com.kapilagro.sasyak.presentation.common.theme.YieldContainer
+import com.kapilagro.sasyak.presentation.common.theme.YieldIcon
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 
 /**
  * Formats a date-time string into a compact format
  */
 fun formatDateTime(dateTimeString: String): String {
+    if (dateTimeString.isBlank()) return "N/A"
     return try {
-        val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
-        val date = inputFormat.parse(dateTimeString) ?: return "N/A"
-        val timeFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
-        timeFormat.format(date)
+        val inputFormats = listOf(
+            SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()),
+            SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSSSSS", Locale.getDefault())
+        )
+
+        var date: Date? = null
+        for (format in inputFormats) {
+            try {
+                date = format.parse(dateTimeString)
+                if (date != null) break
+            } catch (_: Exception) { }
+        }
+
+        date?.let {
+            // Get today's date at midnight
+            val today = Calendar.getInstance()
+            today.set(Calendar.HOUR_OF_DAY, 0)
+            today.set(Calendar.MINUTE, 0)
+            today.set(Calendar.SECOND, 0)
+            today.set(Calendar.MILLISECOND, 0)
+
+            // Get input date at midnight
+            val inputCal = Calendar.getInstance()
+            inputCal.time = it
+            inputCal.set(Calendar.HOUR_OF_DAY, 0)
+            inputCal.set(Calendar.MINUTE, 0)
+            inputCal.set(Calendar.SECOND, 0)
+            inputCal.set(Calendar.MILLISECOND, 0)
+
+            return if (today.time == inputCal.time) {
+                // Same day → show time
+                val outputTimeFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
+                outputTimeFormat.format(it)
+            } else {
+                // Different day → show date
+                val outputDateFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+                outputDateFormat.format(it)
+            }
+        } ?: "N/A"
     } catch (e: Exception) {
         "N/A"
     }
 }
+
 
 /**
  * Extracts the first image URL from the imagesJson string
@@ -63,7 +130,11 @@ fun TaskCard(
     task: Task,
     onClick: () -> Unit
 ) {
-    val firstImageUrl = getFirstImageUrl(task.imagesJson)
+    var firstImageUrl = getFirstImageUrl(task.imagesJson)
+
+    if (firstImageUrl == null){
+        firstImageUrl = "https://minio.kapilagro.com:9000/sasyak/placeholder.png"
+    }
 
     Card(
         modifier = Modifier

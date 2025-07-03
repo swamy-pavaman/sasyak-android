@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 import javax.inject.Inject
 
 @HiltViewModel
@@ -93,6 +94,13 @@ class ReportViewModel @Inject constructor(
         val today = LocalDate.now()
         val startOfWeek = today.minusDays(today.dayOfWeek.value.toLong() - 1)
         val formatter = DateTimeFormatter.ISO_LOCAL_DATE
+        val dayOfWeekFormatter = DateTimeFormatter.ofPattern("EEE", Locale.ENGLISH)
+
+        // Define day-of-week order for sorting
+        val dayOrder = mapOf(
+            "MON" to 1, "TUE" to 2, "WED" to 3, "THU" to 4,
+            "FRI" to 5, "SAT" to 6, "SUN" to 7
+        )
 
         val completed = tasksCompleted
             .filter {
@@ -101,12 +109,12 @@ class ReportViewModel @Inject constructor(
             }
             .map {
                 DailyTaskCount(
-                    date = LocalDate.parse(it.date, formatter).dayOfWeek.toString().substring(0, 3),
+                    date = LocalDate.parse(it.date, formatter).format(dayOfWeekFormatter),
                     count = it.count,
-                    color = COLOR_COMPLETED // Assign Teal to completed tasks
+                    color = COLOR_COMPLETED
                 )
             }
-            .sortedBy { LocalDate.parse(it.date, formatter) }
+            .sortedBy { dayOrder[it.date.uppercase()] ?: Int.MAX_VALUE }
 
         val created = tasksCreated
             .filter {
@@ -115,12 +123,12 @@ class ReportViewModel @Inject constructor(
             }
             .map {
                 DailyTaskCount(
-                    date = LocalDate.parse(it.date, formatter).dayOfWeek.toString().substring(0, 3),
+                    date = LocalDate.parse(it.date, formatter).format(dayOfWeekFormatter),
                     count = it.count,
-                    color = COLOR_CREATED // Assign Red to created tasks
+                    color = COLOR_CREATED
                 )
             }
-            .sortedBy { LocalDate.parse(it.date, formatter) }
+            .sortedBy { dayOrder[it.date.uppercase()] ?: Int.MAX_VALUE }
 
         Log.d("ReportViewModel", "Weekly Task Counts - Completed: ${completed.size}, Created: ${created.size}")
         return Pair(completed, created)

@@ -24,14 +24,21 @@ import androidx.compose.material.icons.automirrored.outlined.Assignment
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.airbnb.lottie.compose.LottieAnimation
+import com.airbnb.lottie.compose.LottieCompositionSpec
+import com.airbnb.lottie.compose.LottieConstants
+import com.airbnb.lottie.compose.rememberLottieAnimatable
+import com.airbnb.lottie.compose.rememberLottieComposition
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import com.kapilagro.sasyak.R
 
 import com.kapilagro.sasyak.presentation.common.components.TaskCard
 import com.kapilagro.sasyak.presentation.common.components.WeatherCard
@@ -459,24 +466,25 @@ fun ManagerHomeContent(
                         }
                     }
                     is HomeViewModel.TasksState.Error -> {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(200.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(
-                                    text = (newTasksState as HomeViewModel.TasksState.Error).message,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.error
+                        val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.no_internet))
+                        val lottieAnimatable = rememberLottieAnimatable()
+
+                        // Play the Lottie animation continuously once it's loaded
+                        LaunchedEffect(composition) {
+                            if (composition != null) {
+                                lottieAnimatable.animate(
+                                    composition = composition,
+                                    iterations = LottieConstants.IterateForever,
+                                    speed = 1f
                                 )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Button(onClick = loadHotNewTasks) {
-                                    Text("Retry")
-                                }
                             }
                         }
+                            LottieAnimation(
+                                composition = composition,
+                                progress = { lottieAnimatable.progress },
+                                modifier = Modifier.size(300.dp)
+                            )
+
                     }
                 }
             }
@@ -515,23 +523,27 @@ fun ManagerHomeContent(
                         }
                     }
                     is HomeViewModel.TasksState.Error -> {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(200.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(
-                                    text = (tasksState as HomeViewModel.TasksState.Error).message,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.error
+                        val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.no_internet))
+                        val lottieAnimatable = rememberLottieAnimatable()
+
+                        // Play the Lottie animation continuously once it's loaded
+                        LaunchedEffect(composition) {
+                            if (composition != null) {
+                                lottieAnimatable.animate(
+                                    composition = composition,
+                                    iterations = LottieConstants.IterateForever,
+                                    speed = 1f
                                 )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Button(onClick = loadHotMyTasks) {
-                                    Text("Retry")
-                                }
                             }
+                        }
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            LottieAnimation(
+                                composition = composition,
+                                progress = { lottieAnimatable.progress },
+                                modifier = Modifier.size(300.dp)
+                            )
                         }
                     }
                 }
@@ -694,6 +706,19 @@ fun SupervisorHomeContent(
                 }
             }
             is HomeViewModel.TasksState.Error -> {
+                val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.no_internet))
+                val lottieAnimatable = rememberLottieAnimatable()
+
+                // Play the Lottie animation continuously once it's loaded
+                LaunchedEffect(composition) {
+                    if (composition != null) {
+                        lottieAnimatable.animate(
+                            composition = composition,
+                            iterations = LottieConstants.IterateForever,
+                            speed = 1f
+                        )
+                    }
+                }
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -701,11 +726,16 @@ fun SupervisorHomeContent(
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
+                        LottieAnimation(
+                            composition = composition,
+                            progress = { lottieAnimatable.progress },
+                            modifier = Modifier.size(300.dp)
+                        )
+                        /*Text(
                             text = (tasksState as HomeViewModel.TasksState.Error).message,
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.error
-                        )
+                        )*/
                         Spacer(modifier = Modifier.height(8.dp))
                         Button(onClick = {
                             // Retry based on current tab

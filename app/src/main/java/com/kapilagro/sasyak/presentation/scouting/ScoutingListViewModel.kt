@@ -103,7 +103,7 @@ class ScoutingListViewModel @Inject constructor(
     fun createScoutingTask(
         scoutingDetails: ScoutingDetails,
         description: String,
-        imagesJson:List<String>,
+        imagesJson:List<String>?=null,
         assignedToId:Int?=null
     ) {
         _createScoutingState.value = CreateScoutingState.Loading
@@ -118,7 +118,7 @@ class ScoutingListViewModel @Inject constructor(
                     description = description,
                     detailsJson = detailsJson,
                     imagesJson = imagesJson,
-                    assignedToId = null
+                    assignedToId = assignedToId
                 )) {
                     is ApiResponse.Success -> {
                         _createScoutingState.value = CreateScoutingState.Success(response.data)

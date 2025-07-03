@@ -1,5 +1,6 @@
 package com.kapilagro.sasyak.presentation.profile
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kapilagro.sasyak.di.IoDispatcher
@@ -46,11 +47,13 @@ class ProfileViewModel @Inject constructor(
 
     init {
         loadUserProfile()
+        Log.d("ProfileViewModel", "User role from authRepo: $_userRole,${userRole.value}")
 
         // Listen for role changes to load appropriate data
         viewModelScope.launch {
             userRole.collectLatest { role ->
                 if (role == "SUPERVISOR") {
+                    Log.d("ProfileViewModel", "Supervisor role detected, loading manager data")
                     loadManagerData()
                 }
             }

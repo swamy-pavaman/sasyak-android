@@ -1,6 +1,7 @@
 package com.kapilagro.sasyak.presentation.sowing
 
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -38,6 +39,8 @@ import java.io.File
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
+import com.kapilagro.sasyak.presentation.common.catalog.CategoryViewModel
+import com.kapilagro.sasyak.presentation.common.catalog.CategoriesState
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
@@ -48,6 +51,7 @@ fun SowingRequestScreen(
     navController: NavController,
     viewModel: SowingListViewModel = hiltViewModel(),
     homeViewModel: HomeViewModel = hiltViewModel(),
+    categoryViewModel: CategoryViewModel = hiltViewModel(),
     @IoDispatcher ioDispatcher: CoroutineDispatcher,
     imageUploadService: ImageUploadService
 ) {
@@ -55,6 +59,7 @@ fun SowingRequestScreen(
     val userRole by homeViewModel.userRole.collectAsState()
     val supervisorsListState by homeViewModel.supervisorsListState.collectAsState()
     val scope = rememberCoroutineScope()
+    val categoriesStates by categoryViewModel.categoriesStates.collectAsState()
 
     // Dialog state
     var showSuccessDialog by remember { mutableStateOf(false) }
@@ -116,21 +121,35 @@ fun SowingRequestScreen(
         }
     }
 
-    val crops = listOf(
-        "Wheat", "Rice", "Maize", "Barley", "Sorghum",
-        "Mango", "Banana", "Apple", "Papaya", "Guava",
-        "Tomato", "Potato", "Onion", "Brinjal", "Cabbage",
-        "Sugarcane", "Groundnut", "Cotton", "Soybean", "Mustard"
-    )
+    LaunchedEffect(Unit) {
+        categoryViewModel.fetchCategories("Crop")
+        categoryViewModel.fetchCategories("Seed-variety")
+    }
+
+    val crops = when (val state = categoriesStates["Crop"]) {
+        is CategoriesState.Success -> state.categories.map { it.value }
+        else -> listOf(
+            "Wheat", "Rice", "Maize", "Barley", "Sorghum",
+            "Mango", "Banana", "Apple", "Papaya", "Guava",
+            "Tomato", "Potato", "Onion", "Brinjal", "Cabbage",
+            "Sugarcane", "Groundnut", "Cotton", "Soybean", "Mustard"
+        )
+    }
 
     val rows = (1..20).map { it.toString() }
 
-    val seedVarieties = mapOf(
-        "Wheat" to listOf("HD-2967", "PBW-343", "WH-542", "HD-3086", "DBW-17"),
-        "Rice" to listOf("Pusa Basmati-1", "IR-36", "IR-64", "MTU-7029", "Swarna"),
-        "Maize" to listOf("DHM-117", "Pratap Hybrid-1", "Bio-9681", "Ganga-11", "PAC-751"),
-        "Cotton" to listOf("Bt Cotton", "H-6", "F-1378", "LRA-5166", "MCU-5")
-    ).withDefault { listOf("Standard", "Hybrid", "Local") }
+    val seedVarieties = when (val state = categoriesStates["Seed-variety"]) {
+        is CategoriesState.Success -> state.categories.map { it.value }
+        else -> listOf(
+            "HD-2967", "PBW-343", "WH-542", "HD-3086", "DBW-17",
+            "Pusa Basmati-1", "IR-36", "IR-64", "MTU-7029", "Swarna",
+            "DHM-117", "Pratap Hybrid-1", "Bio-9681", "Ganga-11", "PAC-751",
+            "Bt Cotton", "H-6", "F-1378", "LRA-5166", "MCU-5"
+        )
+    }
+    LaunchedEffect(categoriesStates) {
+        Log.d("Categories", "Crops: $crops, SeedVarieties: $seedVarieties")
+    }
 
     val units = listOf("kg", "g", "quintal", "tonnes", "bags")
 
@@ -183,7 +202,7 @@ fun SowingRequestScreen(
 
         SuccessDialog(
             title = "Sowing Report Sent!",
-            message = "Your manager will be notified when they take action on it.",
+            message = if (userRole=="MANAGER") "This report has been sent to the supervisor." else "This report has been sent to the manager.",
             details = details,
             description = description,
             primaryButtonText = "OK",
@@ -250,6 +269,7 @@ fun SowingRequestScreen(
             ) {
                 OutlinedTextField(
                     value = cropName,
+                    readOnly = true,
                     onValueChange = { newValue ->
                         cropName = newValue
                         cropNameExpanded = true
@@ -268,7 +288,7 @@ fun SowingRequestScreen(
                     expanded = cropNameExpanded,
                     onDismissRequest = { cropNameExpanded = false }
                 ) {
-                    crops.filter { it.contains(cropName, ignoreCase = true) }
+                    crops
                         .forEach { crop ->
                             DropdownMenuItem(
                                 text = { Text(crop) },
@@ -285,40 +305,15 @@ fun SowingRequestScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Row Dropdown
-            ExposedDropdownMenuBox(
-                expanded = rowExpanded,
-                onExpandedChange = { rowExpanded = it },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                OutlinedTextField(
-                    value = row,
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Row *") },
-                    trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = rowExpanded)
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .menuAnchor(),
-                    shape = RoundedCornerShape(8.dp)
-                )
-
-                ExposedDropdownMenu(
-                    expanded = rowExpanded,
-                    onDismissRequest = { rowExpanded = false }
-                ) {
-                    rows.forEach { rowNumber ->
-                        DropdownMenuItem(
-                            text = { Text(rowNumber) },
-                            onClick = {
-                                row = rowNumber
-                                rowExpanded = false
-                            }
-                        )
-                    }
-                }
-            }
+            OutlinedTextField(
+                value = row,
+                onValueChange = {newValue ->
+                    row = newValue},
+                label = { Text("Row *") },
+                modifier = Modifier
+                    .fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp)
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -342,6 +337,7 @@ fun SowingRequestScreen(
             ) {
                 OutlinedTextField(
                     value = seedVariety,
+                    readOnly = true,
                     onValueChange = { newValue ->
                         seedVariety = newValue
                         seedVarietyExpanded = true
@@ -360,8 +356,7 @@ fun SowingRequestScreen(
                     expanded = seedVarietyExpanded,
                     onDismissRequest = { seedVarietyExpanded = false }
                 ) {
-                    val varieties = if (cropName.isNotBlank()) seedVarieties.getValue(cropName) else emptyList()
-                    varieties.filter { it.contains(seedVariety, ignoreCase = true) }
+                    seedVarieties
                         .forEach { variety ->
                             DropdownMenuItem(
                                 text = { Text(variety) },
@@ -373,6 +368,7 @@ fun SowingRequestScreen(
                         }
                 }
             }
+
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -436,6 +432,7 @@ fun SowingRequestScreen(
             ) {
                 OutlinedTextField(
                     value = sowingMethod,
+                    readOnly = true,
                     onValueChange = { newValue ->
                         sowingMethod = newValue
                         sowingMethodExpanded = true
@@ -454,7 +451,7 @@ fun SowingRequestScreen(
                     expanded = sowingMethodExpanded,
                     onDismissRequest = { sowingMethodExpanded = false }
                 ) {
-                    sowingMethods.filter { it.contains(sowingMethod, ignoreCase = true) }
+                    sowingMethods
                         .forEach { method ->
                             DropdownMenuItem(
                                 text = { Text(method) },
@@ -579,7 +576,7 @@ fun SowingRequestScreen(
 
             // Upload Section
             Text(
-                text = "Upload *",
+                text = "Upload",
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
@@ -708,58 +705,67 @@ fun SowingRequestScreen(
             Button(
                 onClick = {
                     if (cropName.isNotBlank() && row.isNotBlank() && seedVariety.isNotBlank() &&
-                        sowingMethod.isNotBlank() && imageFiles != null &&
+                        sowingMethod.isNotBlank() &&
                         (userRole != "MANAGER" || assignedTo != null)) {
-
                         scope.launch(ioDispatcher) {
-                            // Upload images
-                            uploadState = UploadState.Loading
-                            val uploadResult = imageUploadService.uploadImages(imageFiles!!, "SOWING")
-                            when (uploadResult) {
-                                is ApiResponse.Success -> {
-                                    val imageUrls = uploadResult.data
-                                    if (imageUrls.isEmpty()) {
-                                        uploadState = UploadState.Error("Image upload failed, no URLs received")
-                                        return@launch
-                                    }
-                                    val sowingDetails = SowingDetails(
-                                        sowingDate = sowingDate,
-                                        cropName = cropName,
-                                        row = row.toInt(),
-                                        fieldArea = fieldArea.ifBlank { null },
-                                        seedVariety = seedVariety,
-                                        seedQuantity = seedQuantity.ifBlank { null },
-                                        seedUnit = seedUnit.takeIf { seedQuantity.isNotBlank() },
-                                        sowingMethod = sowingMethod,
-                                        seedTreatment = seedTreatment.ifBlank { null },
-                                        spacingBetweenRows = spacingBetweenRows.ifBlank { null },
-                                        spacingBetweenPlants = spacingBetweenPlants.ifBlank { null },
-                                        soilCondition = soilCondition.ifBlank { null },
-                                        weatherCondition = weatherCondition.ifBlank { null },
-                                        //imageUrls = imageUrls
-                                    )
+                            val sowingDetails = SowingDetails(
+                                sowingDate = sowingDate,
+                                cropName = cropName,
+                                row = row.toString(),
+                                fieldArea = fieldArea.ifBlank { null },
+                                seedVariety = seedVariety,
+                                seedQuantity = seedQuantity.ifBlank { null },
+                                seedUnit = seedUnit.takeIf { seedQuantity.isNotBlank() },
+                                sowingMethod = sowingMethod,
+                                seedTreatment = seedTreatment.ifBlank { null },
+                                spacingBetweenRows = spacingBetweenRows.ifBlank { null },
+                                spacingBetweenPlants = spacingBetweenPlants.ifBlank { null },
+                                soilCondition = soilCondition.ifBlank { null },
+                                weatherCondition = weatherCondition.ifBlank { null },
+                            )
+                            submittedEntry = sowingDetails
 
-                                    submittedEntry = sowingDetails
-                                    viewModel.createSowingTask(
-                                        sowingDetails,
-                                        description,
-                                        imageUrls,
-                                        assignedToId = if (userRole == "MANAGER") assignedTo else null
-                                    )
-                                    uploadState = UploadState.Idle
-                                }
-                                is ApiResponse.Error -> {
-                                    uploadState = UploadState.Error("Image upload failed: ${uploadResult.errorMessage}")
-                                }
-                                is ApiResponse.Loading -> {
-                                    uploadState = UploadState.Loading
+                            if (imageFiles.isNullOrEmpty()) {
+                                // No images to upload, proceed with task creation with empty image list
+                                viewModel.createSowingTask(
+                                    sowingDetails = sowingDetails,
+                                    description = description,
+                                    imagesJson = emptyList<String>(), // Pass empty list instead of null
+                                    assignedToId = if (userRole == "MANAGER") assignedTo else null
+                                )
+                                uploadState = UploadState.Idle
+                            } else {
+                                // Upload images
+                                uploadState = UploadState.Loading
+                                val uploadResult = imageUploadService.uploadImages(imageFiles!!, "SOWING")
+                                when (uploadResult) {
+                                    is ApiResponse.Success -> {
+                                        val imageUrls = uploadResult.data
+                                        if (imageUrls.isEmpty()) {
+                                            uploadState = UploadState.Error("Image upload failed, no URLs received")
+                                            return@launch
+                                        }
+                                        viewModel.createSowingTask(
+                                            sowingDetails = sowingDetails,
+                                            description = description,
+                                            imagesJson = imageUrls,
+                                            assignedToId = if (userRole == "MANAGER") assignedTo else null
+                                        )
+                                        uploadState = UploadState.Idle
+                                    }
+                                    is ApiResponse.Error -> {
+                                        uploadState = UploadState.Error("Image upload failed: ${uploadResult.errorMessage}")
+                                    }
+                                    is ApiResponse.Loading -> {
+                                        uploadState = UploadState.Loading
+                                    }
                                 }
                             }
                         }
                     }
                 },
                 enabled = cropName.isNotBlank() && row.isNotBlank() && seedVariety.isNotBlank() &&
-                        sowingMethod.isNotBlank() && imageFiles != null &&
+                        sowingMethod.isNotBlank() &&
                         createSowingState !is SowingListViewModel.CreateSowingState.Loading &&
                         uploadState !is UploadState.Loading,
                 modifier = Modifier

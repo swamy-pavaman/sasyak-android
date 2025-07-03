@@ -1,6 +1,7 @@
 package com.kapilagro.sasyak.presentation.yield
 
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -28,6 +29,8 @@ import com.kapilagro.sasyak.data.api.ImageUploadService
 import com.kapilagro.sasyak.di.IoDispatcher
 import com.kapilagro.sasyak.domain.models.ApiResponse
 import com.kapilagro.sasyak.domain.models.YieldDetails
+import com.kapilagro.sasyak.presentation.common.catalog.CropViewModel
+import com.kapilagro.sasyak.presentation.common.catalog.CropsState
 import com.kapilagro.sasyak.presentation.common.components.SuccessDialog
 import com.kapilagro.sasyak.presentation.common.navigation.Screen
 import com.kapilagro.sasyak.presentation.common.theme.AgroPrimary
@@ -47,12 +50,14 @@ fun YieldRequestScreen(
     navController: NavController,
     viewModel: YieldListViewModel = hiltViewModel(),
     homeViewModel: HomeViewModel = hiltViewModel(),
+    cropViewModel: CropViewModel = hiltViewModel(),
     @IoDispatcher ioDispatcher: CoroutineDispatcher,
     imageUploadService: ImageUploadService
 ) {
     val createYieldState by viewModel.createYieldState.collectAsState()
     val userRole by homeViewModel.userRole.collectAsState()
     val supervisorsListState by homeViewModel.supervisorsListState.collectAsState()
+    val cropsState by cropViewModel.cropsState.collectAsState()
     val scope = rememberCoroutineScope()
 
     // Dialog state
@@ -108,15 +113,24 @@ fun YieldRequestScreen(
             }
         }
     }
+    Log.d("CropViewModel", "cropsState: $cropsState")
+    val crops = when (cropsState) {
+        is CropsState.Success -> (cropsState as CropsState.Success).crops.map { it.value }
+        else -> listOf(
+            "Wheat", "Rice", "Maize", "Barley", "Sorghum",
+            "Mango", "Banana", "Apple", "Papaya", "Guava",
+            "Tomato", "Potato", "Onion", "Brinjal", "Cabbage",
+            "Sugarcane", "Groundnut", "Cotton", "Soybean", "Mustard"
+        )
+    }
 
-    val crops = listOf(
+   /* val crops = listOf(
         "Wheat", "Rice", "Maize", "Barley", "Sorghum",
         "Mango", "Banana", "Apple", "Papaya", "Guava",
         "Tomato", "Potato", "Onion", "Brinjal", "Cabbage",
         "Sugarcane", "Groundnut", "Cotton", "Soybean", "Mustard"
-    )
+    )*/
 
-    val rows = (1..20).map { it.toString() }
 
     val units = listOf("kg", "tonnes", "quintals", "bags")
 
@@ -168,7 +182,7 @@ fun YieldRequestScreen(
 
         SuccessDialog(
             title = "Yield Report Sent!",
-            message = "Your manager will be notified when they take action on it.",
+            message = if (userRole=="MANAGER") "This report has been sent to the supervisor." else "This report has been sent to the manager.",
             details = details,
             description = description,
             primaryButtonText = "OK",
@@ -232,6 +246,7 @@ fun YieldRequestScreen(
             ) {
                 OutlinedTextField(
                     value = cropName,
+                    readOnly = true,
                     onValueChange = { newValue ->
                         cropName = newValue
                         cropNameExpanded = true
@@ -250,7 +265,7 @@ fun YieldRequestScreen(
                     expanded = cropNameExpanded,
                     onDismissRequest = { cropNameExpanded = false }
                 ) {
-                    crops.filter { it.contains(cropName, ignoreCase = true) }
+                    crops
                         .forEach { crop ->
                             DropdownMenuItem(
                                 text = { Text(crop) },
@@ -266,40 +281,16 @@ fun YieldRequestScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Row Dropdown
-            ExposedDropdownMenuBox(
-                expanded = rowExpanded,
-                onExpandedChange = { rowExpanded = it },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                OutlinedTextField(
-                    value = row,
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Row *") },
-                    trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = rowExpanded)
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .menuAnchor(),
-                    shape = RoundedCornerShape(8.dp)
-                )
+            OutlinedTextField(
+                value = row,
+                onValueChange = {newValue ->
+                    row = newValue
+                },
+                label = { Text("Row *") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp)
+            )
 
-                ExposedDropdownMenu(
-                    expanded = rowExpanded,
-                    onDismissRequest = { rowExpanded = false }
-                ) {
-                    rows.forEach { rowNumber ->
-                        DropdownMenuItem(
-                            text = { Text(rowNumber) },
-                            onClick = {
-                                row = rowNumber
-                                rowExpanded = false
-                            }
-                        )
-                    }
-                }
-            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -375,6 +366,7 @@ fun YieldRequestScreen(
             ) {
                 OutlinedTextField(
                     value = qualityGrade,
+                    readOnly = true,
                     onValueChange = { newValue ->
                         qualityGrade = newValue
                         qualityGradeExpanded = true
@@ -393,7 +385,7 @@ fun YieldRequestScreen(
                     expanded = qualityGradeExpanded,
                     onDismissRequest = { qualityGradeExpanded = false }
                 ) {
-                    grades.filter { it.contains(qualityGrade, ignoreCase = true) }
+                    grades
                         .forEach { grade ->
                             DropdownMenuItem(
                                 text = { Text(grade) },
@@ -428,6 +420,7 @@ fun YieldRequestScreen(
             ) {
                 OutlinedTextField(
                     value = harvestMethod,
+                    readOnly = true,
                     onValueChange = { newValue ->
                         harvestMethod = newValue
                         harvestMethodExpanded = true
@@ -446,7 +439,7 @@ fun YieldRequestScreen(
                     expanded = harvestMethodExpanded,
                     onDismissRequest = { harvestMethodExpanded = false }
                 ) {
-                    harvestMethods.filter { it.contains(harvestMethod, ignoreCase = true) }
+                    harvestMethods
                         .forEach { method ->
                             DropdownMenuItem(
                                 text = { Text(method) },
@@ -511,7 +504,7 @@ fun YieldRequestScreen(
 
             // Upload Section
             Text(
-                text = "Upload *",
+                text ="Upload",
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
@@ -621,53 +614,64 @@ fun YieldRequestScreen(
             Button(
                 onClick = {
                     if (cropName.isNotBlank() && row.isNotBlank() && yieldQuantity.isNotBlank() &&
-                        yieldUnit.isNotBlank() && imageFiles != null &&
+                        yieldUnit.isNotBlank() &&
                         (userRole != "MANAGER" || assignedTo != null)) {
                         scope.launch(ioDispatcher) {
-                            // Upload images
-                            uploadState = UploadState.Loading
-                            val uploadResult = imageUploadService.uploadImages(imageFiles!!, "YIELD")
-                            when (uploadResult) {
-                                is ApiResponse.Success -> {
-                                    val imageUrls = uploadResult.data
-                                    if (imageUrls.isEmpty()) {
-                                        uploadState = UploadState.Error("Image upload failed, no URLs received")
-                                        return@launch
+                            val yieldDetails = YieldDetails(
+                                harvestDate = harvestDate,
+                                cropName = cropName,
+                                row = row.toString(),
+                                fieldArea = fieldArea.ifBlank { null },
+                                yieldQuantity = yieldQuantity,
+                                yieldUnit = yieldUnit,
+                                qualityGrade = qualityGrade.ifBlank { null },
+                                moistureContent = moistureContent.ifBlank { null },
+                                harvestMethod = harvestMethod.ifBlank { null },
+                                notes = notes.ifBlank { null },
+                            )
+                            submittedEntry = yieldDetails
+
+                            if (imageFiles.isNullOrEmpty()) {
+                                // No images to upload, proceed with task creation with empty image list
+                                viewModel.createYieldTask(
+                                    yieldDetails = yieldDetails,
+                                    description = description,
+                                    imagesJson = emptyList<String>(), // Pass empty list instead of null
+                                    assignedToId = if (userRole == "MANAGER") assignedTo else null
+                                )
+                                uploadState = UploadState.Idle
+                            } else {
+                                // Upload images
+                                uploadState = UploadState.Loading
+                                val uploadResult = imageUploadService.uploadImages(imageFiles!!, "YIELD")
+                                when (uploadResult) {
+                                    is ApiResponse.Success -> {
+                                        val imageUrls = uploadResult.data
+                                        if (imageUrls.isEmpty()) {
+                                            uploadState = UploadState.Error("Image upload failed, no URLs received")
+                                            return@launch
+                                        }
+                                        viewModel.createYieldTask(
+                                            yieldDetails = yieldDetails,
+                                            description = description,
+                                            imagesJson = imageUrls,
+                                            assignedToId = if (userRole == "MANAGER") assignedTo else null
+                                        )
+                                        uploadState = UploadState.Idle
                                     }
-                                    val yieldDetails = YieldDetails(
-                                        harvestDate = harvestDate,
-                                        cropName = cropName,
-                                        row = row.toInt(),
-                                        fieldArea = fieldArea.ifBlank { null },
-                                        yieldQuantity = yieldQuantity,
-                                        yieldUnit = yieldUnit,
-                                        qualityGrade = qualityGrade.ifBlank { null },
-                                        moistureContent = moistureContent.ifBlank { null },
-                                        harvestMethod = harvestMethod.ifBlank { null },
-                                        notes = notes.ifBlank { null },
-                                       // uploadedFiles = imageUrls
-                                    )
-                                    submittedEntry = yieldDetails
-                                    viewModel.createYieldTask(
-                                        yieldDetails = yieldDetails,
-                                        description = description,
-                                         imageUrls,
-                                        assignedToId = if (userRole == "MANAGER") assignedTo else null
-                                    )
-                                    uploadState = UploadState.Idle
-                                }
-                                is ApiResponse.Error -> {
-                                    uploadState = UploadState.Error("Image upload failed: ${uploadResult.errorMessage}")
-                                }
-                                is ApiResponse.Loading -> {
-                                    uploadState = UploadState.Loading
+                                    is ApiResponse.Error -> {
+                                        uploadState = UploadState.Error("Image upload failed: ${uploadResult.errorMessage}")
+                                    }
+                                    is ApiResponse.Loading -> {
+                                        uploadState = UploadState.Loading
+                                    }
                                 }
                             }
                         }
                     }
                 },
                 enabled = cropName.isNotBlank() && row.isNotBlank() && yieldQuantity.isNotBlank() &&
-                        yieldUnit.isNotBlank() && imageFiles != null &&
+                        yieldUnit.isNotBlank() &&
                         (userRole != "MANAGER" || assignedTo != null) &&
                         createYieldState !is YieldListViewModel.CreateYieldState.Loading &&
                         uploadState !is UploadState.Loading,

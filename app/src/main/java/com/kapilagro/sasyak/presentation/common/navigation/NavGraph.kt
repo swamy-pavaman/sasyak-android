@@ -518,7 +518,10 @@ fun AppNavGraph(
                 taskId = taskId,
                 onBackClick = {
                     navController.popBackStack()
-                }
+                },
+                navController = navController,
+                ioDispatcher = ioDispatcher,
+                imageUploadService = imageUploadService
             )
         }
 

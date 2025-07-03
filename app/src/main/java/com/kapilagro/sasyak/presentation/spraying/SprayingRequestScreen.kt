@@ -1,6 +1,7 @@
 package com.kapilagro.sasyak.presentation.spraying
 
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -37,6 +38,8 @@ import kotlinx.coroutines.launch
 import java.io.File
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import com.kapilagro.sasyak.presentation.common.catalog.CategoryViewModel
+import com.kapilagro.sasyak.presentation.common.catalog.CategoriesState
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
@@ -47,6 +50,7 @@ fun SprayingRequestScreen(
     navController: NavController,
     viewModel: SprayingListViewModel = hiltViewModel(),
     homeViewModel: HomeViewModel = hiltViewModel(),
+    categoryViewModel: CategoryViewModel = hiltViewModel(),
     @IoDispatcher ioDispatcher: CoroutineDispatcher,
     imageUploadService: ImageUploadService
 ) {
@@ -54,6 +58,7 @@ fun SprayingRequestScreen(
     val userRole by homeViewModel.userRole.collectAsState()
     val supervisorsListState by homeViewModel.supervisorsListState.collectAsState()
     val scope = rememberCoroutineScope()
+    val categoriesStates by categoryViewModel.categoriesStates.collectAsState()
 
     // Dialog state
     var showSuccessDialog by remember { mutableStateOf(false) }
@@ -106,20 +111,35 @@ fun SprayingRequestScreen(
         }
     }
 
-    val crops = listOf(
-        "Wheat", "Rice", "Maize", "Barley", "Sorghum",
-        "Mango", "Banana", "Apple", "Papaya", "Guava",
-        "Tomato", "Potato", "Onion", "Brinjal", "Cabbage",
-        "Sugarcane", "Groundnut", "Cotton", "Soybean", "Mustard"
-    )
+    LaunchedEffect(Unit) {
+        categoryViewModel.fetchCategories("Crop")
+        categoryViewModel.fetchCategories("Fertilizer")
+    }
+
+    val crops = when (val state = categoriesStates["Crop"]) {
+        is CategoriesState.Success -> state.categories.map { it.value }
+        else -> listOf(
+            "Wheat", "Rice", "Maize", "Barley", "Sorghum",
+            "Mango", "Banana", "Apple", "Papaya", "Guava",
+            "Tomato", "Potato", "Onion", "Brinjal", "Cabbage",
+            "Sugarcane", "Groundnut", "Cotton", "Soybean", "Mustard"
+        )
+    }
+    val chemicals = when (val state = categoriesStates["Fertilizer"]) {
+        is CategoriesState.Success -> state.categories.map { it.value }
+        else -> listOf(
+            "Glyphosate", "2,4-D", "Atrazine", "Paraquat", "Pendimethalin",
+            "Chlorpyrifos", "Cypermethrin", "Lambda-cyhalothrin", "Carbofuran", "Imidacloprid",
+            "Mancozeb", "Copper Oxychloride", "Carbendazim", "Metalaxyl", "Thiram"
+        )
+    }
+
+    // Log states for debugging
+    LaunchedEffect(categoriesStates) {
+        Log.d("Categories", "Crops: $crops, Chemicals : $chemicals")
+    }
 
     val rows = (1..20).map { it.toString() }
-
-    val chemicals = listOf(
-        "Glyphosate", "2,4-D", "Atrazine", "Paraquat", "Pendimethalin",
-        "Chlorpyrifos", "Cypermethrin", "Lambda-cyhalothrin", "Carbofuran", "Imidacloprid",
-        "Mancozeb", "Copper Oxychloride", "Carbendazim", "Metalaxyl", "Thiram"
-    )
 
     val sprayingMethods = listOf(
         "Backpack Sprayer", "Boom Sprayer", "Aerial Spraying", "Drip Application",
@@ -169,7 +189,7 @@ fun SprayingRequestScreen(
 
         SuccessDialog(
             title = "Spraying Report Sent!",
-            message = "Your manager will be notified when they take action on it.",
+            message = if (userRole=="MANAGER") "This report has been sent to the supervisor." else "This report has been sent to the manager.",
             details = details,
             description = description,
             primaryButtonText = "OK",
@@ -232,6 +252,7 @@ fun SprayingRequestScreen(
             ) {
                 OutlinedTextField(
                     value = cropName,
+                    readOnly = true,
                     onValueChange = { newValue ->
                         cropName = newValue
                         cropNameExpanded = true
@@ -250,7 +271,7 @@ fun SprayingRequestScreen(
                     expanded = cropNameExpanded,
                     onDismissRequest = { cropNameExpanded = false }
                 ) {
-                    crops.filter { it.contains(cropName, ignoreCase = true) }
+                    crops
                         .forEach { crop ->
                             DropdownMenuItem(
                                 text = { Text(crop) },
@@ -266,40 +287,16 @@ fun SprayingRequestScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Row Dropdown
-            ExposedDropdownMenuBox(
-                expanded = rowExpanded,
-                onExpandedChange = { rowExpanded = it },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                OutlinedTextField(
-                    value = row,
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Row *") },
-                    trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = rowExpanded)
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .menuAnchor(),
-                    shape = RoundedCornerShape(8.dp)
-                )
+            OutlinedTextField(
+                value = row,
+                onValueChange = { newValue ->
+                    row = newValue
+                },
+                label = { Text("Row *") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp)
+            )
 
-                ExposedDropdownMenu(
-                    expanded = rowExpanded,
-                    onDismissRequest = { rowExpanded = false }
-                ) {
-                    rows.forEach { rowNumber ->
-                        DropdownMenuItem(
-                            text = { Text(rowNumber) },
-                            onClick = {
-                                row = rowNumber
-                                rowExpanded = false
-                            }
-                        )
-                    }
-                }
-            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -323,6 +320,7 @@ fun SprayingRequestScreen(
             ) {
                 OutlinedTextField(
                     value = chemicalName,
+                    readOnly = true,
                     onValueChange = { newValue ->
                         chemicalName = newValue
                         chemicalNameExpanded = true
@@ -341,7 +339,7 @@ fun SprayingRequestScreen(
                     expanded = chemicalNameExpanded,
                     onDismissRequest = { chemicalNameExpanded = false }
                 ) {
-                    chemicals.filter { it.contains(chemicalName, ignoreCase = true) }
+                    chemicals
                         .forEach { chemical ->
                             DropdownMenuItem(
                                 text = { Text(chemical) },
@@ -376,6 +374,7 @@ fun SprayingRequestScreen(
             ) {
                 OutlinedTextField(
                     value = sprayingMethod,
+                    readOnly = true,
                     onValueChange = { newValue ->
                         sprayingMethod = newValue
                         sprayingMethodExpanded = true
@@ -394,7 +393,7 @@ fun SprayingRequestScreen(
                     expanded = sprayingMethodExpanded,
                     onDismissRequest = { sprayingMethodExpanded = false }
                 ) {
-                    sprayingMethods.filter { it.contains(sprayingMethod, ignoreCase = true) }
+                    sprayingMethods
                         .forEach { method ->
                             DropdownMenuItem(
                                 text = { Text(method) },
@@ -481,7 +480,7 @@ fun SprayingRequestScreen(
 
             // Upload Section
             Text(
-                text = "Upload *",
+                text = "Upload",
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
@@ -591,52 +590,63 @@ fun SprayingRequestScreen(
             Button(
                 onClick = {
                     if (cropName.isNotBlank() && row.isNotBlank() && chemicalName.isNotBlank() &&
-                        sprayingMethod.isNotBlank() && imageFiles != null &&
+                        sprayingMethod.isNotBlank() &&
                         (userRole != "MANAGER" || assignedTo != null)) {
                         scope.launch(ioDispatcher) {
-                            // Upload images
-                            uploadState = UploadState.Loading
-                            val uploadResult = imageUploadService.uploadImages(imageFiles!!, "SPRAYING")
-                            when (uploadResult) {
-                                is ApiResponse.Success -> {
-                                    val imageUrls = uploadResult.data
-                                    if (imageUrls.isEmpty()) {
-                                        uploadState = UploadState.Error("Image upload failed, no URLs received")
-                                        return@launch
+                            val sprayingDetails = SprayingDetails(
+                                sprayingDate = sprayingDate,
+                                cropName = cropName,
+                                row = row.toString(),
+                                fieldArea = fieldArea.ifBlank { null },
+                                chemicalName = chemicalName,
+                                dosage = dosage.ifBlank { null },
+                                sprayingMethod = sprayingMethod,
+                                targetPest = targetPest.ifBlank { null },
+                                weatherCondition = weatherCondition.ifBlank { null },
+                            )
+                            submittedEntry = sprayingDetails
+
+                            if (imageFiles.isNullOrEmpty()) {
+                                // No images to upload, proceed with task creation with empty image list
+                                viewModel.createSprayingTask(
+                                    sprayingDetails = sprayingDetails,
+                                    description = description,
+                                    imagesJson = emptyList<String>(), // Pass empty list instead of null
+                                    assignedToId = if (userRole == "MANAGER") assignedTo else null
+                                )
+                                uploadState = UploadState.Idle
+                            } else {
+                                // Upload images
+                                uploadState = UploadState.Loading
+                                val uploadResult = imageUploadService.uploadImages(imageFiles!!, "SPRAYING")
+                                when (uploadResult) {
+                                    is ApiResponse.Success -> {
+                                        val imageUrls = uploadResult.data
+                                        if (imageUrls.isEmpty()) {
+                                            uploadState = UploadState.Error("Image upload failed, no URLs received")
+                                            return@launch
+                                        }
+                                        viewModel.createSprayingTask(
+                                            sprayingDetails = sprayingDetails,
+                                            description = description,
+                                            imagesJson = imageUrls,
+                                            assignedToId = if (userRole == "MANAGER") assignedTo else null
+                                        )
+                                        uploadState = UploadState.Idle
                                     }
-                                    val sprayingDetails = SprayingDetails(
-                                        sprayingDate = sprayingDate,
-                                        cropName = cropName,
-                                        row = row.toInt(),
-                                        fieldArea = fieldArea.ifBlank { null },
-                                        chemicalName = chemicalName,
-                                        dosage = dosage.ifBlank { null },
-                                        sprayingMethod = sprayingMethod,
-                                        targetPest = targetPest.ifBlank { null },
-                                        weatherCondition = weatherCondition.ifBlank { null },
-                                        //uploadedFiles = imageUrls
-                                    )
-                                    submittedEntry = sprayingDetails
-                                    viewModel.createSprayingTask(
-                                        sprayingDetails = sprayingDetails,
-                                        description = description,
-                                         imageUrls,
-                                        assignedToId = if (userRole == "MANAGER") assignedTo else null
-                                    )
-                                    uploadState = UploadState.Idle
-                                }
-                                is ApiResponse.Error -> {
-                                    uploadState = UploadState.Error("Image upload failed: ${uploadResult.errorMessage}")
-                                }
-                                is ApiResponse.Loading -> {
-                                    uploadState = UploadState.Loading
+                                    is ApiResponse.Error -> {
+                                        uploadState = UploadState.Error("Image upload failed: ${uploadResult.errorMessage}")
+                                    }
+                                    is ApiResponse.Loading -> {
+                                        uploadState = UploadState.Loading
+                                    }
                                 }
                             }
                         }
                     }
                 },
                 enabled = cropName.isNotBlank() && row.isNotBlank() && chemicalName.isNotBlank() &&
-                        sprayingMethod.isNotBlank() && imageFiles != null &&
+                        sprayingMethod.isNotBlank() &&
                         (userRole != "MANAGER" || assignedTo != null) &&
                         createSprayingState !is SprayingListViewModel.CreateSprayingState.Loading &&
                         uploadState !is UploadState.Loading,
