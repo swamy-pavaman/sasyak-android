@@ -72,7 +72,9 @@ fun ScoutingRequestScreen(
             ?: LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))
     ) }
     var cropName by remember { mutableStateOf(savedStateHandle?.get<String>("cropName") ?: "") }
+    var valveName by remember { mutableStateOf(savedStateHandle?.get<String>("valveName") ?: "") }
     var cropNameExpanded by remember { mutableStateOf(false) }
+    var valveNameExpanded by remember { mutableStateOf(false) }
     var row by remember { mutableStateOf(savedStateHandle?.get<String>("row") ?: "") }
     var rowExpanded by remember { mutableStateOf(false) }
     var treeNo by remember { mutableStateOf(savedStateHandle?.get<String>("treeNo") ?: "") }
@@ -113,6 +115,7 @@ fun ScoutingRequestScreen(
     LaunchedEffect(Unit) {
         categoryViewModel.fetchCategories("Crop")
         categoryViewModel.fetchCategories("Disease")
+        categoryViewModel.fetchCategories("Valve")
     }
 
     // Extract crops and diseases
@@ -131,6 +134,12 @@ fun ScoutingRequestScreen(
             "Powdery mildew", "Downy mildew", "Late blight", "Early blight", "Rust", "Fusarium wilt",
             "Verticillium wilt", "Anthracnose", "Leaf spot", "Damping-off", "Fire blight",
             "Bacterial blight", "Mosaic virus", "Black spot", "Citrus canker"
+        )
+    }
+    val valves = when (val state = categoriesStates["Valve"]) {
+        is CategoriesState.Success -> state.categories.map { it.value }
+        else -> listOf(
+            "Valve 1", "Valve 2", "Valve 3"
         )
     }
 
@@ -237,6 +246,48 @@ fun ScoutingRequestScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Valve Name Dropdown
+            ExposedDropdownMenuBox(
+                expanded = valveNameExpanded,
+                onExpandedChange = { valveNameExpanded = it },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    value = valveName,
+                    readOnly = true,
+                    onValueChange = { newValue ->
+                        valveName = newValue
+                        valveNameExpanded = true
+                    },
+                    label = { Text("Valve name *") },
+                    trailingIcon = {
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = valveNameExpanded)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(),
+                    shape = RoundedCornerShape(8.dp)
+                )
+
+                ExposedDropdownMenu(
+                    expanded = valveNameExpanded,
+                    onDismissRequest = { valveNameExpanded = false }
+                ) {
+                    valves
+                        .forEach { valve ->
+                            DropdownMenuItem(
+                                text = { Text(valve)},
+                                onClick = {
+                                    valveName = valve
+                                    valveNameExpanded = false
+                                }
+                            )
+                        }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             // Crop Name Dropdown
             ExposedDropdownMenuBox(
                 expanded = cropNameExpanded,
@@ -295,6 +346,7 @@ fun ScoutingRequestScreen(
             // Tree No Dropdown
             OutlinedTextField(
                 value = treeNo,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 onValueChange = { newValue ->
                     treeNo = newValue
                 },
@@ -544,18 +596,19 @@ fun ScoutingRequestScreen(
             // Submit Button
             Button(
                 onClick = {
-                    if (cropName.isNotBlank() && row.isNotBlank() && treeNo.isNotBlank() &&
-                        (userRole != "MANAGER" || assignedTo != null)) {
+                    if (cropName.isNotBlank() && row.isNotBlank() && valveName.isNotBlank() && treeNo.isNotBlank() &&
+                        (userRole != "MANAGER" || assignedTo != null)){
                         scope.launch(ioDispatcher) {
                             val scoutingDetails = ScoutingDetails(
                                 scoutingDate = scoutingDate,
                                 cropName = cropName,
-                                row = row.toInt(),
+                                row = row.toString(),
                                 treeNo = treeNo.toInt(),
                                 noOfFruitSeen = noOfFruitSeen.ifBlank { null },
                                 noOfFlowersSeen = noOfFlowersSeen.ifBlank { null },
                                 noOfFruitsDropped = noOfFruitsDropped.ifBlank { null },
-                                nameOfDisease = nameOfDisease.ifBlank { null }
+                                nameOfDisease = nameOfDisease.ifBlank { null },
+                                valveName = valveName
                             )
                             submittedEntry = scoutingDetails
 
@@ -599,7 +652,7 @@ fun ScoutingRequestScreen(
                     }
                 },
                 enabled = cropName.isNotBlank() && row.isNotBlank() && treeNo.isNotBlank() &&
-                        (userRole != "MANAGER" || assignedTo != null) &&
+                        (userRole != "MANAGER" || assignedTo != null) && valveName.isNotBlank() &&
                         createScoutingState !is ScoutingListViewModel.CreateScoutingState.Loading &&
                         uploadState !is UploadState.Loading,
                 modifier = Modifier

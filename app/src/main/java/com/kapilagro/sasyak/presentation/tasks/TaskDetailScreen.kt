@@ -273,49 +273,64 @@ fun TaskDetailScreen(
                             }
 
                             if (details != null) {
-                                // Collect keys into a list for controlled iteration
-                                val keysList = details.keys().asSequence().toList()
-                                // Limit to first 4 keys when not expanded
-                                val displayKeys =
-                                    if (isExpandedForDetails) keysList else keysList.take(6)
+                                // Collect keys with non-null and non-empty values into a list
+                                val keysList = details.keys().asSequence()
+                                    .filter { key -> details.optString(key, "").isNotEmpty() }
+                                    .toList()
 
-                                // Display key-value pairs
-                                displayKeys.forEach { key ->
-                                    val value = details.optString(key, "")
-                                    DetailRow(
-                                        key.replaceFirstChar { it.uppercase() },
-                                        value
+                                // Show "No details available" if no valid key-value pairs exist
+                                if (keysList.isEmpty()) {
+                                    Text(
+                                        text = "No details available",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        modifier = Modifier.padding(horizontal = 16.dp)
                                     )
-                                }
+                                } else {
+                                    // Limit to first 6 keys when not expanded
+                                    val displayKeys = if (isExpandedForDetails) keysList else keysList.take(6)
 
-                                // Show arrow icon if there are more than 4 keys
-                                if (keysList.size > 6) {
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable {
-                                                isExpandedForDetails = !isExpandedForDetails
-                                            }
-                                            .padding(vertical = 4.dp),
-                                        horizontalArrangement = Arrangement.End,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            text = if (isExpandedForDetails) "Show Less" else "Show More",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.padding(end = 4.dp)
+                                    // Display key-value pairs
+                                    displayKeys.forEach { key ->
+                                        val value = details.optString(key, "")
+                                        DetailRow(
+                                            key.replaceFirstChar { it.uppercase() },
+                                            value
                                         )
-                                        Icon(
-                                            imageVector = if (isExpandedForDetails) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
-                                            contentDescription = if (isExpandedForDetails) "Collapse details" else "Expand details",
-                                            tint = MaterialTheme.colorScheme.primary
-                                        )
+                                    }
+
+                                    // Show arrow icon if there are more than 6 keys
+                                    if (keysList.size > 6) {
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable {
+                                                    isExpandedForDetails = !isExpandedForDetails
+                                                }
+                                                .padding(vertical = 4.dp),
+                                            horizontalArrangement = Arrangement.End,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = if (isExpandedForDetails) "Show Less" else "Show More",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.padding(end = 4.dp)
+                                            )
+                                            Icon(
+                                                imageVector = if (isExpandedForDetails) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
+                                                contentDescription = if (isExpandedForDetails) "Collapse details" else "Expand details",
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
                                     }
                                 }
                             } else {
-                                Text("No details available")
+                                Text(
+                                    text = "No details available",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    modifier = Modifier.padding(horizontal = 16.dp)
+                                )
                             }
                         }
                         Spacer(modifier = Modifier.height(8.dp))
@@ -1293,6 +1308,7 @@ fun FormattedScoutingFields(detailsJson: String?) {
         DetailRow("Row", it.optString("row", ""))
         DetailRow("Tree Number", it.optString("treeNo", ""))
         DetailRow("Fruits Dropped", it.optString("noOfFruitsDropped", ""))
+        DetailRow("Valve", it.optString("valveName", ""))
     } ?: Text(
         text = "Error loading scouting details",
         style = MaterialTheme.typography.bodyMedium,

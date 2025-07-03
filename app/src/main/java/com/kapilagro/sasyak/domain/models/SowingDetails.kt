@@ -25,7 +25,7 @@ import kotlinx.serialization.Serializable
 data class SowingDetails(
     val sowingDate: String,
     val cropName: String,
-    val row: Int,
+    val row: String,
     val fieldArea: String? = null,
     val seedVariety: String,
     val seedQuantity: String? = null,

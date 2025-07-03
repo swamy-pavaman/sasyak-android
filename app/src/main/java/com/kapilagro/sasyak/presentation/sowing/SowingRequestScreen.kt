@@ -711,7 +711,7 @@ fun SowingRequestScreen(
                             val sowingDetails = SowingDetails(
                                 sowingDate = sowingDate,
                                 cropName = cropName,
-                                row = row.toInt(),
+                                row = row.toString(),
                                 fieldArea = fieldArea.ifBlank { null },
                                 seedVariety = seedVariety,
                                 seedQuantity = seedQuantity.ifBlank { null },

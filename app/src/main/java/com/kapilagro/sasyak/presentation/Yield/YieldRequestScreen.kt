@@ -620,7 +620,7 @@ fun YieldRequestScreen(
                             val yieldDetails = YieldDetails(
                                 harvestDate = harvestDate,
                                 cropName = cropName,
-                                row = row.toInt(),
+                                row = row.toString(),
                                 fieldArea = fieldArea.ifBlank { null },
                                 yieldQuantity = yieldQuantity,
                                 yieldUnit = yieldUnit,

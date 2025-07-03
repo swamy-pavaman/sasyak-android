@@ -27,7 +27,7 @@ import kotlinx.serialization.Serializable
 data class SprayingDetails(
     val sprayingDate: String,
     val cropName: String,
-    val row: Int,
+    val row: String,
     val fieldArea: String? = null,
     val chemicalName: String,
     val dosage: String? = null,

@@ -596,7 +596,7 @@ fun SprayingRequestScreen(
                             val sprayingDetails = SprayingDetails(
                                 sprayingDate = sprayingDate,
                                 cropName = cropName,
-                                row = row.toInt(),
+                                row = row.toString(),
                                 fieldArea = fieldArea.ifBlank { null },
                                 chemicalName = chemicalName,
                                 dosage = dosage.ifBlank { null },
