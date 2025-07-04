@@ -38,7 +38,9 @@ import com.kapilagro.sasyak.presentation.home.HomeViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.launch
 import java.io.File
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -89,6 +91,23 @@ fun ScoutingRequestScreen(
     var assignedTo by remember { mutableStateOf<Int?>(savedStateHandle?.get<Int>("assignedTo")) }
     var assignedToExpanded by remember { mutableStateOf(false) }
 
+    var dueDateText by remember {
+        mutableStateOf(
+            savedStateHandle?.get<String>("dueDate")
+                ?: LocalDate.now().plusDays(7).format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))
+        )
+    }
+    var showDatePicker by remember { mutableStateOf(false) }
+
+
+    val datePattern = Regex("\\d{2}-\\d{2}-\\d{4}")
+    val isValidDueDate = dueDateText.matches(datePattern) && try {
+        LocalDate.parse(dueDateText, DateTimeFormatter.ofPattern("dd-MM-yyyy")).isAfter(LocalDate.now())
+    } catch (e: Exception) {
+        false
+    }
+
+
     // Save form state before navigating to ImageCaptureScreen
     LaunchedEffect(Unit) {
         snapshotFlow {
@@ -103,7 +122,8 @@ fun ScoutingRequestScreen(
                 "nameOfDisease" to nameOfDisease,
                 "description" to description,
                 "assignedTo" to assignedTo,
-                "valveName" to valveName
+                "valveName" to valveName,
+                "dueDate" to dueDateText
             )
         }.collect { state ->
             state.forEach { (key, value) ->
@@ -286,6 +306,8 @@ fun ScoutingRequestScreen(
                         }
                 }
             }
+
+
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -483,6 +505,80 @@ fun ScoutingRequestScreen(
                     }
                 }
 
+
+                // TODO ADD Due Date only to manager not for supervisor
+
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+
+            }
+
+            if (userRole == "MANAGER") {
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Due Date Validation
+                val datePattern = Regex("\\d{2}-\\d{2}-\\d{4}")
+                val isValidDueDate = dueDateText.matches(datePattern) && try {
+                    LocalDate.parse(dueDateText, DateTimeFormatter.ofPattern("dd-MM-yyyy")).isAfter(LocalDate.now())
+                } catch (e: Exception) {
+                    false
+                }
+
+                // Due Date Field
+                val datePickerState = rememberDatePickerState()
+                OutlinedTextField(
+                    value = dueDateText,
+                    onValueChange = { /* Read-only, updated via date picker */ },
+                    label = { Text("Due Date *") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showDatePicker = true },
+                    enabled = false,
+                    shape = RoundedCornerShape(8.dp),
+                    placeholder = { Text("dd-MM-yyyy") }
+                )
+
+                if (!isValidDueDate && dueDateText.isNotBlank()) {
+                    Text(
+                        text = "Please select a valid future date (dd-MM-yyyy)",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+                    )
+                }
+
+                if (showDatePicker) {
+                    DatePickerDialog(
+                        onDismissRequest = { showDatePicker = false },
+                        confirmButton = {
+                            TextButton(
+                                onClick = {
+                                    val selectedDateMillis = datePickerState.selectedDateMillis
+                                    if (selectedDateMillis != null) {
+                                        val selectedDate = Instant.ofEpochMilli(selectedDateMillis)
+                                            .atZone(ZoneId.systemDefault())
+                                            .toLocalDate()
+                                        dueDateText = selectedDate.format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))
+
+                                        Log.d("due date ",dueDateText)
+                                    }
+                                    showDatePicker = false
+                                }
+                            ) { Text("OK") }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
+                        }
+                    ) {
+                        DatePicker(state = datePickerState)
+                    }
+                }
+
+                LaunchedEffect(dueDateText) {
+                    savedStateHandle?.set("dueDate", dueDateText)
+                }
+
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
@@ -609,7 +705,8 @@ fun ScoutingRequestScreen(
                                 noOfFlowersSeen = noOfFlowersSeen.ifBlank { null },
                                 noOfFruitsDropped = noOfFruitsDropped.ifBlank { null },
                                 nameOfDisease = nameOfDisease.ifBlank { null },
-                                valveName = valveName
+                                valveName = valveName,
+                                dueDate = if (userRole == "MANAGER") dueDateText else null
                             )
                             submittedEntry = scoutingDetails
 

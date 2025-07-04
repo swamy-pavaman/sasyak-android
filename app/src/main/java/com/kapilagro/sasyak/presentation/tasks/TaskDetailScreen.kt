@@ -1309,6 +1309,7 @@ fun FormattedScoutingFields(detailsJson: String?) {
         DetailRow("Tree Number", it.optString("treeNo", ""))
         DetailRow("Fruits Dropped", it.optString("noOfFruitsDropped", ""))
         DetailRow("Valve", it.optString("valveName", ""))
+        DetailRow("Due Date",it.optString("dueDate","noDue date"))
     } ?: Text(
         text = "Error loading scouting details",
         style = MaterialTheme.typography.bodyMedium,
