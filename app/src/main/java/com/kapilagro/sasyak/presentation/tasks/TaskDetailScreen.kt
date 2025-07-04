@@ -12,22 +12,11 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -41,30 +30,9 @@ import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.PlayArrow
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -72,6 +40,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -80,21 +49,13 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
-import com.kapilagro.sasyak.data.api.ImageUploadService
 import com.kapilagro.sasyak.di.IoDispatcher
+import com.kapilagro.sasyak.data.api.ImageUploadService
 import com.kapilagro.sasyak.domain.models.ApiResponse
 import com.kapilagro.sasyak.domain.models.TaskAdvice
 import com.kapilagro.sasyak.presentation.common.components.TaskTypeChip
 import com.kapilagro.sasyak.presentation.common.navigation.Screen
-import com.kapilagro.sasyak.presentation.common.theme.AgroMuted
-import com.kapilagro.sasyak.presentation.common.theme.AgroMutedForeground
-import com.kapilagro.sasyak.presentation.common.theme.AgroPrimary
-import com.kapilagro.sasyak.presentation.common.theme.ApprovedContainer
-import com.kapilagro.sasyak.presentation.common.theme.ApprovedText
-import com.kapilagro.sasyak.presentation.common.theme.RejectedContainer
-import com.kapilagro.sasyak.presentation.common.theme.RejectedText
-import com.kapilagro.sasyak.presentation.common.theme.SubmittedContainer
-import com.kapilagro.sasyak.presentation.common.theme.SubmittedText
+import com.kapilagro.sasyak.presentation.common.theme.*
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -107,6 +68,7 @@ import java.io.File
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlin.collections.isNotEmpty
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
@@ -1340,22 +1302,14 @@ fun FormattedScoutingFields(detailsJson: String?) {
     }
 
     json?.let {
-        val fields = listOf(
-            "Disease/Pest" to it.optString("nameOfDisease", "None detected"),
-            "Fruits Count" to it.optString("noOfFruitSeen", ""),
-            "Flowers Count" to it.optString("noOfFlowersSeen", ""),
-            "Row" to it.optString("row", ""),
-            "Tree Number" to it.optString("treeNo", ""),
-            "Fruits Dropped" to it.optString("noOfFruitsDropped", ""),
-            "Valve" to it.optString("valveName", "")
-        )
-
-        // Filter out empty or blank values and display only valid ones
-        fields.forEach { (label, value) ->
-            if (value != "null") {
-                DetailRow(label, value)
-            }
-        }
+        DetailRow("Disease/Pest", it.optString("nameOfDisease", "None detected"))
+        DetailRow("Fruits Count", it.optString("noOfFruitSeen", ""))
+        DetailRow("Flowers Count", it.optString("noOfFlowersSeen", ""))
+        DetailRow("Row", it.optString("row", ""))
+        DetailRow("Tree Number", it.optString("treeNo", ""))
+        DetailRow("Fruits Dropped", it.optString("noOfFruitsDropped", ""))
+        DetailRow("Valve", it.optString("valveName", ""))
+        DetailRow("Due Date",it.optString("dueDate","noDue date"))
     } ?: Text(
         text = "Error loading scouting details",
         style = MaterialTheme.typography.bodyMedium,
