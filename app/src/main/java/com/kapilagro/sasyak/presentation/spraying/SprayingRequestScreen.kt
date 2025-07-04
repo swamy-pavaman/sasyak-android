@@ -41,6 +41,8 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import com.kapilagro.sasyak.presentation.common.catalog.CategoryViewModel
 import com.kapilagro.sasyak.presentation.common.catalog.CategoriesState
+import java.time.Instant
+import java.time.ZoneId
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
@@ -92,6 +94,22 @@ fun SprayingRequestScreen(
     var category by remember { mutableStateOf(savedStateHandle?.get<String>("category") ?: "Pest") }
     var targetPest by remember { mutableStateOf(savedStateHandle?.get<String>("targetPest") ?: "") }
 
+    var dueDateText by remember {
+        mutableStateOf(
+            savedStateHandle?.get<String>("dueDate")
+                ?: LocalDate.now().plusDays(7).format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))
+        )
+    }
+    var showDatePicker by remember { mutableStateOf(false) }
+
+
+    val datePattern = Regex("\\d{2}-\\d{2}-\\d{4}")
+    val isValidDueDate = dueDateText.matches(datePattern) && try {
+        LocalDate.parse(dueDateText, DateTimeFormatter.ofPattern("dd-MM-yyyy")).isAfter(LocalDate.now())
+    } catch (e: Exception) {
+        false
+    }
+
     // Save form state before navigating to ImageCaptureScreen
     LaunchedEffect(Unit) {
         snapshotFlow {
@@ -109,7 +127,8 @@ fun SprayingRequestScreen(
                 "category" to category,
                 "weatherCondition" to weatherCondition,
                 "description" to description,
-                "assignedTo" to assignedTo
+                "assignedTo" to assignedTo,
+                "dueDate" to dueDateText
             )
         }.collect { state ->
             state.forEach { (key, value) ->
@@ -417,17 +436,17 @@ fun SprayingRequestScreen(
                     onValueChange = { dosage = it },
                     label = { Text("Dosage") },
                     modifier = Modifier.fillMaxWidth()
-                        .weight(0.7f),
+                        .weight(0.6f),
                     shape = RoundedCornerShape(8.dp),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                 )
-                Spacer(modifier = Modifier.width(8.dp))
+                //Spacer(modifier = Modifier.width(8.dp))
                 var dosageTypeExpanded by remember { mutableStateOf(false) }
                 ExposedDropdownMenuBox(
                     expanded = dosageTypeExpanded,
                     onExpandedChange = { dosageTypeExpanded = it },
                     modifier = Modifier
-                        .weight(0.3f)
+                        .weight(0.4f)
                         .fillMaxWidth()
                 ) {
                     OutlinedTextField(
@@ -682,6 +701,73 @@ fun SprayingRequestScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
             }
+            if (userRole == "MANAGER") {
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Due Date Validation
+                val datePattern = Regex("\\d{2}-\\d{2}-\\d{4}")
+                val isValidDueDate = dueDateText.matches(datePattern) && try {
+                    LocalDate.parse(dueDateText, DateTimeFormatter.ofPattern("dd-MM-yyyy")).isAfter(LocalDate.now())
+                } catch (e: Exception) {
+                    false
+                }
+
+                // Due Date Field
+                val datePickerState = rememberDatePickerState()
+                OutlinedTextField(
+                    value = dueDateText,
+                    onValueChange = { /* Read-only, updated via date picker */ },
+                    label = { Text("Due Date *") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showDatePicker = true },
+                    enabled = false,
+                    shape = RoundedCornerShape(8.dp),
+                    placeholder = { Text("dd-MM-yyyy") }
+                )
+
+                if (!isValidDueDate && dueDateText.isNotBlank()) {
+                    Text(
+                        text = "Please select a valid future date (dd-MM-yyyy)",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+                    )
+                }
+
+                if (showDatePicker) {
+                    DatePickerDialog(
+                        onDismissRequest = { showDatePicker = false },
+                        confirmButton = {
+                            TextButton(
+                                onClick = {
+                                    val selectedDateMillis = datePickerState.selectedDateMillis
+                                    if (selectedDateMillis != null) {
+                                        val selectedDate = Instant.ofEpochMilli(selectedDateMillis)
+                                            .atZone(ZoneId.systemDefault())
+                                            .toLocalDate()
+                                        dueDateText = selectedDate.format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))
+
+                                        Log.d("due date ",dueDateText)
+                                    }
+                                    showDatePicker = false
+                                }
+                            ) { Text("OK") }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
+                        }
+                    ) {
+                        DatePicker(state = datePickerState)
+                    }
+                }
+
+                LaunchedEffect(dueDateText) {
+                    savedStateHandle?.set("dueDate", dueDateText)
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+            }
 
             // Upload Section
             Text(
@@ -808,6 +894,7 @@ fun SprayingRequestScreen(
                                 sprayingMethod = sprayingMethod,
                                 target = if (targetPest.isNotBlank()) "$category : $targetPest" else null,
                                 weatherCondition = weatherCondition.ifBlank { null },
+                                dueDate = if (userRole == "MANAGER") dueDateText else null
                             )
                             submittedEntry = sprayingDetails
 

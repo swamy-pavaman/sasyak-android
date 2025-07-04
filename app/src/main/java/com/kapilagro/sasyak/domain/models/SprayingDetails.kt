@@ -34,5 +34,6 @@ data class SprayingDetails(
     val sprayingMethod: String,
     val target: String? = null,
     val weatherCondition: String? = null,
+    val dueDate: String? = null,
    // val uploadedFiles: List<String>? = null
 )
