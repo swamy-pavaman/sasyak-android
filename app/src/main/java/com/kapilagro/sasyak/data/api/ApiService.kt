@@ -154,4 +154,13 @@ interface ApiService {
 //    suspend fun getTrendReport(): TrendReportResponse
 @GET("/api/tasks/report/trend")
 suspend fun getTrendReport(): Response<TrendReportResponse>
+
+@GET("api/catalog/Crop")
+suspend fun cropService() : List<CropsResponce>
+
+@GET("api/catalog/{categoryType}")
+suspend fun categoryService(
+    @Path("categoryType") categoryType: String
+) : List<CategoryResponce>
+
 }

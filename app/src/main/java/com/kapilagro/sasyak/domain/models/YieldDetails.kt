@@ -30,7 +30,7 @@ import kotlinx.serialization.Serializable
 data class YieldDetails(
     val harvestDate: String,
     val cropName: String,
-    val row: Int,
+    val row: String,
     val fieldArea: String? = null,
     val yieldQuantity: String,
     val yieldUnit: String,

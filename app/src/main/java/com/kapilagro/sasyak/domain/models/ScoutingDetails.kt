@@ -6,11 +6,12 @@ import kotlinx.serialization.Serializable
 data class ScoutingDetails(
     val scoutingDate: String,
     val cropName: String,
-    val row: Int,
+    val row: String,
     val treeNo: Int,
     val noOfFruitSeen: String?,
     val noOfFlowersSeen: String?,
     val noOfFruitsDropped: String?,
     val nameOfDisease: String?,
+    val valveName: String,
     //val uploadedFiles: List<String>? = null
 )

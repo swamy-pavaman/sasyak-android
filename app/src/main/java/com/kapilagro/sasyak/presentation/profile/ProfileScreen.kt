@@ -556,11 +556,11 @@ fun ProfileInfoSection(user: User) {
             value = user.location ?: "Nashik, Maharashtra" // Fallback
         )
 
-        ProfileInfoItem(
-            icon = Icons.Outlined.CalendarToday,
-            label = "Joined",
-            value = user.joinedDate ?: "April 2022" // Fallback
-        )
+//        ProfileInfoItem(
+//            icon = Icons.Outlined.CalendarToday,
+//            label = "Joined",
+//            value = user.joinedDate ?: "April 2022" // Fallback
+//        )
     }
 }
 
