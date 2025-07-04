@@ -272,14 +272,28 @@ fun FuelRequestScreen(
             ) {
                 OutlinedTextField(
                     value = vehicleName,
-                    readOnly = true,
+                    readOnly = false,
                     onValueChange = { newValue ->
                         vehicleName = newValue
                         vehicleNameExpanded = true
                     },
                     label = { Text("Vehicle name *") },
                     trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = vehicleNameExpanded)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ){
+                            if (vehicleName.isNotEmpty()) {
+                                IconButton(onClick = { vehicleName = "" }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Clear vehicle name",
+                                        tint = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = vehicleNameExpanded)
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -292,6 +306,7 @@ fun FuelRequestScreen(
                     onDismissRequest = { vehicleNameExpanded = false }
                 ) {
                     vehicles
+                        .filter { it.contains(vehicleName, ignoreCase = true) }
                         .forEach { vehicle ->
                             DropdownMenuItem(
                                 text = { Text(vehicle) },
@@ -314,14 +329,28 @@ fun FuelRequestScreen(
             ) {
                 OutlinedTextField(
                     value = vehicleNumber,
-                    readOnly = true,
+                    readOnly = false,
                     onValueChange = { newValue ->
                         vehicleNumber = newValue
                         vehicleNumberExpanded = true
                     },
                     label = { Text("Vehicle number") },
                     trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = vehicleNumberExpanded)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ){
+                            if (vehicleNumber.isNotEmpty()) {
+                                IconButton(onClick = { vehicleNumber = "" }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Clear vehicle number",
+                                        tint = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = vehicleNumberExpanded)
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -334,6 +363,7 @@ fun FuelRequestScreen(
                     onDismissRequest = { vehicleNumberExpanded = false }
                 ) {
                     vehicleNumbers
+                        .filter { it.contains(vehicleNumber, ignoreCase = true) }
                         .forEach { number ->
                             DropdownMenuItem(
                                 text = { Text(number) },
@@ -490,14 +520,28 @@ fun FuelRequestScreen(
             ) {
                 OutlinedTextField(
                     value = driverName,
-                    readOnly = true,
+                    readOnly = false,
                     onValueChange = { newValue ->
                         driverName = newValue
                         driverNameExpanded = true
                     },
                     label = { Text("Driver name") },
                     trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = driverNameExpanded)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ){
+                            if (driverName.isNotEmpty()) {
+                                IconButton(onClick = { driverName = "" }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Clear driver name",
+                                        tint = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = driverNameExpanded)
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -510,6 +554,7 @@ fun FuelRequestScreen(
                     onDismissRequest = { driverNameExpanded = false }
                 ) {
                     drivers
+                        .filter { it.contains(driverName, ignoreCase = true) }
                         .forEach { driver ->
                             DropdownMenuItem(
                                 text = { Text(driver) },

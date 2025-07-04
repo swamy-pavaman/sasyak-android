@@ -11,6 +11,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -79,14 +80,17 @@ fun SprayingRequestScreen(
     var chemicalName by remember { mutableStateOf(savedStateHandle?.get<String>("chemicalName") ?: "") }
     var chemicalNameExpanded by remember { mutableStateOf(false) }
     var dosage by remember { mutableStateOf(savedStateHandle?.get<String>("dosage") ?: "") }
+    var dosageType by remember { mutableStateOf(savedStateHandle?.get<String>("dosageType") ?: "ml") }
     var sprayingMethod by remember { mutableStateOf(savedStateHandle?.get<String>("sprayingMethod") ?: "") }
     var sprayingMethodExpanded by remember { mutableStateOf(false) }
-    var targetPest by remember { mutableStateOf(savedStateHandle?.get<String>("targetPest") ?: "") }
+    var target by remember { mutableStateOf(savedStateHandle?.get<String>("target") ?: "") }
     var weatherCondition by remember { mutableStateOf(savedStateHandle?.get<String>("weatherCondition") ?: "") }
     var description by remember { mutableStateOf(savedStateHandle?.get<String>("description") ?: "") }
     var imageFiles by remember { mutableStateOf<List<File>?>(null) }
     var assignedTo by remember { mutableStateOf<Int?>(savedStateHandle?.get<Int>("assignedTo")) }
     var assignedToExpanded by remember { mutableStateOf(false) }
+    var category by remember { mutableStateOf(savedStateHandle?.get<String>("category") ?: "Pest") }
+    var targetPest by remember { mutableStateOf(savedStateHandle?.get<String>("targetPest") ?: "") }
 
     // Save form state before navigating to ImageCaptureScreen
     LaunchedEffect(Unit) {
@@ -98,8 +102,11 @@ fun SprayingRequestScreen(
                 "fieldArea" to fieldArea,
                 "chemicalName" to chemicalName,
                 "dosage" to dosage,
+                "dosageType" to dosageType,
                 "sprayingMethod" to sprayingMethod,
+                "target" to target,
                 "targetPest" to targetPest,
+                "category" to category,
                 "weatherCondition" to weatherCondition,
                 "description" to description,
                 "assignedTo" to assignedTo
@@ -114,6 +121,8 @@ fun SprayingRequestScreen(
     LaunchedEffect(Unit) {
         categoryViewModel.fetchCategories("Crop")
         categoryViewModel.fetchCategories("Fertilizer")
+        categoryViewModel.fetchCategories("Pest")
+        categoryViewModel.fetchCategories("Disease")
     }
 
     val crops = when (val state = categoriesStates["Crop"]) {
@@ -133,6 +142,19 @@ fun SprayingRequestScreen(
             "Mancozeb", "Copper Oxychloride", "Carbendazim", "Metalaxyl", "Thiram"
         )
     }
+    val pestList = when (val state = categoriesStates["Pest"]) {
+        is CategoriesState.Success -> state.categories.map { it.value }
+        else -> listOf(
+            "Aphids", "Spider Mites", "Whiteflies", "Caterpillars"
+        )
+    }
+    val diseaseList = when (val state = categoriesStates["Disease"]) {
+        is CategoriesState.Success -> state.categories.map { it.value }
+        else -> listOf(
+            "Powdery Mildew", "Root Rot", "Leaf Spot", "Blight"
+        )
+    }
+    val targetItems = if (category == "Pest") pestList else diseaseList
 
     // Log states for debugging
     LaunchedEffect(categoriesStates) {
@@ -183,7 +205,7 @@ fun SprayingRequestScreen(
             "Chemical" to submittedEntry!!.chemicalName,
             "Dosage" to (submittedEntry!!.dosage ?: "Not specified"),
             "Method" to submittedEntry!!.sprayingMethod,
-            "Target Pest" to (submittedEntry!!.targetPest ?: "Not specified"),
+            "Target Pest" to (submittedEntry!!.target ?: "Not specified"),
             "Weather" to (submittedEntry!!.weatherCondition ?: "Not specified")
         )
 
@@ -252,14 +274,28 @@ fun SprayingRequestScreen(
             ) {
                 OutlinedTextField(
                     value = cropName,
-                    readOnly = true,
+                    readOnly = false,
                     onValueChange = { newValue ->
                         cropName = newValue
                         cropNameExpanded = true
                     },
                     label = { Text("Crop name *") },
                     trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = cropNameExpanded)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ){
+                            if (cropName.isNotEmpty()) {
+                                IconButton(onClick = { cropName = "" }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Clear crop name",
+                                        tint = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = cropNameExpanded)
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -272,6 +308,7 @@ fun SprayingRequestScreen(
                     onDismissRequest = { cropNameExpanded = false }
                 ) {
                     crops
+                        .filter { it.contains(cropName, ignoreCase = true) }
                         .forEach { crop ->
                             DropdownMenuItem(
                                 text = { Text(crop) },
@@ -320,14 +357,28 @@ fun SprayingRequestScreen(
             ) {
                 OutlinedTextField(
                     value = chemicalName,
-                    readOnly = true,
+                    readOnly = false,
                     onValueChange = { newValue ->
                         chemicalName = newValue
                         chemicalNameExpanded = true
                     },
                     label = { Text("Chemical name *") },
                     trailingIcon = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ){
+                        if (chemicalName.isNotEmpty()) {
+                            IconButton(onClick = { chemicalName = "" }) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Clear chemical name",
+                                    tint = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
                         ExposedDropdownMenuDefaults.TrailingIcon(expanded = chemicalNameExpanded)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -340,6 +391,7 @@ fun SprayingRequestScreen(
                     onDismissRequest = { chemicalNameExpanded = false }
                 ) {
                     chemicals
+                        .filter { it.contains(chemicalName, ignoreCase = true) }
                         .forEach { chemical ->
                             DropdownMenuItem(
                                 text = { Text(chemical) },
@@ -355,14 +407,59 @@ fun SprayingRequestScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Dosage
-            OutlinedTextField(
-                value = dosage,
-                onValueChange = { dosage = it },
-                label = { Text("Dosage (ml/litre)") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
-            )
+            Row (
+                modifier = Modifier
+                    .fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ){
+                OutlinedTextField(
+                    value = dosage,
+                    onValueChange = { dosage = it },
+                    label = { Text("Dosage") },
+                    modifier = Modifier.fillMaxWidth()
+                        .weight(0.7f),
+                    shape = RoundedCornerShape(8.dp),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                var dosageTypeExpanded by remember { mutableStateOf(false) }
+                ExposedDropdownMenuBox(
+                    expanded = dosageTypeExpanded,
+                    onExpandedChange = { dosageTypeExpanded = it },
+                    modifier = Modifier
+                        .weight(0.3f)
+                        .fillMaxWidth()
+                ) {
+                    OutlinedTextField(
+                        value = dosageType,
+                        onValueChange = { /* readOnly, handled by dropdown */ },
+                        readOnly = true,
+                        label = { Text("Unit") },
+                        trailingIcon = {
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = dosageTypeExpanded)
+                        },
+                        modifier = Modifier
+                            .menuAnchor()
+                            .fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp)
+                    )
+
+                    ExposedDropdownMenu(
+                        expanded = dosageTypeExpanded,
+                        onDismissRequest = { dosageTypeExpanded = false }
+                    ) {
+                        listOf("ml", "L","grams").forEach { unit ->
+                            DropdownMenuItem(
+                                text = { Text(unit) },
+                                onClick = {
+                                    dosageType = unit
+                                    dosageTypeExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -374,14 +471,28 @@ fun SprayingRequestScreen(
             ) {
                 OutlinedTextField(
                     value = sprayingMethod,
-                    readOnly = true,
+                    readOnly = false,
                     onValueChange = { newValue ->
                         sprayingMethod = newValue
                         sprayingMethodExpanded = true
                     },
                     label = { Text("Spraying method *") },
                     trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = sprayingMethodExpanded)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ){
+                            if (sprayingMethod.isNotEmpty()) {
+                                IconButton(onClick = { sprayingMethod = "" }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Clear spraying method",
+                                        tint = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = sprayingMethodExpanded)
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -394,6 +505,7 @@ fun SprayingRequestScreen(
                     onDismissRequest = { sprayingMethodExpanded = false }
                 ) {
                     sprayingMethods
+                        .filter { it.contains(sprayingMethod, ignoreCase = true) }
                         .forEach { method ->
                             DropdownMenuItem(
                                 text = { Text(method) },
@@ -408,15 +520,108 @@ fun SprayingRequestScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Target Pest
-            OutlinedTextField(
-                value = targetPest,
-                onValueChange = { targetPest = it },
-                label = { Text("Target pest/disease") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp)
-            )
+            // Target Pest/disease
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // First dropdown
+                var categoryExpanded by remember { mutableStateOf(false) }
+                ExposedDropdownMenuBox(
+                    expanded = categoryExpanded,
+                    onExpandedChange = { categoryExpanded = it },
+                    modifier = Modifier
+                        .weight(0.4f)
+                        .fillMaxWidth()
+                ) {
+                    OutlinedTextField(
+                        value = category,
+                        onValueChange = { category = it },
+                        readOnly = true,
+                        label = { Text("Category") },
+                        trailingIcon = {
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded)
+                        },
+                        modifier = Modifier
+                            .menuAnchor()
+                            .fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp)
+                    )
 
+                    ExposedDropdownMenu(
+                        expanded = categoryExpanded,
+                        onDismissRequest = { categoryExpanded = false }
+                    ) {
+                        listOf("Pest", "Disease").forEach { item ->
+                            DropdownMenuItem(
+                                text = { Text(item) },
+                                onClick = {
+                                    category = item
+                                    targetPest = "" // Reset target when category changes
+                                    categoryExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                // Second dropdown
+                var targetExpanded by remember { mutableStateOf(false) }
+                ExposedDropdownMenuBox(
+                    expanded = targetExpanded,
+                    onExpandedChange = { targetExpanded = it },
+                    modifier = Modifier
+                        .weight(0.6f)
+                        .fillMaxWidth()
+                ) {
+                    OutlinedTextField(
+                        value = targetPest,
+                        onValueChange = { targetPest = it },
+                        readOnly = false,
+                        label = { Text("Target ${category.lowercase()}") },
+                        trailingIcon = {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ){
+                                if (targetPest.isNotEmpty()) {
+                                    IconButton(onClick = { targetPest = "" }) {
+                                        Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = "Clear target pest",
+                                            tint = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                }
+                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = targetExpanded)
+                                Spacer(modifier = Modifier.width(8.dp))
+                            }
+                        },
+                        modifier = Modifier
+                            .menuAnchor()
+                            .fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp)
+                    )
+
+                    ExposedDropdownMenu(
+                        expanded = targetExpanded,
+                        onDismissRequest = { targetExpanded = false }
+                    ) {
+                        targetItems
+                            .filter { it.contains(targetPest, ignoreCase = true) }
+                            .forEach { item ->
+                            DropdownMenuItem(
+                                text = { Text(item) },
+                                onClick = {
+                                    targetPest = item
+                                    targetExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+            //target = "$category : $targetPest"
             Spacer(modifier = Modifier.height(16.dp))
 
             // Weather Condition
@@ -599,9 +804,9 @@ fun SprayingRequestScreen(
                                 row = row.toString(),
                                 fieldArea = fieldArea.ifBlank { null },
                                 chemicalName = chemicalName,
-                                dosage = dosage.ifBlank { null },
+                                dosage = if (dosage.isNotBlank()) "$dosage $dosageType" else null,
                                 sprayingMethod = sprayingMethod,
-                                targetPest = targetPest.ifBlank { null },
+                                target = if (targetPest.isNotBlank()) "$category : $targetPest" else null,
                                 weatherCondition = weatherCondition.ifBlank { null },
                             )
                             submittedEntry = sprayingDetails

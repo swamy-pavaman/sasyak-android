@@ -269,14 +269,28 @@ fun SowingRequestScreen(
             ) {
                 OutlinedTextField(
                     value = cropName,
-                    readOnly = true,
+                    readOnly = false,
                     onValueChange = { newValue ->
                         cropName = newValue
                         cropNameExpanded = true
                     },
                     label = { Text("Crop name *") },
                     trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = cropNameExpanded)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ){
+                            if (cropName.isNotEmpty()) {
+                                IconButton(onClick = { cropName = "" }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Clear crop name",
+                                        tint = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = cropNameExpanded)
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -289,6 +303,7 @@ fun SowingRequestScreen(
                     onDismissRequest = { cropNameExpanded = false }
                 ) {
                     crops
+                        .filter { it.contains(cropName, ignoreCase = true) }
                         .forEach { crop ->
                             DropdownMenuItem(
                                 text = { Text(crop) },
@@ -337,14 +352,28 @@ fun SowingRequestScreen(
             ) {
                 OutlinedTextField(
                     value = seedVariety,
-                    readOnly = true,
+                    readOnly = false,
                     onValueChange = { newValue ->
                         seedVariety = newValue
                         seedVarietyExpanded = true
                     },
                     label = { Text("Seed variety *") },
                     trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = seedVarietyExpanded)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ){
+                            if (seedVariety.isNotEmpty()) {
+                                IconButton(onClick = { seedVariety = "" }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Clear seed variety",
+                                        tint = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = seedVarietyExpanded)
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -357,6 +386,7 @@ fun SowingRequestScreen(
                     onDismissRequest = { seedVarietyExpanded = false }
                 ) {
                     seedVarieties
+                        .filter { it.contains(seedVariety, ignoreCase = true) }
                         .forEach { variety ->
                             DropdownMenuItem(
                                 text = { Text(variety) },

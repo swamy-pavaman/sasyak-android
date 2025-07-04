@@ -109,6 +109,10 @@ fun HomeScreen(
         }
     }
 
+    LaunchedEffect(Unit) {
+        notificationViewModel.loadUnreadCount()
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
