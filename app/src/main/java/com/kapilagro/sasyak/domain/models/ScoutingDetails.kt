@@ -13,5 +13,6 @@ data class ScoutingDetails(
     val noOfFruitsDropped: String?,
     val nameOfDisease: String?,
     val valveName: String,
+    val dueDate:String?,
     //val uploadedFiles: List<String>? = null
 )
