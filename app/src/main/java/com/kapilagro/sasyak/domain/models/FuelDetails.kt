@@ -17,5 +17,6 @@ data class FuelDetails(
     val purposeOfFuel: String? = null,
     val refillLocation: String? = null,
     val notes: String? = null,
+    val dueDate: String? = null,
    // val uploadedFiles: List<String>? = null
 )

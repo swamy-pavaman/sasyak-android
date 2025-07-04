@@ -42,6 +42,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import kotlin.collections.filter
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
@@ -275,14 +276,28 @@ fun ScoutingRequestScreen(
             ) {
                 OutlinedTextField(
                     value = valveName,
-                    readOnly = true,
+                    readOnly = false,
                     onValueChange = { newValue ->
                         valveName = newValue
                         valveNameExpanded = true
                     },
                     label = { Text("Valve name *") },
                     trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = valveNameExpanded)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ){
+                            if (valveName.isNotEmpty()) {
+                                IconButton(onClick = { valveName = "" }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Clear valve name",
+                                        tint = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = valveNameExpanded)
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -295,6 +310,7 @@ fun ScoutingRequestScreen(
                     onDismissRequest = { valveNameExpanded = false }
                 ) {
                     valves
+                        .filter { it.contains(valveName, ignoreCase = true) }
                         .forEach { valve ->
                             DropdownMenuItem(
                                 text = { Text(valve)},
@@ -319,14 +335,28 @@ fun ScoutingRequestScreen(
             ) {
                 OutlinedTextField(
                     value = cropName,
-                    readOnly = true,
+                    readOnly = false,
                     onValueChange = { newValue ->
                         cropName = newValue
                         cropNameExpanded = true
                     },
                     label = { Text("Crop name *") },
                     trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = cropNameExpanded)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ){
+                            if (cropName.isNotEmpty()) {
+                                IconButton(onClick = { cropName = "" }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Clear crop name",
+                                        tint = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = cropNameExpanded)
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -339,6 +369,7 @@ fun ScoutingRequestScreen(
                     onDismissRequest = { cropNameExpanded = false }
                 ) {
                     crops
+                        .filter { it.contains(cropName, ignoreCase = true) }
                         .forEach { crop ->
                             DropdownMenuItem(
                                 text = { Text(crop) },
@@ -425,14 +456,28 @@ fun ScoutingRequestScreen(
             ) {
                 OutlinedTextField(
                     value = nameOfDisease,
-                    readOnly = true,
+                    readOnly = false,
                     onValueChange = { newValue ->
                         nameOfDisease = newValue
                         nameOfDiseaseExpanded = true
                     },
                     label = { Text("Name of the Disease") },
                     trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = nameOfDiseaseExpanded)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ){
+                            if (nameOfDisease.isNotEmpty()) {
+                                IconButton(onClick = { nameOfDisease = "" }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Clear name of the disease",
+                                        tint = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = nameOfDiseaseExpanded)
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -445,6 +490,7 @@ fun ScoutingRequestScreen(
                     onDismissRequest = { nameOfDiseaseExpanded = false }
                 ) {
                     diseases
+                        .filter { it.contains(nameOfDisease, ignoreCase = true) }
                         .forEach { disease ->
                             DropdownMenuItem(
                                 text = { Text(disease) },
@@ -700,7 +746,7 @@ fun ScoutingRequestScreen(
                                 scoutingDate = scoutingDate,
                                 cropName = cropName,
                                 row = row.toString(),
-                                treeNo = treeNo.toInt(),
+                                treeNo = treeNo.toString(),
                                 noOfFruitSeen = noOfFruitSeen.ifBlank { null },
                                 noOfFlowersSeen = noOfFlowersSeen.ifBlank { null },
                                 noOfFruitsDropped = noOfFruitsDropped.ifBlank { null },
