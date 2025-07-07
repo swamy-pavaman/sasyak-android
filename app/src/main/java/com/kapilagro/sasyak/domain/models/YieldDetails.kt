@@ -38,5 +38,6 @@ data class YieldDetails(
     val moistureContent: String? = null,
     val harvestMethod: String? = null,
     val notes: String? = null,
+    val dueDate: String? = null,
    // val uploadedFiles: List<String>? = null
 )

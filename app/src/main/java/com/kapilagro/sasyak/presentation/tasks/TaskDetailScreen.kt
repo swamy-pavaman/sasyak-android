@@ -1302,13 +1302,23 @@ fun FormattedScoutingFields(detailsJson: String?) {
     }
 
     json?.let {
-        DetailRow("Disease/Pest", it.optString("nameOfDisease", "None detected"))
-        DetailRow("Fruits Count", it.optString("noOfFruitSeen", ""))
-        DetailRow("Flowers Count", it.optString("noOfFlowersSeen", ""))
-        DetailRow("Row", it.optString("row", ""))
-        DetailRow("Tree Number", it.optString("treeNo", ""))
-        DetailRow("Fruits Dropped", it.optString("noOfFruitsDropped", ""))
-        DetailRow("Valve", it.optString("valveName", ""))
+        val fields = listOf(
+            "Disease" to it.optString("nameOfDisease", "None detected"),
+            "Fruits Count" to it.optString("noOfFruitSeen", ""),
+            "Flowers Count" to it.optString("noOfFlowersSeen", ""),
+            "Row" to it.optString("row", ""),
+            "Tree Number" to it.optString("treeNo", ""),
+            "Fruits Dropped" to it.optString("noOfFruitsDropped", ""),
+            "Valve" to it.optString("valveName", ""),
+            "Due Date" to it.optString("dueDate","noDue date")
+        )
+
+        // Filter out empty or blank values and display only valid ones
+        fields.forEach { (label, value) ->
+            if (value != "null") {
+                DetailRow(label, value)
+            }
+        }
     } ?: Text(
         text = "Error loading scouting details",
         style = MaterialTheme.typography.bodyMedium,
