@@ -550,11 +550,11 @@ fun ProfileInfoSection(user: User) {
             value = user.phoneNumber
         )
 
-        ProfileInfoItem(
-            icon = Icons.Outlined.LocationOn,
-            label = "Location",
-            value = user.location ?: "Nashik, Maharashtra" // Fallback
-        )
+//        ProfileInfoItem(
+//            icon = Icons.Outlined.LocationOn,
+//            label = "Location",
+//            value = user.location ?: "Nashik, Maharashtra" // Fallback
+//        )
 
 //        ProfileInfoItem(
 //            icon = Icons.Outlined.CalendarToday,

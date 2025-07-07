@@ -147,16 +147,16 @@ fun EditProfileScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    OutlinedTextField(
-                        value = location,
-                        onValueChange = { location = it },
-                        label = { Text("Location") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
+//                    OutlinedTextField(
+//                        value = location,
+//                        onValueChange = { location = it },
+//                        label = { Text("Location") },
+//                        singleLine = true,
+//                        modifier = Modifier.fillMaxWidth(),
+//                        shape = RoundedCornerShape(12.dp)
+//                    )
+//
+//                    Spacer(modifier = Modifier.height(16.dp))
 
                     OutlinedTextField(
                         value = profileImageUrl,

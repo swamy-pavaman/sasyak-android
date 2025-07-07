@@ -16,6 +16,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -722,6 +723,19 @@ fun SprayingRequestScreen(
                         .fillMaxWidth()
                         .clickable { showDatePicker = true },
                     enabled = false,
+                    trailingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.DateRange,
+                            contentDescription = "Calendar",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    },
+                    colors = TextFieldDefaults.outlinedTextFieldColors(
+                        disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                        disabledBorderColor = MaterialTheme.colorScheme.primary,
+                        disabledLabelColor = MaterialTheme.colorScheme.onSurface
+                    ),
                     shape = RoundedCornerShape(8.dp),
                     placeholder = { Text("dd-MM-yyyy") }
                 )
@@ -881,7 +895,7 @@ fun SprayingRequestScreen(
             Button(
                 onClick = {
                     if (cropName.isNotBlank() && row.isNotBlank() && chemicalName.isNotBlank() &&
-                        sprayingMethod.isNotBlank() &&
+                        sprayingMethod.isNotBlank() && isValidDueDate &&
                         (userRole != "MANAGER" || assignedTo != null)) {
                         scope.launch(ioDispatcher) {
                             val sprayingDetails = SprayingDetails(
@@ -938,7 +952,7 @@ fun SprayingRequestScreen(
                     }
                 },
                 enabled = cropName.isNotBlank() && row.isNotBlank() && chemicalName.isNotBlank() &&
-                        sprayingMethod.isNotBlank() &&
+                        sprayingMethod.isNotBlank() && isValidDueDate &&
                         (userRole != "MANAGER" || assignedTo != null) &&
                         createSprayingState !is SprayingListViewModel.CreateSprayingState.Loading &&
                         uploadState !is UploadState.Loading,
