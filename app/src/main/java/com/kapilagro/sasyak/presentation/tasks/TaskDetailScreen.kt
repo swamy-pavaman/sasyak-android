@@ -109,7 +109,7 @@ fun TaskDetailScreen(
 
     LaunchedEffect(taskId, shouldRefresh) {
         viewModel.loadTaskDetail(taskId)
-        viewModel.getCurrentUserRole()
+        //viewModel.getCurrentUserRole()
         if (shouldRefresh) {
             shouldRefresh = false
         }

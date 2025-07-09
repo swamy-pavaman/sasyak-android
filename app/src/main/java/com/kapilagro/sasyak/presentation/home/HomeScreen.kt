@@ -323,6 +323,17 @@ fun HomeScreen(
                         onYieldTaskClick = onYieldTaskClick
                     )
                 }
+                "ADMIN" -> {
+                    AdminHomeContent(
+                        onTaskClick = onTaskClick,
+                        tasksState = tasksState, // For "My" tasks
+                        newTasksState = newTasksState, // For "New" tasks
+                        loadHotMyTasks = { viewModel.loadHotMyTasks() }, // For "My" tasks
+                        loadHotNewTasks = { viewModel.loadHotNewTasks() }, // For "New" tasks
+                        onTeamClick = onTeamClick,
+                        onReportsClick = onReportsClick,
+                    )
+                }
                 else -> {
                     // Default view if role is unknown
                     DefaultHomeContent(
@@ -753,6 +764,212 @@ fun SupervisorHomeContent(
                             Text("Retry")
                         }
 
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun AdminHomeContent(
+    onTaskClick: (String) -> Unit,
+    tasksState: HomeViewModel.TasksState,
+    newTasksState: HomeViewModel.TasksState,
+    loadHotMyTasks: () -> Unit,
+    loadHotNewTasks: () -> Unit,
+    onTeamClick: () -> Unit,
+    onReportsClick: () -> Unit,
+){
+    // Admin-specific quick actions
+    Text(
+        text = "Quick Actions",
+        style = MaterialTheme.typography.titleLarge,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+    )
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+            .padding(horizontal = 8.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly
+    ) {
+        QuickActionButton(
+            icon = Icons.Outlined.PeopleAlt,
+            label = "Team",
+            backgroundColor = TeamIcon,
+            containerColor = TeamContainer,
+            onClick = onTeamClick
+        )
+
+        QuickActionButton(
+            icon = Icons.Outlined.Assessment,
+            label = "Reports",
+            backgroundColor = ReportsIcon,
+            containerColor = ReportsContainer,
+            onClick = onReportsClick
+        )
+    }
+
+    Spacer(modifier = Modifier.height(16.dp))
+
+    // Admin Task Sections with New and My Tabs
+    var selectedAdminTab by remember { mutableStateOf(0) }
+
+    // Load tasks based on tab selection
+    LaunchedEffect(selectedAdminTab) {
+        if (selectedAdminTab == 0) {
+            loadHotNewTasks() // Load "New" tasks
+        } else {
+            loadHotMyTasks() // Load "My" tasks
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+    ) {
+        Text(
+            text = "Tasks",
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.padding(vertical = 8.dp)
+        )
+
+        TabRow(
+            selectedTabIndex = selectedAdminTab,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Tab(
+                selected = selectedAdminTab == 0,
+                onClick = { selectedAdminTab = 0 },
+                text = { Text("New") }
+            )
+            Tab(
+                selected = selectedAdminTab == 1,
+                onClick = { selectedAdminTab = 1 },
+                text = { Text("My") }
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        when (selectedAdminTab) {
+            0 -> {
+                // New tasks (created by supervisors)
+                when (newTasksState) {
+                    is HomeViewModel.TasksState.Success -> {
+                        val tasks = (newTasksState as HomeViewModel.TasksState.Success).tasks
+                        if (tasks.isEmpty()) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(200.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("No new tasks available", style = MaterialTheme.typography.bodyLarge)
+                            }
+                        } else {
+                            tasks.forEach { task ->
+                                TaskCard(
+                                    task = task,
+                                    onClick = { onTaskClick(task.id.toString()) }
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                            }
+                        }
+                    }
+                    is HomeViewModel.TasksState.Loading -> {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(200.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                    }
+                    is HomeViewModel.TasksState.Error -> {
+                        val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.no_internet))
+                        val lottieAnimatable = rememberLottieAnimatable()
+
+                        // Play the Lottie animation continuously once it's loaded
+                        LaunchedEffect(composition) {
+                            if (composition != null) {
+                                lottieAnimatable.animate(
+                                    composition = composition,
+                                    iterations = LottieConstants.IterateForever,
+                                    speed = 1f
+                                )
+                            }
+                        }
+                        LottieAnimation(
+                            composition = composition,
+                            progress = { lottieAnimatable.progress },
+                            modifier = Modifier.size(300.dp)
+                        )
+
+                    }
+                }
+            }
+            1 -> {
+                // My tasks (created by manager)
+                when (tasksState) {
+                    is HomeViewModel.TasksState.Success -> {
+                        val tasks = (tasksState as HomeViewModel.TasksState.Success).tasks
+                        if (tasks.isEmpty()) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(200.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("No tasks created by you", style = MaterialTheme.typography.bodyLarge)
+                            }
+                        } else {
+                            tasks.forEach { task ->
+                                TaskCard(
+                                    task = task,
+                                    onClick = { onTaskClick(task.id.toString()) }
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                            }
+                        }
+                    }
+                    is HomeViewModel.TasksState.Loading -> {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(200.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                    }
+                    is HomeViewModel.TasksState.Error -> {
+                        val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.no_internet))
+                        val lottieAnimatable = rememberLottieAnimatable()
+
+                        // Play the Lottie animation continuously once it's loaded
+                        LaunchedEffect(composition) {
+                            if (composition != null) {
+                                lottieAnimatable.animate(
+                                    composition = composition,
+                                    iterations = LottieConstants.IterateForever,
+                                    speed = 1f
+                                )
+                            }
+                        }
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            LottieAnimation(
+                                composition = composition,
+                                progress = { lottieAnimatable.progress },
+                                modifier = Modifier.size(300.dp)
+                            )
+                        }
                     }
                 }
             }

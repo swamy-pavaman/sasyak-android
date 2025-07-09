@@ -7,6 +7,7 @@ import com.kapilagro.sasyak.data.api.models.requests.CreateTaskRequest
 import com.kapilagro.sasyak.data.api.models.requests.UpdateImplementationRequest
 import com.kapilagro.sasyak.data.api.models.requests.UpdateTaskStatusRequest
 import com.kapilagro.sasyak.data.api.models.responses.DailyTaskCount
+import com.kapilagro.sasyak.data.api.models.responses.TeamMemberListResponse
 import com.kapilagro.sasyak.data.api.models.responses.TrendReportResponse
 import com.kapilagro.sasyak.domain.models.ApiResponse
 import com.kapilagro.sasyak.domain.models.Task
@@ -211,6 +212,34 @@ class TaskRepositoryImpl @Inject constructor(
                 ApiResponse.Error(response.errorBody()?.string() ?: "Failed to get tasks by supervisors")
             }
         } catch (e: Exception) {
+            ApiResponse.Error(e.message ?: "An unknown error occurred")
+        }
+    }
+
+    override suspend fun getTasksByUserId(userId: Int, page: Int, size: Int): ApiResponse<Pair<List<Task>, Int>> {
+        return try {
+            val response = apiService.getTasksByUserId(userId, page, size)
+            if (response.isSuccessful && response.body() != null) {
+                val tasks = response.body()!!.tasks.map { it.toDomainModel() }
+                val totalCount = response.body()!!.totalCount
+                ApiResponse.Success(Pair(tasks, totalCount))
+            } else {
+                ApiResponse.Error(response.errorBody()?.string() ?: "Failed to get tasks by user ID")
+            }
+        } catch (e: Exception) {
+            ApiResponse.Error(e.message ?: "An unknown error occurred")
+        }
+    }
+
+    override suspend fun getUsersByRole(role: String): ApiResponse<TeamMemberListResponse> {
+        return try {
+            val response = apiService.getUsersByRole(role)
+            if (response.isSuccessful && response.body() != null) {
+                ApiResponse.Success(response.body()!!)
+            } else {
+                ApiResponse.Error(response.errorBody()?.string() ?: "Failed to get users by role")
+            }
+        }catch (e: Exception) {
             ApiResponse.Error(e.message ?: "An unknown error occurred")
         }
     }
