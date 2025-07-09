@@ -35,6 +35,7 @@ import com.kapilagro.sasyak.presentation.common.components.SuccessDialog
 import com.kapilagro.sasyak.presentation.common.navigation.Screen
 import com.kapilagro.sasyak.presentation.common.theme.AgroPrimary
 import com.kapilagro.sasyak.presentation.home.HomeViewModel
+import com.kapilagro.sasyak.presentation.tasks.TaskViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.launch
 import java.io.File
@@ -52,6 +53,7 @@ fun YieldRequestScreen(
     navController: NavController,
     viewModel: YieldListViewModel = hiltViewModel(),
     homeViewModel: HomeViewModel = hiltViewModel(),
+    taskViewModel: TaskViewModel = hiltViewModel(),
     cropViewModel: CropViewModel = hiltViewModel(),
     @IoDispatcher ioDispatcher: CoroutineDispatcher,
     imageUploadService: ImageUploadService
@@ -61,6 +63,8 @@ fun YieldRequestScreen(
     val supervisorsListState by homeViewModel.supervisorsListState.collectAsState()
     val cropsState by cropViewModel.cropsState.collectAsState()
     val scope = rememberCoroutineScope()
+    val managersList by taskViewModel.managersList.collectAsState()
+    val supervisorsList by taskViewModel.supervisorsList.collectAsState()
 
     // Dialog state
     var showSuccessDialog by remember { mutableStateOf(false) }
@@ -99,6 +103,9 @@ fun YieldRequestScreen(
         )
     }
     var showDatePicker by remember { mutableStateOf(false) }
+    // State for selected role and user
+    var selectedRole by remember { mutableStateOf(savedStateHandle?.get<String>("selectedRole") ?:"Manager") }
+    var selectedUser by remember { mutableStateOf(savedStateHandle?.get<String>("selectedUser") ?:"") }
 
 
     val datePattern = Regex("\\d{2}-\\d{2}-\\d{4}")
@@ -124,7 +131,9 @@ fun YieldRequestScreen(
                 "notes" to notes,
                 "description" to description,
                 "assignedTo" to assignedTo,
-                "dueDate" to dueDateText
+                "dueDate" to dueDateText,
+                "selectedRole" to selectedRole,
+                "selectedUser" to selectedUser
             )
         }.collect { state ->
             state.forEach { (key, value) ->
@@ -535,7 +544,88 @@ fun YieldRequestScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
             }
-            if (userRole == "MANAGER") {
+            if (userRole == "ADMIN") {
+                val managerList = managersList
+                val supervisorList = supervisorsList
+
+                // State for dropdown
+                var expanded by remember { mutableStateOf(false) }
+
+
+                val userList = if (selectedRole == "Manager") managerList else supervisorList
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp)
+                ) {
+                    Text(
+                        text = "Select Role",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = selectedRole == "Manager",
+                            onClick = {
+                                selectedRole = "Manager"
+                                assignedTo = null
+                                selectedUser = "" // reset dropdown selection
+                            }
+                        )
+                        Text(text = "Manager")
+
+                        Spacer(modifier = Modifier.width(16.dp))
+
+                        RadioButton(
+                            selected = selectedRole == "Supervisor",
+                            onClick = {
+                                selectedRole = "Supervisor"
+                                assignedTo = null
+                                selectedUser = "" // reset dropdown selection
+                            }
+                        )
+                        Text(text = "Supervisor")
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    ExposedDropdownMenuBox(
+                        expanded = expanded,
+                        onExpandedChange = { expanded = !expanded }
+                    ) {
+                        TextField(
+                            value = selectedUser,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Select $selectedRole") },
+                            trailingIcon = {
+                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                            },
+                            modifier = Modifier.menuAnchor()
+                        )
+
+                        ExposedDropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false }
+                        ) {
+                            userList.forEach { user ->
+                                DropdownMenuItem(
+                                    text = { Text(user.name) },
+                                    onClick = {
+                                        selectedUser = user.name
+                                        assignedTo = user.id
+                                        expanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            if (userRole == "MANAGER" || userRole == "ADMIN") {
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Due Date Validation
@@ -715,7 +805,7 @@ fun YieldRequestScreen(
             Button(
                 onClick = {
                     if (cropName.isNotBlank() && row.isNotBlank() && yieldQuantity.isNotBlank() &&
-                        yieldUnit.isNotBlank() &&
+                        yieldUnit.isNotBlank() && (userRole != "ADMIN" || assignedTo != null) &&
                         (userRole != "MANAGER" || assignedTo != null)) {
                         scope.launch(ioDispatcher) {
                             val yieldDetails = YieldDetails(
@@ -729,7 +819,7 @@ fun YieldRequestScreen(
                                 moistureContent = moistureContent.ifBlank { null },
                                 harvestMethod = harvestMethod.ifBlank { null },
                                 notes = notes.ifBlank { null },
-                                dueDate = if (userRole == "MANAGER") dueDateText else null
+                                dueDate = if (userRole == "MANAGER" || userRole == "ADMIN") dueDateText else null
                             )
                             submittedEntry = yieldDetails
 
@@ -739,7 +829,7 @@ fun YieldRequestScreen(
                                     yieldDetails = yieldDetails,
                                     description = description,
                                     imagesJson = emptyList<String>(), // Pass empty list instead of null
-                                    assignedToId = if (userRole == "MANAGER") assignedTo else null
+                                    assignedToId = if (userRole == "MANAGER" || userRole == "ADMIN") assignedTo else null
                                 )
                                 uploadState = UploadState.Idle
                             } else {
@@ -757,7 +847,7 @@ fun YieldRequestScreen(
                                             yieldDetails = yieldDetails,
                                             description = description,
                                             imagesJson = imageUrls,
-                                            assignedToId = if (userRole == "MANAGER") assignedTo else null
+                                            assignedToId = if (userRole == "MANAGER" || userRole == "ADMIN") assignedTo else null
                                         )
                                         uploadState = UploadState.Idle
                                     }
@@ -773,7 +863,7 @@ fun YieldRequestScreen(
                     }
                 },
                 enabled = cropName.isNotBlank() && row.isNotBlank() && yieldQuantity.isNotBlank() &&
-                        yieldUnit.isNotBlank() &&
+                        yieldUnit.isNotBlank() && (userRole != "ADMIN" || assignedTo != null) &&
                         (userRole != "MANAGER" || assignedTo != null) &&
                         createYieldState !is YieldListViewModel.CreateYieldState.Loading &&
                         uploadState !is UploadState.Loading,

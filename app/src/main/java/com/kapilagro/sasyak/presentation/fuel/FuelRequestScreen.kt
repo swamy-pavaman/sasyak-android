@@ -40,6 +40,7 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import com.kapilagro.sasyak.presentation.common.catalog.CategoryViewModel
 import com.kapilagro.sasyak.presentation.common.catalog.CategoriesState
+import com.kapilagro.sasyak.presentation.tasks.TaskViewModel
 import java.time.Instant
 import java.time.ZoneId
 
@@ -52,6 +53,7 @@ fun FuelRequestScreen(
     navController: NavController,
     viewModel: FuelListViewModel = hiltViewModel(),
     homeViewModel: HomeViewModel = hiltViewModel(),
+    taskViewModel: TaskViewModel = hiltViewModel(),
     categoryViewModel: CategoryViewModel = hiltViewModel(),
     @IoDispatcher ioDispatcher: CoroutineDispatcher,
     imageUploadService: ImageUploadService
@@ -61,6 +63,8 @@ fun FuelRequestScreen(
     val supervisorsListState by homeViewModel.supervisorsListState.collectAsState()
     val scope = rememberCoroutineScope()
     val categoriesStates by categoryViewModel.categoriesStates.collectAsState()
+    val managersList by taskViewModel.managersList.collectAsState()
+    val supervisorsList by taskViewModel.supervisorsList.collectAsState()
 
     // Dialog state
     var showSuccessDialog by remember { mutableStateOf(false) }
@@ -101,6 +105,9 @@ fun FuelRequestScreen(
         )
     }
     var showDatePicker by remember { mutableStateOf(false) }
+    // State for selected role and user
+    var selectedRole by remember { mutableStateOf(savedStateHandle?.get<String>("selectedRole") ?:"Manager") }
+    var selectedUser by remember { mutableStateOf(savedStateHandle?.get<String>("selectedUser") ?:"") }
 
 
     val datePattern = Regex("\\d{2}-\\d{2}-\\d{4}")
@@ -129,7 +136,9 @@ fun FuelRequestScreen(
                 "notes" to notes,
                 "description" to description,
                 "assignedTo" to assignedTo,
-                "dueDate" to dueDateText
+                "dueDate" to dueDateText,
+                "selectedRole" to selectedRole,
+                "selectedUser" to selectedUser
             )
         }.collect { state ->
             state.forEach { (key, value) ->
@@ -671,7 +680,88 @@ fun FuelRequestScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
             }
-            if (userRole == "MANAGER") {
+            if (userRole == "ADMIN") {
+                val managerList = managersList
+                val supervisorList = supervisorsList
+
+                // State for dropdown
+                var expanded by remember { mutableStateOf(false) }
+
+
+                val userList = if (selectedRole == "Manager") managerList else supervisorList
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp)
+                ) {
+                    Text(
+                        text = "Select Role",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = selectedRole == "Manager",
+                            onClick = {
+                                selectedRole = "Manager"
+                                assignedTo = null
+                                selectedUser = "" // reset dropdown selection
+                            }
+                        )
+                        Text(text = "Manager")
+
+                        Spacer(modifier = Modifier.width(16.dp))
+
+                        RadioButton(
+                            selected = selectedRole == "Supervisor",
+                            onClick = {
+                                selectedRole = "Supervisor"
+                                assignedTo = null
+                                selectedUser = "" // reset dropdown selection
+                            }
+                        )
+                        Text(text = "Supervisor")
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    ExposedDropdownMenuBox(
+                        expanded = expanded,
+                        onExpandedChange = { expanded = !expanded }
+                    ) {
+                        TextField(
+                            value = selectedUser,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Select $selectedRole") },
+                            trailingIcon = {
+                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                            },
+                            modifier = Modifier.menuAnchor()
+                        )
+
+                        ExposedDropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false }
+                        ) {
+                            userList.forEach { user ->
+                                DropdownMenuItem(
+                                    text = { Text(user.name) },
+                                    onClick = {
+                                        selectedUser = user.name
+                                        assignedTo = user.id
+                                        expanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            if (userRole == "MANAGER" || userRole == "ADMIN") {
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Due Date Validation
@@ -850,7 +940,7 @@ fun FuelRequestScreen(
             // Submit Button
             Button(
                 onClick = {
-                    if (vehicleName.isNotBlank() && fuelType.isNotBlank() && quantity.isNotBlank()
+                    if (vehicleName.isNotBlank() && fuelType.isNotBlank() && (userRole != "ADMIN" || assignedTo != null) && quantity.isNotBlank()
                         && (userRole != "MANAGER" || assignedTo != null)) {
                         scope.launch(ioDispatcher) {
                             val fuelDetails = FuelDetails(
@@ -867,7 +957,7 @@ fun FuelRequestScreen(
                                 purposeOfFuel = purposeOfFuel.ifBlank { null },
                                 refillLocation = refillLocation.ifBlank { null },
                                 notes = notes.ifBlank { null },
-                                dueDate = if (userRole == "MANAGER") dueDateText else null
+                                dueDate = if (userRole == "MANAGER" || userRole == "ADMIN") dueDateText else null
                             )
                             submittedEntry = fuelDetails
 
@@ -877,7 +967,7 @@ fun FuelRequestScreen(
                                     fuelDetails = fuelDetails,
                                     description = description,
                                     imagesJson = emptyList<String>(), // Pass empty list instead of null
-                                    assignedToId = if (userRole == "MANAGER") assignedTo else null
+                                    assignedToId = if (userRole == "MANAGER" || userRole == "ADMIN") assignedTo else null
                                 )
                                 uploadState = UploadState.Idle
                             } else {
@@ -895,7 +985,7 @@ fun FuelRequestScreen(
                                             fuelDetails = fuelDetails,
                                             description = description,
                                             imagesJson = imageUrls,
-                                            assignedToId = if (userRole == "MANAGER") assignedTo else null
+                                            assignedToId = if (userRole == "MANAGER" || userRole == "ADMIN") assignedTo else null
                                         )
                                         uploadState = UploadState.Idle
                                     }
@@ -911,7 +1001,7 @@ fun FuelRequestScreen(
                     }
                 },
                 enabled = vehicleName.isNotBlank() && fuelType.isNotBlank() && quantity.isNotBlank()
-                        && (userRole != "MANAGER" || assignedTo != null) &&
+                        && (userRole != "MANAGER" || assignedTo != null) && (userRole != "ADMIN" || assignedTo != null) &&
                         createFuelState !is FuelListViewModel.CreateFuelState.Loading &&
                         uploadState !is UploadState.Loading,
                 modifier = Modifier
