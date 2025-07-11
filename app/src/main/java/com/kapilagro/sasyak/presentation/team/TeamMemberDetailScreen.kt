@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -25,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.rememberAsyncImagePainter
 import com.kapilagro.sasyak.domain.models.TeamMember
+import com.kapilagro.sasyak.presentation.auth.AuthViewModel
 import com.kapilagro.sasyak.presentation.common.components.ErrorView
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -35,9 +37,19 @@ fun TeamMemberDetailScreen(
     onBackClick: () -> Unit
 ) {
     val state by viewModel.teamMemberState.collectAsState()
+    val userRole by viewModel.userRole.collectAsState()
 
     // Load the team member data
-    viewModel.loadTeamMemberDetails(teamMemberId)
+    LaunchedEffect(teamMemberId, userRole) {
+        when (userRole) {
+            "ADMIN" -> viewModel.loadAdminTeamMemberDetails(teamMemberId)
+            "MANAGER" -> viewModel.loadTeamMemberDetails(teamMemberId)
+            else -> {
+                // Optionally handle null or unknown roles (e.g., show error or default to loadTeamMemberDetails)
+                viewModel.loadTeamMemberDetails(teamMemberId)
+            }
+        }
+    }
 
     MaterialTheme(
         colorScheme = MaterialTheme.colorScheme.copy(

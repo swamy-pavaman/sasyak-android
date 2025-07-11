@@ -2,6 +2,7 @@ package com.kapilagro.sasyak.presentation.tasks
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.kapilagro.sasyak.data.api.models.responses.TeamMemberResponse
 import com.kapilagro.sasyak.di.IoDispatcher
 import com.kapilagro.sasyak.domain.models.ApiResponse
 import com.kapilagro.sasyak.domain.models.Task
@@ -61,9 +62,27 @@ class TaskViewModel @Inject constructor(
     private val _assignedTaskCount = MutableStateFlow(0)
     val assignedTaskCount: StateFlow<Int> = _assignedTaskCount.asStateFlow()
 
+    // Admin-specific states
+    private val _managersList = MutableStateFlow<List<TeamMemberResponse>>(emptyList())
+    val managersList: StateFlow<List<TeamMemberResponse>> = _managersList.asStateFlow()
+
+    private val _supervisorsList = MutableStateFlow<List<TeamMemberResponse>>(emptyList())
+    val supervisorsList: StateFlow<List<TeamMemberResponse>> = _supervisorsList.asStateFlow()
+
+    private val _selectedUserId = MutableStateFlow<Int?>(null)
+    val selectedUserId: StateFlow<Int?> = _selectedUserId.asStateFlow()
+
     private var currentPage = 0
     private val pageSize = 10
     private val accumulatedTasks = mutableListOf<Task>()
+
+    init {
+        getCurrentUserRole()
+        if (_userRole.value == "ADMIN") {
+            fetchManagers()
+            fetchSupervisors()
+        }
+    }
 
     fun getCurrentUserRole() {
         viewModelScope.launch {
@@ -73,6 +92,7 @@ class TaskViewModel @Inject constructor(
                 val newTab = when (role) {
                     "MANAGER" -> TaskTab.ME
                     "SUPERVISOR" -> TaskTab.ASSIGNED // Default to ASSIGNED for supervisors
+                    "ADMIN" -> TaskTab.MANAGERS
                     else -> TaskTab.SUPERVISORS
                 }
                 if (_selectedTab.value != newTab) {
@@ -92,6 +112,7 @@ class TaskViewModel @Inject constructor(
             val newTab = when (role) {
                 "MANAGER" -> TaskTab.ME
                 "SUPERVISOR" -> TaskTab.ASSIGNED
+                "ADMIN" -> TaskTab.MANAGERS
                 else -> TaskTab.SUPERVISORS
             }
             if (_selectedTab.value != newTab) {
@@ -106,10 +127,97 @@ class TaskViewModel @Inject constructor(
     fun onTabSelected(tab: TaskTab) {
         if (_selectedTab.value != tab) {
             _selectedTab.value = tab
+            _selectedUserId.value = null
             accumulatedTasks.clear()
             currentPage = 0
             loadTasks(currentPage, pageSize)
         }
+    }
+
+    fun fetchManagers() {
+        viewModelScope.launch(ioDispatcher) {
+            try {
+                val response = taskRepository.getUsersByRole("MANAGER") // Implement in TaskRepository
+                when (response) {
+                    is ApiResponse.Success -> {
+                        _managersList.value = response.data.employees
+                    }
+                    is ApiResponse.Error -> {
+                        // Handle error (e.g., show toast in UI)
+                    }
+                    is ApiResponse.Loading -> {}
+                }
+            } catch (e: Exception) {
+                // Handle exception
+            }
+        }
+    }
+
+    fun fetchSupervisors() {
+        viewModelScope.launch(ioDispatcher) {
+            try {
+                val response = taskRepository.getUsersByRole("SUPERVISOR") // Implement in TaskRepository
+                when (response) {
+                    is ApiResponse.Success -> {
+                        _supervisorsList.value = response.data.employees
+                    }
+                    is ApiResponse.Error -> {
+                        // Handle error
+                    }
+                    is ApiResponse.Loading -> {}
+                }
+            } catch (e: Exception) {
+                // Handle exception
+            }
+        }
+    }
+
+    fun selectUser(userId: Int) {
+        _selectedUserId.value = userId
+        accumulatedTasks.clear()
+        currentPage = 0
+        loadTasks(currentPage, pageSize)
+    }
+
+    fun loadMyTasks(page: Int, size: Int) {
+        if (page == 0) {
+            accumulatedTasks.clear()
+            _taskListState.value = TaskListState.Loading
+        }
+        _refreshing.value = page == 0
+        viewModelScope.launch(ioDispatcher) {
+            val response = taskRepository.getCreatedTasks(page, size)
+            when (response) {
+                is ApiResponse.Success -> {
+                    accumulatedTasks.addAll(response.data.first)
+                    _createdTaskCount.value = response.data.second
+                    _taskListState.value = TaskListState.Success(
+                        tasks = accumulatedTasks.toList(),
+                        isLastPage = response.data.second <= (page + 1) * size
+                    )
+                    _refreshing.value = false
+                }
+                is ApiResponse.Error -> {
+                    _taskListState.value = TaskListState.Error(response.errorMessage)
+                    _refreshing.value = false
+                }
+                is ApiResponse.Loading -> {
+                    if (page == 0) {
+                        _taskListState.value = TaskListState.Loading
+                    }
+                }
+            }
+        }
+    }
+
+    fun refreshMyTasks() {
+        currentPage = 0
+        loadMyTasks(currentPage, pageSize)
+    }
+
+    fun loadMoreMyTasks() {
+        currentPage++
+        loadMyTasks(currentPage, pageSize)
     }
 
     fun loadTasks(page: Int, size: Int) {
@@ -124,6 +232,8 @@ class TaskViewModel @Inject constructor(
                 TaskTab.ME -> taskRepository.getCreatedTasks(page, size)
                 TaskTab.ASSIGNED -> taskRepository.getAssignedTasks(page, size)
                 TaskTab.CREATED -> taskRepository.getCreatedTasks(page, size)
+                TaskTab.MANAGERS -> if (_selectedUserId.value != null) taskRepository.getTasksByUserId(_selectedUserId.value!!, page, size) else ApiResponse.Success(Pair(emptyList<Task>(), 0))
+                TaskTab.SUPERVISOR_LIST -> if (_selectedUserId.value != null) taskRepository.getTasksByUserId(_selectedUserId.value!!, page, size) else ApiResponse.Success(Pair(emptyList<Task>(), 0))
             }
 
             when (response) {
@@ -134,6 +244,8 @@ class TaskViewModel @Inject constructor(
                         TaskTab.ME -> _createdTaskCount.value = response.data.second
                         TaskTab.ASSIGNED -> _assignedTaskCount.value = response.data.second
                         TaskTab.CREATED -> _createdTaskCount.value = response.data.second
+                        TaskTab.MANAGERS -> {} // No count update for Admin tabs
+                        TaskTab.SUPERVISOR_LIST -> {} // No count update for Supervisor List tabs
                     }
                     _taskListState.value = TaskListState.Success(
                         tasks = accumulatedTasks.toList(),
@@ -354,7 +466,7 @@ class TaskViewModel @Inject constructor(
     }
 
     enum class TaskTab {
-        SUPERVISORS, ME, ASSIGNED, CREATED
+        SUPERVISORS, ME, ASSIGNED, CREATED, MANAGERS , SUPERVISOR_LIST
     }
 
     data class Implementation(
