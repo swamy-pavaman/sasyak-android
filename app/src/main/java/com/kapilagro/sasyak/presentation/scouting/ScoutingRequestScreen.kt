@@ -15,6 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -674,6 +675,19 @@ fun ScoutingRequestScreen(
                         .fillMaxWidth()
                         .clickable { showDatePicker = true },
                     enabled = false,
+                    trailingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.DateRange,
+                            contentDescription = "Calendar",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    },
+                    colors = TextFieldDefaults.outlinedTextFieldColors(
+                        disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                        disabledBorderColor = MaterialTheme.colorScheme.primary,
+                        disabledLabelColor = MaterialTheme.colorScheme.onSurface
+                    ),
                     shape = RoundedCornerShape(8.dp),
                     placeholder = { Text("dd-MM-yyyy") }
                 )
@@ -835,7 +849,9 @@ fun ScoutingRequestScreen(
             Button(
                 onClick = {
 
-                    if (cropName.isNotBlank() && row.isNotBlank() && valveName.isNotBlank() && treeNo.isNotBlank() && (userRole != "ADMIN" || assignedTo != null) &&
+                    if (cropName.isNotBlank() && row.isNotBlank()
+                        && valveName.isNotBlank() && treeNo.isNotBlank()
+                        && (userRole != "ADMIN" || assignedTo != null) && isValidDueDate &&
                         (userRole != "MANAGER" || assignedTo != null)){
                         scope.launch(ioDispatcher) {
                             val scoutingDetails = ScoutingDetails(
@@ -891,7 +907,7 @@ fun ScoutingRequestScreen(
                         }
                     }
                 },
-                enabled = cropName.isNotBlank() && row.isNotBlank() && treeNo.isNotBlank() &&
+                enabled = cropName.isNotBlank() && row.isNotBlank() && treeNo.isNotBlank() && isValidDueDate &&
                         (userRole != "MANAGER" || assignedTo != null) && valveName.isNotBlank() && (userRole != "ADMIN" || assignedTo != null) &&
                         createScoutingState !is ScoutingListViewModel.CreateScoutingState.Loading &&
                         uploadState !is UploadState.Loading,

@@ -15,6 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -648,6 +649,19 @@ fun YieldRequestScreen(
                         .fillMaxWidth()
                         .clickable { showDatePicker = true },
                     enabled = false,
+                    trailingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.DateRange,
+                            contentDescription = "Calendar",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    },
+                    colors = TextFieldDefaults.outlinedTextFieldColors(
+                        disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                        disabledBorderColor = MaterialTheme.colorScheme.primary,
+                        disabledLabelColor = MaterialTheme.colorScheme.onSurface
+                    ),
                     shape = RoundedCornerShape(8.dp),
                     placeholder = { Text("dd-MM-yyyy") }
                 )
@@ -808,9 +822,8 @@ fun YieldRequestScreen(
             Button(
                 onClick = {
                     if (cropName.isNotBlank() && row.isNotBlank() && yieldQuantity.isNotBlank() &&
-
-                        yieldUnit.isNotBlank() && (userRole != "ADMIN" || assignedTo != null) &&
-
+                        yieldUnit.isNotBlank() && isValidDueDate
+                        && (userRole != "ADMIN" || assignedTo != null) &&
                         (userRole != "MANAGER" || assignedTo != null)) {
                         scope.launch(ioDispatcher) {
                             val yieldDetails = YieldDetails(
@@ -869,7 +882,7 @@ fun YieldRequestScreen(
                 },
                 enabled = cropName.isNotBlank() && row.isNotBlank() && yieldQuantity.isNotBlank() &&
                         yieldUnit.isNotBlank() && (userRole != "ADMIN" || assignedTo != null) &&
-                        (userRole != "MANAGER" || assignedTo != null) &&
+                        (userRole != "MANAGER" || assignedTo != null) && isValidDueDate &&
                         createYieldState !is YieldListViewModel.CreateYieldState.Loading &&
                         uploadState !is UploadState.Loading,
                 modifier = Modifier
