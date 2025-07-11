@@ -25,12 +25,8 @@ class AuthRepositoryImpl @Inject constructor(
 
     private val authStateFlow = MutableStateFlow(isLoggedIn())
     private val userRoleFlow = MutableStateFlow<String?>(getUserRoleFromPrefs())
+    private val userIdFlow = MutableStateFlow<Int?>(getUserIdFromPrefs())
 
-    init {
-        sharedPreferences.all.forEach {
-            Log.d("AuthRepositoryImpl", "SharedPrefs: ${it.key} = ${it.value}")
-        }
-    }
 
     private companion object {
         const val KEY_ACCESS_TOKEN = "access_token"
@@ -95,6 +91,8 @@ class AuthRepositoryImpl @Inject constructor(
 
     override fun getUserRole(): Flow<String?> = userRoleFlow.asStateFlow()
 
+    override fun getUserId(): Flow<Int?> = userIdFlow.asStateFlow()
+
     override suspend fun saveAuthTokens(authResponse: com.kapilagro.sasyak.domain.models.AuthResponse) {
         sharedPreferences.edit().apply {
             putString(KEY_ACCESS_TOKEN, authResponse.accessToken)
@@ -108,6 +106,7 @@ class AuthRepositoryImpl @Inject constructor(
 
         authStateFlow.value = true
         userRoleFlow.value = authResponse.role  // Update the role flow
+        userIdFlow.value = authResponse.userId
     }
 
     override suspend fun saveAuthTokensForRefresh(authResponse: com.kapilagro.sasyak.domain.models.AuthResponse) {
@@ -155,8 +154,10 @@ class AuthRepositoryImpl @Inject constructor(
     }
 
     private fun getUserRoleFromPrefs(): String? {
-        // this fun is returning "supervisor" for some reason which should be "SUPERVISOR" or "MANAGER"
-        Log.d("AuthRepositoryImpl", "Getting user role from prefs: ${sharedPreferences.getString(KEY_USER_ROLE, null)}")
         return sharedPreferences.getString(KEY_USER_ROLE, null)
+    }
+    private fun getUserIdFromPrefs(): Int? {
+        val userId = sharedPreferences.getInt(KEY_USER_ID, -1)
+        return if (userId == -1) null else userId
     }
 }
