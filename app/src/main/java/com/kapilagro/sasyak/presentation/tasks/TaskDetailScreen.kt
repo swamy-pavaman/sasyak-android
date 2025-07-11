@@ -639,7 +639,7 @@ fun TaskDetailScreen(
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))
-                    }*/
+                    }
                     if (showPreviewDialog && imagesToPreview != null) {
                         Dialog(
                             onDismissRequest = {
