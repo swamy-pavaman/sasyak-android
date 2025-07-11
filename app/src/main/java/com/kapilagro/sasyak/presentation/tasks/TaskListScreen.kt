@@ -58,6 +58,7 @@ fun TaskListScreen(
     val managersList by viewModel.managersList.collectAsState()
     val supervisorsList by viewModel.supervisorsList.collectAsState()
     val selectedUserId by viewModel.selectedUserId.collectAsState()
+    var selectedUser by remember { mutableStateOf<TeamMemberResponse?>(null) }
 
     // Task counts
     val supervisorTaskCount by viewModel.supervisorTaskCount.collectAsState()
@@ -97,7 +98,8 @@ fun TaskListScreen(
     val tabs: List<TabItem<TaskViewModel.TaskTab>> = when (userRole) {
         "MANAGER" -> listOf(
             TabItem(id = TaskViewModel.TaskTab.ME, title = "Me", count = createdTaskCount),
-            TabItem(id = TaskViewModel.TaskTab.SUPERVISORS, title = "Supervisors", count = supervisorTaskCount)
+            TabItem(id = TaskViewModel.TaskTab.SUPERVISORS, title = "Supervisors", count = supervisorTaskCount),
+            TabItem(id = TaskViewModel.TaskTab.ASSIGNED, title = "Assigned", count = assignedTaskCount)
         )
         "SUPERVISOR" -> listOf(
             TabItem(id = TaskViewModel.TaskTab.ASSIGNED, title = "Assigned", count = assignedTaskCount),
@@ -333,6 +335,7 @@ fun TaskListScreen(
                     tabs = tabs,
                     onTabSelected = { tab ->
                         viewModel.onTabSelected(tab)
+                        selectedUser = null
                     }
                 )
             } else {
@@ -354,17 +357,17 @@ fun TaskListScreen(
             if (userRole == "ADMIN" && (selectedTab == TaskViewModel.TaskTab.MANAGERS || selectedTab == TaskViewModel.TaskTab.SUPERVISOR_LIST)) {
                 val items = if (selectedTab == TaskViewModel.TaskTab.MANAGERS) managersList else supervisorsList
                 var expanded by remember { mutableStateOf(false) }
-                var selectedUser by remember { mutableStateOf<TeamMemberResponse?>(null) }
 
                 ExposedDropdownMenuBox(
                     expanded = expanded,
                     onExpandedChange = { expanded = !expanded }
                 ) {
-                    TextField(
+                    OutlinedTextField(
                         value = selectedUser?.name ?: "Select ${if (selectedTab == TaskViewModel.TaskTab.MANAGERS) "Manager" else "Supervisor"}",
                         onValueChange = {},
                         readOnly = true,
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                        shape = RoundedCornerShape(8.dp),
                         modifier = Modifier
                             .fillMaxWidth(0.6f)
                             .menuAnchor()

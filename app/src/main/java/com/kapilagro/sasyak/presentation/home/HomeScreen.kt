@@ -62,7 +62,7 @@ fun HomeScreen(
     onSowingTaskClick: () -> Unit,
     onSprayingTaskClick: () -> Unit,
     onYieldTaskClick: () -> Unit,
-
+    onMyTasksClick: () -> Unit,
     onTeamClick:()->Unit,
 
 
@@ -326,6 +326,7 @@ fun HomeScreen(
                 "ADMIN" -> {
                     AdminHomeContent(
                         onTaskClick = onTaskClick,
+                        onMyTasksClick = onMyTasksClick,
                         tasksState = tasksState, // For "My" tasks
                         newTasksState = newTasksState, // For "New" tasks
                         loadHotMyTasks = { viewModel.loadHotMyTasks() }, // For "My" tasks
@@ -780,6 +781,7 @@ fun AdminHomeContent(
     loadHotNewTasks: () -> Unit,
     onTeamClick: () -> Unit,
     onReportsClick: () -> Unit,
+    onMyTasksClick: () -> Unit,
 ){
     // Admin-specific quick actions
     Text(
@@ -809,6 +811,13 @@ fun AdminHomeContent(
             backgroundColor = ReportsIcon,
             containerColor = ReportsContainer,
             onClick = onReportsClick
+        )
+        QuickActionButton(
+            icon = Icons.Outlined.Task,
+            label = "My Tasks",
+            backgroundColor = FuelIcon,
+            containerColor = FuelContainer,
+            onClick = onMyTasksClick
         )
     }
 

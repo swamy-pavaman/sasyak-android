@@ -596,7 +596,7 @@ fun YieldRequestScreen(
                         expanded = expanded,
                         onExpandedChange = { expanded = !expanded }
                     ) {
-                        TextField(
+                        OutlinedTextField(
                             value = selectedUser,
                             onValueChange = {},
                             readOnly = true,
@@ -604,7 +604,8 @@ fun YieldRequestScreen(
                             trailingIcon = {
                                 ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
                             },
-                            modifier = Modifier.menuAnchor()
+                            modifier = Modifier.menuAnchor(),
+                            shape = RoundedCornerShape(8.dp)
                         )
 
                         ExposedDropdownMenu(

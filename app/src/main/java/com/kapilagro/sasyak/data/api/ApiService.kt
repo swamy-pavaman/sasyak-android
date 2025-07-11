@@ -179,4 +179,7 @@ suspend fun categoryService(
 
     @GET("api/admin/users/by-role/{role}")
     suspend fun getUsersByRole(@Path("role") role: String): Response<TeamMemberListResponse>
+
+    @POST("api/tasks/filter")
+    suspend fun getTasksByFilter(@Body filterRequest: FilterRequest): Response<TaskListResponse>
 }

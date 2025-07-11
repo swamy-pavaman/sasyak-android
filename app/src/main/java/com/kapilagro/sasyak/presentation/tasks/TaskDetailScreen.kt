@@ -654,7 +654,7 @@ fun TaskDetailScreen(
 
                     // Role-based actions
                     when (userRole) {
-                        "MANAGER" -> {
+                        "MANAGER" , "ADMIN" -> {
                             if (task.status.equals("submitted", ignoreCase = true) ||
                                 task.status.equals("implemented", ignoreCase = true)
                             ) {
@@ -806,12 +806,9 @@ fun TaskDetailScreen(
                         }
 
                         "SUPERVISOR" -> {
-                            if ((task.status.equals(
-                                    "submitted",
-                                    ignoreCase = true
-                                ) && advices.isNotEmpty())
+                            if ((task.status.equals("submitted", ignoreCase = true) && advices.isNotEmpty())
                                 || task.status.equals("implemented", ignoreCase = true)
-                                || task.assignedTo != null
+                                || (task.status.equals("submitted", ignoreCase = true) && task.assignedTo != null)
                             ) {
 
                                 Spacer(modifier = Modifier.height(16.dp))
