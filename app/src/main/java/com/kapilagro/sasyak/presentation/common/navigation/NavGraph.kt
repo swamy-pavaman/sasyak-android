@@ -472,7 +472,6 @@ fun AppNavGraph(
                 }
             )
         }
-
         composable(Screen.Profile.route) {
             ProfileScreen(
                 onEditProfileClick = {
@@ -483,6 +482,17 @@ fun AppNavGraph(
                     navController.navigate(Screen.Login.route) {
                         popUpTo(Screen.Home.route) { inclusive = true }
                     }
+                }
+            )
+        }
+
+        composable(Screen.EditProfile.route) {
+            EditProfileScreen(
+                onProfileUpdated = {
+                    navController.popBackStack() // Navigate back to ProfileScreen after update
+                },
+                onBackClick = {
+                    navController.popBackStack() // Navigate back to ProfileScreen
                 }
             )
         }
