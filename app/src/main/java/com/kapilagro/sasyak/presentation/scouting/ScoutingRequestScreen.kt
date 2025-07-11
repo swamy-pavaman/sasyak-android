@@ -35,11 +35,15 @@ import com.kapilagro.sasyak.presentation.common.components.SuccessDialog
 import com.kapilagro.sasyak.presentation.common.navigation.Screen
 import com.kapilagro.sasyak.presentation.common.theme.AgroPrimary
 import com.kapilagro.sasyak.presentation.home.HomeViewModel
+import com.kapilagro.sasyak.presentation.tasks.TaskViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.launch
 import java.io.File
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import kotlin.collections.filter
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
@@ -50,6 +54,7 @@ fun ScoutingRequestScreen(
     navController: NavController,
     viewModel: ScoutingListViewModel = hiltViewModel(),
     homeViewModel: HomeViewModel = hiltViewModel(),
+    taskViewModel: TaskViewModel = hiltViewModel(),
     categoryViewModel: CategoryViewModel = hiltViewModel(),
     @IoDispatcher ioDispatcher: CoroutineDispatcher,
     imageUploadService: ImageUploadService
@@ -59,6 +64,8 @@ fun ScoutingRequestScreen(
     val supervisorsListState by homeViewModel.supervisorsListState.collectAsState()
     val categoriesStates by categoryViewModel.categoriesStates.collectAsState()
     val scope = rememberCoroutineScope()
+    val managersList by taskViewModel.managersList.collectAsState()
+    val supervisorsList by taskViewModel.supervisorsList.collectAsState()
 
     // Dialog state
     var showSuccessDialog by remember { mutableStateOf(false) }
@@ -72,7 +79,9 @@ fun ScoutingRequestScreen(
             ?: LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))
     ) }
     var cropName by remember { mutableStateOf(savedStateHandle?.get<String>("cropName") ?: "") }
+    var valveName by remember { mutableStateOf(savedStateHandle?.get<String>("valveName") ?: "") }
     var cropNameExpanded by remember { mutableStateOf(false) }
+    var valveNameExpanded by remember { mutableStateOf(false) }
     var row by remember { mutableStateOf(savedStateHandle?.get<String>("row") ?: "") }
     var rowExpanded by remember { mutableStateOf(false) }
     var treeNo by remember { mutableStateOf(savedStateHandle?.get<String>("treeNo") ?: "") }
@@ -86,6 +95,26 @@ fun ScoutingRequestScreen(
     var imageFiles by remember { mutableStateOf<List<File>?>(null) }
     var assignedTo by remember { mutableStateOf<Int?>(savedStateHandle?.get<Int>("assignedTo")) }
     var assignedToExpanded by remember { mutableStateOf(false) }
+    // State for selected role and user
+    var selectedRole by remember { mutableStateOf(savedStateHandle?.get<String>("selectedRole") ?:"Manager") }
+    var selectedUser by remember { mutableStateOf(savedStateHandle?.get<String>("selectedUser") ?:"") }
+
+    var dueDateText by remember {
+        mutableStateOf(
+            savedStateHandle?.get<String>("dueDate")
+                ?: LocalDate.now().plusDays(7).format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))
+        )
+    }
+    var showDatePicker by remember { mutableStateOf(false) }
+
+
+    val datePattern = Regex("\\d{2}-\\d{2}-\\d{4}")
+    val isValidDueDate = dueDateText.matches(datePattern) && try {
+        LocalDate.parse(dueDateText, DateTimeFormatter.ofPattern("dd-MM-yyyy")).isAfter(LocalDate.now())
+    } catch (e: Exception) {
+        false
+    }
+
 
     // Save form state before navigating to ImageCaptureScreen
     LaunchedEffect(Unit) {
@@ -100,7 +129,11 @@ fun ScoutingRequestScreen(
                 "noOfFruitsDropped" to noOfFruitsDropped,
                 "nameOfDisease" to nameOfDisease,
                 "description" to description,
-                "assignedTo" to assignedTo
+                "assignedTo" to assignedTo,
+                "valveName" to valveName,
+                "dueDate" to dueDateText,
+                "selectedRole" to selectedRole,
+                "selectedUser" to selectedUser
             )
         }.collect { state ->
             state.forEach { (key, value) ->
@@ -113,6 +146,7 @@ fun ScoutingRequestScreen(
     LaunchedEffect(Unit) {
         categoryViewModel.fetchCategories("Crop")
         categoryViewModel.fetchCategories("Disease")
+        categoryViewModel.fetchCategories("Valve")
     }
 
     // Extract crops and diseases
@@ -131,6 +165,12 @@ fun ScoutingRequestScreen(
             "Powdery mildew", "Downy mildew", "Late blight", "Early blight", "Rust", "Fusarium wilt",
             "Verticillium wilt", "Anthracnose", "Leaf spot", "Damping-off", "Fire blight",
             "Bacterial blight", "Mosaic virus", "Black spot", "Citrus canker"
+        )
+    }
+    val valves = when (val state = categoriesStates["Valve"]) {
+        is CategoriesState.Success -> state.categories.map { it.value }
+        else -> listOf(
+            "Valve 1", "Valve 2", "Valve 3"
         )
     }
 
@@ -237,6 +277,65 @@ fun ScoutingRequestScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Valve Name Dropdown
+            ExposedDropdownMenuBox(
+                expanded = valveNameExpanded,
+                onExpandedChange = { valveNameExpanded = it },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    value = valveName,
+                    readOnly = false,
+                    onValueChange = { newValue ->
+                        valveName = newValue
+                        valveNameExpanded = true
+                    },
+                    label = { Text("Valve name *") },
+                    trailingIcon = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ){
+                            if (valveName.isNotEmpty()) {
+                                IconButton(onClick = { valveName = "" }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Clear valve name",
+                                        tint = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = valveNameExpanded)
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(),
+                    shape = RoundedCornerShape(8.dp)
+                )
+
+                ExposedDropdownMenu(
+                    expanded = valveNameExpanded,
+                    onDismissRequest = { valveNameExpanded = false }
+                ) {
+                    valves
+                        .filter { it.contains(valveName, ignoreCase = true) }
+                        .forEach { valve ->
+                            DropdownMenuItem(
+                                text = { Text(valve)},
+                                onClick = {
+                                    valveName = valve
+                                    valveNameExpanded = false
+                                }
+                            )
+                        }
+                }
+            }
+
+
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             // Crop Name Dropdown
             ExposedDropdownMenuBox(
                 expanded = cropNameExpanded,
@@ -245,14 +344,28 @@ fun ScoutingRequestScreen(
             ) {
                 OutlinedTextField(
                     value = cropName,
-                    readOnly = true,
+                    readOnly = false,
                     onValueChange = { newValue ->
                         cropName = newValue
                         cropNameExpanded = true
                     },
                     label = { Text("Crop name *") },
                     trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = cropNameExpanded)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ){
+                            if (cropName.isNotEmpty()) {
+                                IconButton(onClick = { cropName = "" }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Clear crop name",
+                                        tint = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = cropNameExpanded)
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -264,7 +377,8 @@ fun ScoutingRequestScreen(
                     expanded = cropNameExpanded,
                     onDismissRequest = { cropNameExpanded = false }
                 ) {
-                    crops.filter { it.contains(cropName, ignoreCase = true) }
+                    crops
+                        .filter { it.contains(cropName, ignoreCase = true) }
                         .forEach { crop ->
                             DropdownMenuItem(
                                 text = { Text(crop) },
@@ -352,14 +466,28 @@ fun ScoutingRequestScreen(
             ) {
                 OutlinedTextField(
                     value = nameOfDisease,
-                    readOnly = true,
+                    readOnly = false,
                     onValueChange = { newValue ->
                         nameOfDisease = newValue
                         nameOfDiseaseExpanded = true
                     },
                     label = { Text("Name of the Disease") },
                     trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = nameOfDiseaseExpanded)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ){
+                            if (nameOfDisease.isNotEmpty()) {
+                                IconButton(onClick = { nameOfDisease = "" }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Clear name of the disease",
+                                        tint = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = nameOfDiseaseExpanded)
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -433,12 +561,171 @@ fun ScoutingRequestScreen(
                     }
                 }
 
+
+                // TODO ADD Due Date only to manager not for supervisor
+
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+
+            }
+
+            if (userRole == "ADMIN") {
+                val managerList = managersList
+                val supervisorList = supervisorsList
+
+                // State for dropdown
+                var expanded by remember { mutableStateOf(false) }
+
+
+                val userList = if (selectedRole == "Manager") managerList else supervisorList
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp)
+                ) {
+                    Text(
+                        text = "Select Role",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = selectedRole == "Manager",
+                            onClick = {
+                                selectedRole = "Manager"
+                                assignedTo = null
+                                selectedUser = "" // reset dropdown selection
+                            }
+                        )
+                        Text(text = "Manager")
+
+                        Spacer(modifier = Modifier.width(16.dp))
+
+                        RadioButton(
+                            selected = selectedRole == "Supervisor",
+                            onClick = {
+                                selectedRole = "Supervisor"
+                                assignedTo = null
+                                selectedUser = "" // reset dropdown selection
+                            }
+                        )
+                        Text(text = "Supervisor")
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    ExposedDropdownMenuBox(
+                        expanded = expanded,
+                        onExpandedChange = { expanded = !expanded }
+                    ) {
+                        OutlinedTextField(
+                            value = selectedUser,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Select $selectedRole") },
+                            trailingIcon = {
+                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                            },
+                            modifier = Modifier.menuAnchor(),
+                            shape = RoundedCornerShape(8.dp)
+                        )
+
+                        ExposedDropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false }
+                        ) {
+                            userList.forEach { user ->
+                                DropdownMenuItem(
+                                    text = { Text(user.name) },
+                                    onClick = {
+                                        selectedUser = user.name
+                                        assignedTo = user.id
+                                        expanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (userRole == "MANAGER" || userRole == "ADMIN") {
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Due Date Validation
+                val datePattern = Regex("\\d{2}-\\d{2}-\\d{4}")
+                val isValidDueDate = dueDateText.matches(datePattern) && try {
+                    LocalDate.parse(dueDateText, DateTimeFormatter.ofPattern("dd-MM-yyyy")).isAfter(LocalDate.now())
+                } catch (e: Exception) {
+                    false
+                }
+
+                // Due Date Field
+                val datePickerState = rememberDatePickerState()
+                OutlinedTextField(
+                    value = dueDateText,
+                    onValueChange = { /* Read-only, updated via date picker */ },
+                    label = { Text("Due Date *") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showDatePicker = true },
+                    enabled = false,
+                    shape = RoundedCornerShape(8.dp),
+                    placeholder = { Text("dd-MM-yyyy") }
+                )
+
+                if (!isValidDueDate && dueDateText.isNotBlank()) {
+                    Text(
+                        text = "Please select a valid future date (dd-MM-yyyy)",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+                    )
+                }
+
+                if (showDatePicker) {
+                    DatePickerDialog(
+                        onDismissRequest = { showDatePicker = false },
+                        confirmButton = {
+                            TextButton(
+                                onClick = {
+                                    val selectedDateMillis = datePickerState.selectedDateMillis
+                                    if (selectedDateMillis != null) {
+                                        val selectedDate = Instant.ofEpochMilli(selectedDateMillis)
+                                            .atZone(ZoneId.systemDefault())
+                                            .toLocalDate()
+                                        dueDateText = selectedDate.format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))
+
+                                        Log.d("due date ",dueDateText)
+                                    }
+                                    showDatePicker = false
+                                }
+                            ) { Text("OK") }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
+                        }
+                    ) {
+                        DatePicker(state = datePickerState)
+                    }
+                }
+
+                LaunchedEffect(dueDateText) {
+                    savedStateHandle?.set("dueDate", dueDateText)
+                }
+
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
             // Upload Section
             Text(
-                text = if (userRole == "MANAGER") "Upload" else "Upload *",
+
+                text = "Upload",
+
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
@@ -547,49 +834,65 @@ fun ScoutingRequestScreen(
             // Submit Button
             Button(
                 onClick = {
-                    if (cropName.isNotBlank() && row.isNotBlank() && treeNo.isNotBlank() && (userRole == "MANAGER" || imageFiles != null) &&
-                        (userRole != "MANAGER" || assignedTo != null)) {
+
+                    if (cropName.isNotBlank() && row.isNotBlank() && valveName.isNotBlank() && treeNo.isNotBlank() && (userRole != "ADMIN" || assignedTo != null) &&
+                        (userRole != "MANAGER" || assignedTo != null)){
                         scope.launch(ioDispatcher) {
-                            uploadState = UploadState.Loading
-                            val uploadResult = imageUploadService.uploadImages(imageFiles!!, "SCOUTING")
-                            when (uploadResult) {
-                                is ApiResponse.Success -> {
-                                    val imageUrls = uploadResult.data
-                                    if (imageUrls.isEmpty()) {
-                                        uploadState = UploadState.Error("Image upload failed, no URLs received")
-                                        return@launch
+                            val scoutingDetails = ScoutingDetails(
+                                scoutingDate = scoutingDate,
+                                cropName = cropName,
+                                row = row.toString(),
+                                treeNo = treeNo.toString(),
+                                noOfFruitSeen = noOfFruitSeen.ifBlank { null },
+                                noOfFlowersSeen = noOfFlowersSeen.ifBlank { null },
+                                noOfFruitsDropped = noOfFruitsDropped.ifBlank { null },
+                                nameOfDisease = nameOfDisease.ifBlank { null },
+                                valveName = valveName,
+                                dueDate = if (userRole == "MANAGER" || userRole == "ADMIN") dueDateText else null
+                            )
+                            submittedEntry = scoutingDetails
+
+                            if (imageFiles.isNullOrEmpty()) {
+                                // No images to upload, proceed with task creation
+                                viewModel.createScoutingTask(
+                                    scoutingDetails = scoutingDetails,
+                                    description = description,
+                                    imagesJson = emptyList<String>(), // Pass null for imagesJson
+                                    assignedToId = if (userRole == "MANAGER" || userRole == "ADMIN") assignedTo else null
+                                )
+                                uploadState = UploadState.Idle
+                            } else {
+                                // Upload images
+                                uploadState = UploadState.Loading
+                                val uploadResult = imageUploadService.uploadImages(imageFiles!!, "SCOUTING")
+                                when (uploadResult) {
+                                    is ApiResponse.Success -> {
+                                        val imageUrls = uploadResult.data
+                                        if (imageUrls.isEmpty()) {
+                                            uploadState = UploadState.Error("Image upload failed, no URLs received")
+                                            return@launch
+                                        }
+                                        viewModel.createScoutingTask(
+                                            scoutingDetails = scoutingDetails,
+                                            description = description,
+                                            imagesJson = imageUrls,
+                                            assignedToId = if (userRole == "MANAGER" || userRole == "ADMIN") assignedTo else null
+                                        )
+                                        uploadState = UploadState.Idle
                                     }
-                                    val scoutingDetails = ScoutingDetails(
-                                        scoutingDate = scoutingDate,
-                                        cropName = cropName,
-                                        row = row.toInt(),
-                                        treeNo = treeNo.toInt(),
-                                        noOfFruitSeen = noOfFruitSeen.ifBlank { null },
-                                        noOfFlowersSeen = noOfFlowersSeen.ifBlank { null },
-                                        noOfFruitsDropped = noOfFruitsDropped.ifBlank { null },
-                                        nameOfDisease = nameOfDisease.ifBlank { null }
-                                    )
-                                    submittedEntry = scoutingDetails
-                                    viewModel.createScoutingTask(
-                                        scoutingDetails,
-                                        description,
-                                        imageUrls,
-                                        assignedToId = if (userRole == "MANAGER") assignedTo else null
-                                    )
-                                    uploadState = UploadState.Idle
-                                }
-                                is ApiResponse.Error -> {
-                                    uploadState = UploadState.Error("Image upload failed: ${uploadResult.errorMessage}")
-                                }
-                                is ApiResponse.Loading -> {
-                                    uploadState = UploadState.Loading
+                                    is ApiResponse.Error -> {
+                                        uploadState = UploadState.Error("Image upload failed: ${uploadResult.errorMessage}")
+                                    }
+                                    is ApiResponse.Loading -> {
+                                        uploadState = UploadState.Loading
+                                    }
                                 }
                             }
                         }
                     }
                 },
-                enabled = cropName.isNotBlank() && row.isNotBlank() && treeNo.isNotBlank() && imageFiles != null &&
-                        (userRole != "MANAGER" || assignedTo != null) &&
+                enabled = cropName.isNotBlank() && row.isNotBlank() && treeNo.isNotBlank() &&
+                        (userRole != "MANAGER" || assignedTo != null) && valveName.isNotBlank() && (userRole != "ADMIN" || assignedTo != null) &&
                         createScoutingState !is ScoutingListViewModel.CreateScoutingState.Loading &&
                         uploadState !is UploadState.Loading,
                 modifier = Modifier

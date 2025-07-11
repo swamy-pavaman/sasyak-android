@@ -27,12 +27,13 @@ import kotlinx.serialization.Serializable
 data class SprayingDetails(
     val sprayingDate: String,
     val cropName: String,
-    val row: Int,
+    val row: String,
     val fieldArea: String? = null,
     val chemicalName: String,
     val dosage: String? = null,
     val sprayingMethod: String,
-    val targetPest: String? = null,
+    val target: String? = null,
     val weatherCondition: String? = null,
+    val dueDate: String? = null,
    // val uploadedFiles: List<String>? = null
 )

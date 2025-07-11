@@ -40,6 +40,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -93,6 +94,8 @@ fun TaskDetailScreen(
     val scope = rememberCoroutineScope()
     var imagesToPreview by remember { mutableStateOf<List<String>?>(null) }
     var showPreviewDialog by remember { mutableStateOf(false) }
+    var showAllAdvices by remember { mutableStateOf(false) }
+    var showAllImplementations by remember { mutableStateOf(false) }
 
     LaunchedEffect(navController) {
         navController.currentBackStackEntry?.savedStateHandle?.getStateFlow<List<File>>(
@@ -106,7 +109,7 @@ fun TaskDetailScreen(
 
     LaunchedEffect(taskId, shouldRefresh) {
         viewModel.loadTaskDetail(taskId)
-        viewModel.getCurrentUserRole()
+        //viewModel.getCurrentUserRole()
         if (shouldRefresh) {
             shouldRefresh = false
         }
@@ -165,10 +168,10 @@ fun TaskDetailScreen(
                             var imageUrls = Json.parseToJsonElement(task.imagesJson.toString())
                                 .jsonArray
                                 .map { it.jsonPrimitive.content }
-
-                            if (imageUrls.isEmpty()) {
+                            Log.d("imageUrls", imageUrls.toString())
+                            if (imageUrls.isNullOrEmpty()) {
                                 imageUrls =
-                                    listOf("http://13.203.61.201:9000/sasyak/SOWING/gallery_1748631470361.jpg")
+                                    listOf("https://minio.kapilagro.com:9000/sasyak/placeholder.png")
                             }
 
                             ImageSlideshow(
@@ -270,49 +273,64 @@ fun TaskDetailScreen(
                             }
 
                             if (details != null) {
-                                // Collect keys into a list for controlled iteration
-                                val keysList = details.keys().asSequence().toList()
-                                // Limit to first 4 keys when not expanded
-                                val displayKeys =
-                                    if (isExpandedForDetails) keysList else keysList.take(6)
+                                // Collect keys with non-null and non-empty values into a list
+                                val keysList = details.keys().asSequence()
+                                    .filter { key -> details.optString(key, "").isNotEmpty() }
+                                    .toList()
 
-                                // Display key-value pairs
-                                displayKeys.forEach { key ->
-                                    val value = details.optString(key, "")
-                                    DetailRow(
-                                        key.replaceFirstChar { it.uppercase() },
-                                        value
+                                // Show "No details available" if no valid key-value pairs exist
+                                if (keysList.isEmpty()) {
+                                    Text(
+                                        text = "No details available",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        modifier = Modifier.padding(horizontal = 16.dp)
                                     )
-                                }
+                                } else {
+                                    // Limit to first 6 keys when not expanded
+                                    val displayKeys = if (isExpandedForDetails) keysList else keysList.take(6)
 
-                                // Show arrow icon if there are more than 4 keys
-                                if (keysList.size > 6) {
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable {
-                                                isExpandedForDetails = !isExpandedForDetails
-                                            }
-                                            .padding(vertical = 4.dp),
-                                        horizontalArrangement = Arrangement.End,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            text = if (isExpandedForDetails) "Show Less" else "Show More",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.padding(end = 4.dp)
+                                    // Display key-value pairs
+                                    displayKeys.forEach { key ->
+                                        val value = details.optString(key, "")
+                                        DetailRow(
+                                            key.replaceFirstChar { it.uppercase() },
+                                            value
                                         )
-                                        Icon(
-                                            imageVector = if (isExpandedForDetails) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
-                                            contentDescription = if (isExpandedForDetails) "Collapse details" else "Expand details",
-                                            tint = MaterialTheme.colorScheme.primary
-                                        )
+                                    }
+
+                                    // Show arrow icon if there are more than 6 keys
+                                    if (keysList.size > 6) {
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable {
+                                                    isExpandedForDetails = !isExpandedForDetails
+                                                }
+                                                .padding(vertical = 4.dp),
+                                            horizontalArrangement = Arrangement.End,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = if (isExpandedForDetails) "Show Less" else "Show More",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.padding(end = 4.dp)
+                                            )
+                                            Icon(
+                                                imageVector = if (isExpandedForDetails) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
+                                                contentDescription = if (isExpandedForDetails) "Collapse details" else "Expand details",
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
                                     }
                                 }
                             } else {
-                                Text("No details available")
+                                Text(
+                                    text = "No details available",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    modifier = Modifier.padding(horizontal = 16.dp)
+                                )
                             }
                         }
                         Spacer(modifier = Modifier.height(8.dp))
@@ -375,91 +393,146 @@ fun TaskDetailScreen(
                                 }
                                 Spacer(modifier = Modifier.height(8.dp))
 
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = " Assigned By: ",
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = task.createdBy,
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+
                             }
                         }
                     }
 
 
                     Spacer(modifier = Modifier.height(16.dp))
-                    val implementations = getImplementationsFromJson(task.implementationJson)
-                    val communications = mergeAndSortCommunications(advices, implementations)
-                    if (communications.isNotEmpty()) {
+                    if (advices.isNotEmpty()) {
                         Text(
-                            text = "Action Log",
+                            text = "Task Advice",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(12.dp)
+                            modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
+                        )
+                        val reversedAdvices = advices
+                        if (showAllAdvices) {
+                            // Show all advices
+                            reversedAdvices.forEach { advice ->
+                                SimpleAdviceItem(advice = advice)
+                                Spacer(modifier = Modifier.height(8.dp))
+                            }
+                            if (reversedAdvices.size > 1) {
+                                // Show "View Less" button
+                                TextButton(
+                                    onClick = { showAllAdvices = false },
+                                    modifier = Modifier.align(Alignment.End)
+                                ) {
+                                    Text("View Less")
+                                }
+                            }
+                        } else {
+                            // Show only the first advice
+                            SimpleAdviceItem(advice = reversedAdvices.first())
+                            Spacer(modifier = Modifier.height(8.dp))
+                            if (reversedAdvices.size > 1) {
+                                // Show "View More" button if there are more advices
+                                TextButton(
+                                    onClick = { showAllAdvices = true },
+                                    modifier = Modifier.align(Alignment.End)
+                                ) {
+                                    Text("View More (${reversedAdvices.size - 1} more)")
+                                }
+                            }
+                        }
+                    } else {
+                        Text(
+                            text = "No advices available",
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(vertical = 8.dp,horizontal = 16.dp)
                         )
                     }
-                    communications.reversed().forEach { item ->
-                        when (item) {
-                            is CommunicationItem.Advice -> SimpleAdviceItem(advice = item.advice)
-                            is CommunicationItem.Implementation -> {
-                                // Reuse or adapt the existing Implementation Card Composable
-                                Row (
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.End
-                                ){
-                                    Card(
-                                        modifier = Modifier
-                                            .fillMaxWidth(0.9f)
-                                            .padding(horizontal = 16.dp),
-                                        shape = RoundedCornerShape(8.dp),
-                                        colors = CardDefaults.cardColors(
-                                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(
-                                                alpha = 0.5f
-                                            )
-                                        )
+
+                    val implementations = getImplementationsFromJson(task.implementationJson)
+                    Log.d("implementations", implementations.toString())
+                    if (implementations.isNotEmpty()) {
+                        Text(
+                            text = "Implementation",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 16.dp)
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        if (showAllImplementations) {
+                            // Show all implementations
+                            implementations.forEach { implementation ->
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp),
+                                    shape = RoundedCornerShape(8.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                    )
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(16.dp)
                                     ) {
-                                        Column(modifier = Modifier.padding(16.dp)) {
-                                            Row(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                horizontalArrangement = Arrangement.SpaceBetween
-                                            ) {
-                                                Text(
-                                                    text = item.implementation.supervisorName,
-                                                    style = MaterialTheme.typography.bodyMedium,
-                                                    fontWeight = FontWeight.Bold
-                                                )
-                                                Text(
-                                                    text = formatTimestamp(item.implementation.timestamp),
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                )
-                                            }
-                                            Spacer(modifier = Modifier.height(8.dp))
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
                                             Text(
-                                                text = item.implementation.text,
-                                                style = MaterialTheme.typography.bodyMedium
+                                                text = implementation.supervisorName,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = FontWeight.Bold
                                             )
-                                            // Display implementation images if available
-                                            if (item.implementation.imageUrls?.isNotEmpty() == true) {
-                                                Spacer(modifier = Modifier.height(8.dp))
-                                                Row(
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .horizontalScroll(rememberScrollState()),
-                                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                                ) {
-                                                    item.implementation.imageUrls.forEach { url ->
-                                                        Box(modifier = Modifier.size(80.dp)) {
-                                                            Card(
-                                                                modifier = Modifier
-                                                                    .fillMaxSize()
-                                                                    .clickable {
-                                                                        imagesToPreview =
-                                                                            listOf(url) // Preview single image
-                                                                        showPreviewDialog = true
-                                                                    },
-                                                                shape = RoundedCornerShape(8.dp)
-                                                            ) {
-                                                                AsyncImage(
-                                                                    model = url,
-                                                                    contentDescription = "Implementation image",
-                                                                    modifier = Modifier.fillMaxSize(),
-                                                                    contentScale = ContentScale.Crop
-                                                                )
-                                                            }
+                                            Text(
+                                                text = formatTimestamp(implementation.timestamp),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+
+                                        Spacer(modifier = Modifier.height(8.dp))
+
+                                        Text(
+                                            text = implementation.text,
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+
+                                        // Display implementation images if available
+                                        if (implementation.imageUrls?.isNotEmpty() == true) {
+                                            Spacer(modifier = Modifier.height(8.dp))
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .horizontalScroll(rememberScrollState()),
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                implementation.imageUrls.forEach { url ->
+                                                    Box(modifier = Modifier.size(80.dp)) {
+                                                        Card(
+                                                            modifier = Modifier
+                                                                .fillMaxSize()
+                                                                .clickable {
+                                                                    imagesToPreview = listOf(url) // Preview single image
+                                                                    showPreviewDialog = true
+                                                                },
+                                                            shape = RoundedCornerShape(8.dp)
+                                                        ) {
+                                                            AsyncImage(
+                                                                model = url,
+                                                                contentDescription = "Implementation image",
+                                                                modifier = Modifier.fillMaxSize(),
+                                                                contentScale = ContentScale.Crop
+                                                            )
                                                         }
                                                     }
                                                 }
@@ -467,49 +540,29 @@ fun TaskDetailScreen(
                                         }
                                     }
                                 }
+                                Spacer(modifier = Modifier.height(8.dp))
                             }
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                    }
-                   /* Log.d("advices", advices.toString())
-                    if (advices.isNotEmpty()) {
-                        Text(
-                            text = "Task Advice",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 16.dp)
-                        )
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        advices.reversed().forEach { advice ->
-                            SimpleAdviceItem(advice = advice)
-                            Spacer(modifier = Modifier.height(8.dp))
-                        }
-                    }
-
-                    val implementations = getImplementationsFromJson(task.implementationJson)
-                    Log.d("implementations", implementations.toString())
-                    if (implementations.isNotEmpty()) {
-                        Text(
-                            text = if (implementations.size == 1) "Implementation" else "Implementation History",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 16.dp)
-                        )
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        implementations.forEach { implementation ->
+                            if (implementations.size > 1) {
+                                // Show "View Less" button
+                                TextButton(
+                                    onClick = { showAllImplementations = false },
+                                    modifier = Modifier
+                                        .align(Alignment.End)
+                                        .padding(horizontal = 16.dp)
+                                ) {
+                                    Text("View Less")
+                                }
+                            }
+                        } else {
+                            // Show only the first implementation
+                            val firstImplementation = implementations.first()
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 16.dp),
                                 shape = RoundedCornerShape(8.dp),
                                 colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(
-                                        alpha = 0.5f
-                                    )
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                                 )
                             ) {
                                 Column(
@@ -520,12 +573,12 @@ fun TaskDetailScreen(
                                         horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
                                         Text(
-                                            text = implementation.supervisorName,
+                                            text = firstImplementation.supervisorName,
                                             style = MaterialTheme.typography.bodyMedium,
                                             fontWeight = FontWeight.Bold
                                         )
                                         Text(
-                                            text = formatTimestamp(implementation.timestamp),
+                                            text = formatTimestamp(firstImplementation.timestamp),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
@@ -534,12 +587,12 @@ fun TaskDetailScreen(
                                     Spacer(modifier = Modifier.height(8.dp))
 
                                     Text(
-                                        text = implementation.text,
+                                        text = firstImplementation.text,
                                         style = MaterialTheme.typography.bodyMedium
                                     )
 
                                     // Display implementation images if available
-                                    if (implementation.imageUrls?.isNotEmpty() == true) {
+                                    if (firstImplementation.imageUrls?.isNotEmpty() == true) {
                                         Spacer(modifier = Modifier.height(8.dp))
                                         Row(
                                             modifier = Modifier
@@ -547,14 +600,13 @@ fun TaskDetailScreen(
                                                 .horizontalScroll(rememberScrollState()),
                                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                                         ) {
-                                            implementation.imageUrls.forEach { url ->
+                                            firstImplementation.imageUrls.forEach { url ->
                                                 Box(modifier = Modifier.size(80.dp)) {
                                                     Card(
                                                         modifier = Modifier
                                                             .fillMaxSize()
                                                             .clickable {
-                                                                imagesToPreview =
-                                                                    listOf(url) // Preview single image
+                                                                imagesToPreview = listOf(url) // Preview single image
                                                                 showPreviewDialog = true
                                                             },
                                                         shape = RoundedCornerShape(8.dp)
@@ -571,9 +623,19 @@ fun TaskDetailScreen(
                                         }
                                     }
                                 }
-
                             }
                             Spacer(modifier = Modifier.height(8.dp))
+                            if (implementations.size > 1) {
+                                // Show "View More" button if there are more implementations
+                                TextButton(
+                                    onClick = { showAllImplementations = true },
+                                    modifier = Modifier
+                                        .align(Alignment.End)
+                                        .padding(horizontal = 16.dp)
+                                ) {
+                                    Text("View More (${implementations.size - 1} more)")
+                                }
+                            }
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))
@@ -592,7 +654,7 @@ fun TaskDetailScreen(
 
                     // Role-based actions
                     when (userRole) {
-                        "MANAGER" -> {
+                        "MANAGER" , "ADMIN" -> {
                             if (task.status.equals("submitted", ignoreCase = true) ||
                                 task.status.equals("implemented", ignoreCase = true)
                             ) {
@@ -744,11 +806,9 @@ fun TaskDetailScreen(
                         }
 
                         "SUPERVISOR" -> {
-                            if ((task.status.equals(
-                                    "submitted",
-                                    ignoreCase = true
-                                ) && advices.isNotEmpty()) ||
-                                task.status.equals("implemented", ignoreCase = true)
+                            if ((task.status.equals("submitted", ignoreCase = true) && advices.isNotEmpty())
+                                || task.status.equals("implemented", ignoreCase = true)
+                                || (task.status.equals("submitted", ignoreCase = true) && task.assignedTo != null)
                             ) {
 
                                 Spacer(modifier = Modifier.height(16.dp))
@@ -955,7 +1015,7 @@ fun TaskDetailScreen(
                                                         ignoreCase = true
                                                     )
                                                 )
-                                                    "Update Implementation" else "Submit Implementation"
+                                                    "Add Implementation" else "Submit Implementation"
                                             )
                                         }
                                     }
@@ -1252,12 +1312,23 @@ fun FormattedScoutingFields(detailsJson: String?) {
     }
 
     json?.let {
-        DetailRow("Disease/Pest", it.optString("nameOfDisease", "None detected"))
-        DetailRow("Fruits Count", it.optString("noOfFruitSeen", ""))
-        DetailRow("Flowers Count", it.optString("noOfFlowersSeen", ""))
-        DetailRow("Row", it.optString("row", ""))
-        DetailRow("Tree Number", it.optString("treeNo", ""))
-        DetailRow("Fruits Dropped", it.optString("noOfFruitsDropped", ""))
+        val fields = listOf(
+            "Disease" to it.optString("nameOfDisease", "None detected"),
+            "Fruits Count" to it.optString("noOfFruitSeen", ""),
+            "Flowers Count" to it.optString("noOfFlowersSeen", ""),
+            "Row" to it.optString("row", ""),
+            "Tree Number" to it.optString("treeNo", ""),
+            "Fruits Dropped" to it.optString("noOfFruitsDropped", ""),
+            "Valve" to it.optString("valveName", ""),
+            "Due Date" to it.optString("dueDate","noDue date")
+        )
+
+        // Filter out empty or blank values and display only valid ones
+        fields.forEach { (label, value) ->
+            if (value != "null") {
+                DetailRow(label, value)
+            }
+        }
     } ?: Text(
         text = "Error loading scouting details",
         style = MaterialTheme.typography.bodyMedium,
@@ -1283,7 +1354,7 @@ fun SimpleAdviceItem(advice: TaskAdvice) {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = advice.managerName ?: "Unknown",
+                    text = advice.managerName ?: "Manager",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -1404,7 +1475,7 @@ private fun formatTimestamp(timestamp: Long): String {
         "Unknown time"
     }
 }
-
+/*
 @RequiresApi(Build.VERSION_CODES.O)
 fun mergeAndSortCommunications(
     advices: List<TaskAdvice>,
@@ -1432,10 +1503,13 @@ fun mergeAndSortCommunications(
         .map { it.first } // Extract the CommunicationItem
 }
 
+
 sealed class CommunicationItem {
     data class Advice(val advice: TaskAdvice) : CommunicationItem()
     data class Implementation(val implementation: com.kapilagro.sasyak.presentation.tasks.Implementation) : CommunicationItem()
 }
+
+*/
 
 private sealed class UploadState {
     object Idle : UploadState()

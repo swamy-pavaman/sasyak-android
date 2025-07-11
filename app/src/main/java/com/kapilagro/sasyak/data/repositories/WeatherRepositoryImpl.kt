@@ -51,8 +51,8 @@ class WeatherRepositoryImpl @Inject constructor(
             Log.d(TAG, "Fetching from API (app launch or no cached data)...")
 
             // Default coordinates (Pithapuram)
-            var latitude = 17.1168
-            var longitude = 82.2528
+            var latitude = 17.264690446951853
+            var longitude = 78.27062508184291
 
             // Try to get actual location
             val result = locationService.getLocation()

@@ -110,6 +110,15 @@ fun ProfileScreen(
                         )
                     }
 
+                    "ADMIN" -> {
+                        AdminProfileContent(
+                            user = user,
+                            onEditProfileClick = onEditProfileClick,
+                            onLogoutClick = { showLogoutDialog = true },
+                            modifier = Modifier.padding(paddingValues)
+                        )
+                    }
+
                     else -> {
                         DefaultProfileContent(
                             user = user,
@@ -456,6 +465,149 @@ fun SupervisorProfileContent(
 }
 
 @Composable
+fun AdminProfileContent(
+    user: User,
+    onEditProfileClick: () -> Unit,
+    onLogoutClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // Profile header
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            // Profile photo
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box {
+                    // Avatar
+                    Image(
+                        painter = rememberAsyncImagePainter(user.profileImageUrl?.ifBlank { null }
+                            ?: R.drawable.ic_person),
+                        contentDescription = "Profile Photo",
+                        modifier = Modifier
+                            .size(100.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+
+                    // Online status indicator
+                    Box(
+                        modifier = Modifier
+                            .size(20.dp)
+                            .clip(CircleShape)
+                            .background(Green500)
+                            .align(Alignment.BottomEnd)
+                            .offset(x = (-4).dp, y = (-4).dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Name
+                Text(
+                    text = user.name,
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Role - Admin specific
+                Text(
+                    text = "Admin",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Specialization tags - Manager specific
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                ) {
+                    SpecializationChip(label = "User Management")
+                    Spacer(modifier = Modifier.width(8.dp))
+                    SpecializationChip(label = "Data Auditing")
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Edit profile button
+                OutlinedButton(
+                    onClick = onEditProfileClick,
+                    modifier = Modifier.width(200.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Edit,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Edit Profile")
+                }
+            }
+        }
+
+        Divider(modifier = Modifier.padding(vertical = 16.dp))
+
+        // Common profile details
+        ProfileInfoSection(user = user)
+
+        // Manager-specific section
+        Divider(modifier = Modifier.padding(vertical = 16.dp))
+
+        Text(
+            text = "Team Management",
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp)
+        )
+
+        // Team management shortcuts
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            ManagerActionItem(
+                icon = Icons.Outlined.Groups,
+                label = "My Team",
+                onClick = { /* Navigate to team management */ }
+            )
+
+            ManagerActionItem(
+                icon = Icons.Outlined.Person,
+                label = "Supervisors",
+                onClick = { /* Navigate to supervisors list */ }
+            )
+
+            ManagerActionItem(
+                icon = Icons.Outlined.Assignment,
+                label = "Tasks",
+                onClick = { /* Navigate to created tasks */ }
+            )
+        }
+
+        Spacer(modifier = Modifier.weight(1f))
+
+        // Logout button
+        LogoutButton(onLogoutClick = onLogoutClick)
+    }
+}
+
+@Composable
 fun DefaultProfileContent(
     user: User,
     onEditProfileClick: () -> Unit,
@@ -553,14 +705,14 @@ fun ProfileInfoSection(user: User) {
         ProfileInfoItem(
             icon = Icons.Outlined.LocationOn,
             label = "Location",
-            value = user.location ?: "Nashik, Maharashtra" // Fallback
+            value = user.location ?: "Moinabad,Telangana" // Fallback
         )
 
-        ProfileInfoItem(
-            icon = Icons.Outlined.CalendarToday,
-            label = "Joined",
-            value = user.joinedDate ?: "April 2022" // Fallback
-        )
+//        ProfileInfoItem(
+//            icon = Icons.Outlined.CalendarToday,
+//            label = "Joined",
+//            value = user.joinedDate ?: "April 2022" // Fallback
+//        )
     }
 }
 

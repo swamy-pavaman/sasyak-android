@@ -130,7 +130,11 @@ fun TaskCard(
     task: Task,
     onClick: () -> Unit
 ) {
-    val firstImageUrl = getFirstImageUrl(task.imagesJson)
+    var firstImageUrl = getFirstImageUrl(task.imagesJson)
+
+    if (firstImageUrl == null){
+        firstImageUrl = "https://minio.kapilagro.com:9000/sasyak/placeholder.png"
+    }
 
     Card(
         modifier = Modifier
