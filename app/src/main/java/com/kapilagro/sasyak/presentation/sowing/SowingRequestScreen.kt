@@ -783,6 +783,7 @@ fun SowingRequestScreen(
             // Upload Section
             Text(
                 text = "Upload",
+
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
@@ -911,7 +912,9 @@ fun SowingRequestScreen(
             Button(
                 onClick = {
                     if (cropName.isNotBlank() && row.isNotBlank() && seedVariety.isNotBlank() &&
+
                         sowingMethod.isNotBlank() && (userRole != "ADMIN" || assignedTo != null) &&
+
                         (userRole != "MANAGER" || assignedTo != null)) {
                         scope.launch(ioDispatcher) {
                             val sowingDetails = SowingDetails(

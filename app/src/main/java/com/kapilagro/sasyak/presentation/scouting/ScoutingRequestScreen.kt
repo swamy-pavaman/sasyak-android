@@ -396,6 +396,7 @@ fun ScoutingRequestScreen(
             // Row Dropdown
             OutlinedTextField(
                 value = row,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 onValueChange = { newValue ->
                     row = newValue
                 },
@@ -722,7 +723,9 @@ fun ScoutingRequestScreen(
 
             // Upload Section
             Text(
+
                 text = "Upload",
+
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
@@ -831,6 +834,7 @@ fun ScoutingRequestScreen(
             // Submit Button
             Button(
                 onClick = {
+
                     if (cropName.isNotBlank() && row.isNotBlank() && valveName.isNotBlank() && treeNo.isNotBlank() && (userRole != "ADMIN" || assignedTo != null) &&
                         (userRole != "MANAGER" || assignedTo != null)){
                         scope.launch(ioDispatcher) {

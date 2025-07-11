@@ -833,6 +833,7 @@ fun FuelRequestScreen(
             // Upload Section
             Text(
                 text = "Upload",
+
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
@@ -943,6 +944,7 @@ fun FuelRequestScreen(
                 onClick = {
                     if (vehicleName.isNotBlank() && fuelType.isNotBlank() && (userRole != "ADMIN" || assignedTo != null) && quantity.isNotBlank()
                         && (userRole != "MANAGER" || assignedTo != null)) {
+
                         scope.launch(ioDispatcher) {
                             val fuelDetails = FuelDetails(
                                 fuelDate = fuelDate,

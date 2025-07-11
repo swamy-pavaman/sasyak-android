@@ -326,6 +326,7 @@ fun YieldRequestScreen(
             // Row Dropdown
             OutlinedTextField(
                 value = row,
+
                 onValueChange = {newValue ->
                     row = newValue
                 },
@@ -697,6 +698,7 @@ fun YieldRequestScreen(
             // Upload Section
             Text(
                 text ="Upload",
+
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
@@ -806,7 +808,9 @@ fun YieldRequestScreen(
             Button(
                 onClick = {
                     if (cropName.isNotBlank() && row.isNotBlank() && yieldQuantity.isNotBlank() &&
+
                         yieldUnit.isNotBlank() && (userRole != "ADMIN" || assignedTo != null) &&
+
                         (userRole != "MANAGER" || assignedTo != null)) {
                         scope.launch(ioDispatcher) {
                             val yieldDetails = YieldDetails(

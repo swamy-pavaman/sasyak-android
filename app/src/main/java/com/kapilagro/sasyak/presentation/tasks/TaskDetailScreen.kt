@@ -639,7 +639,7 @@ fun TaskDetailScreen(
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))
-                    }
+                    }*/
                     if (showPreviewDialog && imagesToPreview != null) {
                         Dialog(
                             onDismissRequest = {
@@ -1341,7 +1341,7 @@ fun FormattedScoutingFields(detailsJson: String?) {
 fun SimpleAdviceItem(advice: TaskAdvice) {
     Card(
         modifier = Modifier
-            .fillMaxWidth()
+            .fillMaxWidth(0.9f)
             .padding(horizontal = 16.dp),
         shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
@@ -1503,11 +1503,14 @@ fun mergeAndSortCommunications(
         .map { it.first } // Extract the CommunicationItem
 }
 
+
 sealed class CommunicationItem {
     data class Advice(val advice: TaskAdvice) : CommunicationItem()
     data class Implementation(val implementation: com.kapilagro.sasyak.presentation.tasks.Implementation) : CommunicationItem()
 }
+
 */
+
 private sealed class UploadState {
     object Idle : UploadState()
     object Loading : UploadState()

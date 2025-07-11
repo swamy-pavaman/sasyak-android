@@ -354,6 +354,7 @@ fun SprayingRequestScreen(
             // Row Dropdown
             OutlinedTextField(
                 value = row,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 onValueChange = { newValue ->
                     row = newValue
                 },
@@ -863,6 +864,7 @@ fun SprayingRequestScreen(
             // Upload Section
             Text(
                 text = "Upload",
+
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
@@ -973,6 +975,7 @@ fun SprayingRequestScreen(
                 onClick = {
                     if (cropName.isNotBlank() && row.isNotBlank() && chemicalName.isNotBlank() &&
                         sprayingMethod.isNotBlank() && (userRole != "ADMIN" || assignedTo != null) &&
+
                         (userRole != "MANAGER" || assignedTo != null)) {
                         scope.launch(ioDispatcher) {
                             val sprayingDetails = SprayingDetails(
