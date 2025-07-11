@@ -85,7 +85,6 @@
 
 package com.kapilagro.sasyak.presentation.auth
 
-import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kapilagro.sasyak.di.IoDispatcher
@@ -171,8 +170,6 @@ fun login(email: String, password: String) {
             _loginState.value = LoginState.Idle
         }
     }
-
-
 
     fun clearLoginState() {
         _loginState.value = LoginState.Idle
