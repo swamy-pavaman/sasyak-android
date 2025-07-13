@@ -389,7 +389,11 @@ fun AppNavGraph(
         }
 
         composable(Screen.Reports.route) {
-            ReportScreen()
+            ReportScreen(
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
         }
 
         composable(Screen.Notifications.route) {
