@@ -7,6 +7,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
@@ -26,12 +28,14 @@ import com.kapilagro.sasyak.R
 import com.kapilagro.sasyak.presentation.common.theme.*
 import com.kapilagro.sasyak.presentation.reports.components.TaskCompletionChart
 import com.kapilagro.sasyak.presentation.reports.components.TaskTypeSummary
+import com.kapilagro.sasyak.presentation.reports.components.TasksByUser
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReportScreen(
-    viewModel: ReportViewModel = hiltViewModel()
+    viewModel: ReportViewModel = hiltViewModel(),
+    onBackClick: () -> Unit
 ) {
     val reportState by viewModel.reportState.collectAsState()
     val chartTab by viewModel.chartTab.collectAsState()
@@ -40,16 +44,21 @@ fun ReportScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Reports") },
-                actions = {
-                    IconButton(onClick = { /* Export reports */ }) {
-                        Icon(
-                            painter = androidx.compose.ui.res.painterResource(
-                                id = R.drawable.ic_drop
-                            ),
-                            contentDescription = "Export"
-                        )
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
-                }
+                },
+//                actions = {
+//                    IconButton(onClick = { /* Export reports */ }) {
+//                        Icon(
+//                            painter = androidx.compose.ui.res.painterResource(
+//                                id = R.drawable.ic_drop
+//                            ),
+//                            contentDescription = "Export"
+//                        )
+//                    }
+//                }
             )
         }
     ) { paddingValues ->
@@ -94,12 +103,12 @@ fun ReportScreen(
                 Tab(
                     selected = chartTab == ReportViewModel.ChartTab.WEEKLY,
                     onClick = { viewModel.setChartTab(ReportViewModel.ChartTab.WEEKLY) },
-                    text = { Text("Weekly") }
+                    text = { Text("Daily") }
                 )
                 Tab(
                     selected = chartTab == ReportViewModel.ChartTab.MONTHLY,
                     onClick = { viewModel.setChartTab(ReportViewModel.ChartTab.MONTHLY) },
-                    text = { Text("Monthly") }
+                    text = { Text("Weekly") }
                 )
             }
 
@@ -138,6 +147,7 @@ fun ReportScreen(
 
                     val report = (reportState as ReportViewModel.ReportState.Success).report
                     TaskTypeSummary(report.tasksByType)
+                    TasksByUser(report.tasksByUser)
                 }
 
                 is ReportViewModel.ReportState.Loading -> {
