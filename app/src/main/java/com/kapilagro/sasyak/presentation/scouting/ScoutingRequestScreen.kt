@@ -1,7 +1,6 @@
 package com.kapilagro.sasyak.presentation.scouting
 
 import android.os.Build
-import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -33,7 +32,6 @@ import com.kapilagro.sasyak.domain.models.ScoutingDetails
 import com.kapilagro.sasyak.presentation.common.catalog.CategoryViewModel
 import com.kapilagro.sasyak.presentation.common.catalog.CategoriesState
 import com.kapilagro.sasyak.presentation.common.components.SuccessDialog
-import com.kapilagro.sasyak.presentation.common.navigation.Screen
 import com.kapilagro.sasyak.presentation.common.theme.AgroPrimary
 import com.kapilagro.sasyak.presentation.home.HomeViewModel
 import com.kapilagro.sasyak.presentation.tasks.TaskViewModel
@@ -45,6 +43,37 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import kotlin.collections.filter
+import kotlinx.serialization.Serializable
+import com.kapilagro.sasyak.presentation.common.navigation.Screen
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonPrimitive
+
+// Data classes for JSON parsing
+@Serializable
+data class CropDetails(
+    val rawData: Map<String, JsonElement> = emptyMap()
+) {
+    val rows: Map<String, List<String>> by lazy {
+        rawData.filterKeys { it != "PESTS" && it != "DISEASES" }
+            .mapValues { (_, value) ->
+                if (value is JsonArray) {
+                    value.map { it.jsonPrimitive.content }
+                } else {
+                    emptyList()
+                }
+            }
+    }
+
+    val PESTS: List<String>? by lazy {
+        rawData["PESTS"]?.jsonArray?.map { it.jsonPrimitive.content }
+    }
+
+    val DISEASES: List<String>? by lazy {
+        rawData["DISEASES"]?.jsonArray?.map { it.jsonPrimitive.content }
+    }
+}
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
@@ -108,7 +137,6 @@ fun ScoutingRequestScreen(
     }
     var showDatePicker by remember { mutableStateOf(false) }
 
-
     val datePattern = Regex("\\d{2}-\\d{2}-\\d{4}")
     val isValidDueDate = dueDateText.matches(datePattern) && try {
         LocalDate.parse(dueDateText, DateTimeFormatter.ofPattern("dd-MM-yyyy")).isAfter(LocalDate.now())
@@ -143,52 +171,90 @@ fun ScoutingRequestScreen(
         }
     }
 
-    // Fetch crops and diseases
+    // Fetch valves
     LaunchedEffect(Unit) {
-        categoryViewModel.fetchCategories("Crop")
-        categoryViewModel.fetchCategories("Disease")
         categoryViewModel.fetchCategories("Valve")
     }
 
-    // Extract crops and diseases
-    val crops = when (val state = categoriesStates["Crop"]) {
-        is CategoriesState.Success -> state.categories.map { it.value }
-        else -> listOf(
-            "Wheat", "Rice", "Maize", "Barley", "Sorghum",
-            "Mango", "Banana", "Apple", "Papaya", "Guava",
-            "Tomato", "Potato", "Onion", "Brinjal", "Cabbage",
-            "Sugarcane", "Groundnut", "Cotton", "Soybean", "Mustard"
-        )
-    }
-    val diseases = when (val state = categoriesStates["Disease"]) {
-        is CategoriesState.Success -> state.categories.map { it.value }
-        else -> listOf(
-            "Powdery mildew", "Downy mildew", "Late blight", "Early blight", "Rust", "Fusarium wilt",
-            "Verticillium wilt", "Anthracnose", "Leaf spot", "Damping-off", "Fire blight",
-            "Bacterial blight", "Mosaic virus", "Black spot", "Citrus canker"
-        )
-    }
-    val valves = when (val state = categoriesStates["Valve"]) {
-        is CategoriesState.Success -> state.categories.map { it.value }
-        else -> listOf(
-            "Valve 1", "Valve 2", "Valve 3"
-        )
-    }
-
-    // Log states for debugging
-    LaunchedEffect(categoriesStates) {
-        Log.d("Categories", "Crops: $crops, Diseases: $diseases")
-    }
-
-    val rows = (1..20).map { it.toString() }
-    val trees = (1..50).map { it.toString() }
-
-    // Load supervisors list for MANAGER role
-    LaunchedEffect(Unit) {
-        if (userRole == "MANAGER") {
-            homeViewModel.loadSupervisorsList()
+    // Extract valve details
+    val valveDetails = when (val state = categoriesStates["Valve"]) {
+        is CategoriesState.Success -> {
+            state.valveDetails
+        }else -> {
+            emptyMap()
         }
     }
+
+    // Dynamic lists
+    val valves = when (val state = categoriesStates["Valve"]) {
+        is CategoriesState.Success -> state.categories.map { it.value }
+        else -> emptyList()
+    }
+
+    val crops by remember(valveName) {
+        derivedStateOf {
+            val cropList = valveDetails[valveName]?.keys?.toList() ?: emptyList()
+            cropList
+        }
+    }
+
+    val diseases by remember(valveName, cropName) {
+        derivedStateOf {
+            val diseaseList = valveDetails[valveName]?.get(cropName)?.DISEASES?.map { it.trim() } ?: emptyList()
+            diseaseList
+        }
+    }
+
+    val pests by remember(valveName, cropName) {
+        derivedStateOf {
+            val pestList =
+                valveDetails[valveName]?.get(cropName)?.PESTS?.map { it.trim() } ?: emptyList()
+            pestList
+        }
+    }
+
+    val rows by remember(valveName, cropName) {
+        derivedStateOf {
+            val rowList =
+                valveDetails[valveName]?.get(cropName)?.rows?.keys?.toList() ?: emptyList()
+            rowList
+        }
+    }
+
+    val treeNumbers by remember(valveName, cropName, row) {
+        derivedStateOf {
+            val treeList = valveDetails[valveName]?.get(cropName)?.rows?.get(row) ?: emptyList()
+            treeList
+        }
+    }
+
+    // Reset dependent fields
+//    LaunchedEffect(valveName) {
+//        Log.d("ScoutingRequestScreen", "Resetting fields due to valveName change: $valveName")
+//        cropName = ""
+//        nameOfDisease = ""
+//        row = ""
+//        treeNo = ""
+//    }
+//
+//    LaunchedEffect(cropName) {
+//        Log.d("ScoutingRequestScreen", "Resetting fields due to cropName change: $cropName")
+//        nameOfDisease = ""
+//        row = ""
+//        treeNo = ""
+//    }
+//
+//    LaunchedEffect(row) {
+//        Log.d("ScoutingRequestScreen", "Resetting treeNo due to row change: $row")
+//        treeNo = ""
+//    }
+//
+//    // Load supervisors list for MANAGER role
+//    LaunchedEffect(Unit) {
+//        if (userRole == "MANAGER") {
+//            homeViewModel.loadSupervisorsList()
+//        }
+//    }
 
     // Handle navigation result from ImageCaptureScreen
     LaunchedEffect(navController) {
@@ -333,8 +399,6 @@ fun ScoutingRequestScreen(
                 }
             }
 
-
-
             Spacer(modifier = Modifier.height(16.dp))
 
             // Crop Name Dropdown
@@ -395,31 +459,116 @@ fun ScoutingRequestScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Row Dropdown
-            OutlinedTextField(
-                value = row,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                onValueChange = { newValue ->
-                    row = newValue
-                },
-                label = { Text("Row *") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp)
-            )
+            ExposedDropdownMenuBox(
+                expanded = rowExpanded,
+                onExpandedChange = { rowExpanded = it },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    value = row,
+                    readOnly = false,
+                    onValueChange = { newValue ->
+                        row = newValue
+                        rowExpanded = true
+                    },
+                    label = { Text("Row *") },
+                    trailingIcon = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (row.isNotEmpty()) {
+                                IconButton(onClick = { row = "" }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Clear row",
+                                        tint = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = rowExpanded)
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(),
+                    shape = RoundedCornerShape(8.dp)
+                )
+
+                ExposedDropdownMenu(
+                    expanded = rowExpanded,
+                    onDismissRequest = { rowExpanded = false }
+                ) {
+                    rows
+                        .filter { it.contains(row, ignoreCase = true) }
+                        .forEach { rowItem ->
+                            DropdownMenuItem(
+                                text = { Text(rowItem) },
+                                onClick = {
+                                    row = rowItem
+                                    rowExpanded = false
+                                }
+                            )
+                        }
+                }
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
             // Tree No Dropdown
-            OutlinedTextField(
-                value = treeNo,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                onValueChange = { newValue ->
-                    treeNo = newValue
-                },
-                label = { Text("Tree no *") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp)
-            )
+            ExposedDropdownMenuBox(
+                expanded = treeNoExpanded,
+                onExpandedChange = { treeNoExpanded = it },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    value = treeNo,
+                    readOnly = false,
+                    onValueChange = { newValue ->
+                        treeNo = newValue
+                        treeNoExpanded = true
+                    },
+                    label = { Text("Tree no *") },
+                    trailingIcon = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (treeNo.isNotEmpty()) {
+                                IconButton(onClick = { treeNo = "" }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Clear tree number",
+                                        tint = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = treeNoExpanded)
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(),
+                    shape = RoundedCornerShape(8.dp)
+                )
 
+                ExposedDropdownMenu(
+                    expanded = treeNoExpanded,
+                    onDismissRequest = { treeNoExpanded = false }
+                ) {
+                    treeNumbers
+                        .filter { it.contains(treeNo, ignoreCase = true) }
+                        .forEach { tree ->
+                            DropdownMenuItem(
+                                text = { Text(tree) },
+                                onClick = {
+                                    treeNo = tree
+                                    treeNoExpanded = false
+                                }
+                            )
+                        }
+                }
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -476,7 +625,7 @@ fun ScoutingRequestScreen(
                     trailingIcon = {
                         Row(
                             verticalAlignment = Alignment.CenterVertically
-                        ){
+                        ) {
                             if (nameOfDisease.isNotEmpty()) {
                                 IconButton(onClick = { nameOfDisease = "" }) {
                                     Icon(
@@ -514,7 +663,6 @@ fun ScoutingRequestScreen(
                 }
             }
 
-
             Spacer(modifier = Modifier.height(16.dp))
 
             // Assign to Dropdown (for MANAGER role)
@@ -534,7 +682,7 @@ fun ScoutingRequestScreen(
                 ) {
                     OutlinedTextField(
                         value = selectedSupervisorName,
-                        onValueChange = {}, // Read-only
+                        onValueChange = {},
                         label = { Text("Assign to *") },
                         trailingIcon = {
                             ExposedDropdownMenuDefaults.TrailingIcon(expanded = assignedToExpanded)
@@ -562,13 +710,7 @@ fun ScoutingRequestScreen(
                     }
                 }
 
-
-                // TODO ADD Due Date only to manager not for supervisor
-
-
                 Spacer(modifier = Modifier.height(16.dp))
-
-
             }
 
             if (userRole == "ADMIN") {
@@ -713,8 +855,6 @@ fun ScoutingRequestScreen(
                                             .atZone(ZoneId.systemDefault())
                                             .toLocalDate()
                                         dueDateText = selectedDate.format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))
-
-                                        Log.d("due date ",dueDateText)
                                     }
                                     showDatePicker = false
                                 }
@@ -737,9 +877,7 @@ fun ScoutingRequestScreen(
 
             // Upload Section
             Text(
-
                 text = "Upload",
-
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
@@ -848,7 +986,6 @@ fun ScoutingRequestScreen(
             // Submit Button
             Button(
                 onClick = {
-
                     if (cropName.isNotBlank() && row.isNotBlank()
                         && valveName.isNotBlank() && treeNo.isNotBlank()
                         && (userRole != "ADMIN" || assignedTo != null) && isValidDueDate &&
