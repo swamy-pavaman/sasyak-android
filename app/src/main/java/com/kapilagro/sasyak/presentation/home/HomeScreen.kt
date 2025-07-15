@@ -143,11 +143,11 @@ fun HomeScreen(
                                 if (unreadCount > 0) {
                                     Box(
                                         modifier = Modifier
-                                            .size(20.dp) // Slightly larger for visibility
+                                            .size(22.dp) // Slightly larger for visibility
                                             .background(MaterialTheme.colorScheme.error, shape = CircleShape)
                                             .align(Alignment.TopEnd)
-                                            .offset(x = (-2).dp, y = 2.dp),
-                                        contentAlignment = Alignment.Center
+                                        .offset(x = (-1.2).dp, y = 0.dp),
+                                        contentAlignment = Alignment.Center// Adjusted y to 0.dp for centering                                        contentAlignment = Alignment.Center
                                     ) {
                                         Text(
                                             text = if (unreadCount > 99) "99+" else unreadCount.toString(),

@@ -1,7 +1,6 @@
 package com.kapilagro.sasyak.presentation.reports
 
 import android.os.Build
-import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -11,7 +10,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -29,6 +27,8 @@ import com.kapilagro.sasyak.presentation.common.theme.*
 import com.kapilagro.sasyak.presentation.reports.components.TaskCompletionChart
 import com.kapilagro.sasyak.presentation.reports.components.TaskTypeSummary
 import com.kapilagro.sasyak.presentation.reports.components.TasksByUser
+import com.kapilagro.sasyak.presentation.reports.components.TaskByAvgCompletionTime
+import com.kapilagro.sasyak.presentation.reports.components.TaskByStatus
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
@@ -122,11 +122,6 @@ fun ReportScreen(
                         viewModel.getMonthlyTaskCounts()
                     }
 
-                    Log.d(
-                        "ReportScreen",
-                        "Task Counts for Chart - Completed: ${taskCounts.first.size}, Created: ${taskCounts.second.size}"
-                    )
-
                     TaskCompletionChart(
                         taskCounts = taskCounts,
                         modifier = Modifier
@@ -147,6 +142,11 @@ fun ReportScreen(
 
                     val report = (reportState as ReportViewModel.ReportState.Success).report
                     TaskTypeSummary(report.tasksByType)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    TaskByAvgCompletionTime(report.avgCompletionTimeByType)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    TaskByStatus(report.tasksByStatus)
+                    Spacer(modifier = Modifier.height(16.dp))
                     TasksByUser(report.tasksByUser)
                 }
 
@@ -173,20 +173,20 @@ fun ReportScreen(
                             )
                         }
                     }
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center,
-                            modifier = Modifier.fillMaxSize()
-                        ) {
-                            LottieAnimation(
-                                composition = composition,
-                                progress = { lottieAnimatable.progress },
-                                modifier = Modifier.size(300.dp)
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Button(onClick = { viewModel.loadTaskReport() }) {
-                                Text("Retry")
-                            }
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        LottieAnimation(
+                            composition = composition,
+                            progress = { lottieAnimatable.progress },
+                            modifier = Modifier.size(300.dp)
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Button(onClick = { viewModel.loadTaskReport() }) {
+                            Text("Retry")
+                        }
                     }
                 }
             }
