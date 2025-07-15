@@ -1341,7 +1341,7 @@ fun FormattedScoutingFields(detailsJson: String?) {
 fun SimpleAdviceItem(advice: TaskAdvice) {
     Card(
         modifier = Modifier
-            .fillMaxWidth(0.9f)
+            .fillMaxWidth()
             .padding(horizontal = 16.dp),
         shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
