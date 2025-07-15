@@ -202,10 +202,14 @@ fun TeamMembersList(
         contentPadding = PaddingValues(vertical = 16.dp)
     ) {
         items(teamMembers) { teamMember ->
-            TeamMemberCard(
-                teamMember = teamMember,
-                onClick = { onTeamMemberClick(teamMember.id) }
-            )
+            if(teamMember.role == "ADMIN") {
+                // Do Nothing
+            }else {
+                TeamMemberCard(
+                    teamMember = teamMember,
+                    onClick = { onTeamMemberClick(teamMember.id) }
+                )
+            }
         }
     }
 }

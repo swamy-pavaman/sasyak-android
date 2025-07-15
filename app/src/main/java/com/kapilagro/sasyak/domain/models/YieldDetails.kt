@@ -31,6 +31,7 @@ data class YieldDetails(
     val harvestDate: String,
     val cropName: String,
     val row: String,
+    val valveName: String,
     val fieldArea: String? = null,
     val yieldQuantity: String,
     val yieldUnit: String,

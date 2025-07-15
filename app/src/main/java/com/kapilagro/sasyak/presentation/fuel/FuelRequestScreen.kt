@@ -1,5 +1,6 @@
 package com.kapilagro.sasyak.presentation.fuel
 
+import android.R.attr.description
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
@@ -24,6 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.kapilagro.sasyak.data.api.ImageUploadService
@@ -42,6 +44,8 @@ import java.time.format.DateTimeFormatter
 import com.kapilagro.sasyak.presentation.common.catalog.CategoryViewModel
 import com.kapilagro.sasyak.presentation.common.catalog.CategoriesState
 import com.kapilagro.sasyak.presentation.tasks.TaskViewModel
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import java.time.Instant
 import java.time.ZoneId
 
@@ -150,40 +154,38 @@ fun FuelRequestScreen(
 
     LaunchedEffect(Unit) {
         categoryViewModel.fetchCategories("Vehicle")
-        categoryViewModel.fetchCategories("Vehicle-no")
         categoryViewModel.fetchCategories("Driver")
     }
 
-    val vehicles = when (val state = categoriesStates["Vehicle"]) {
+    val state = categoriesStates["Vehicle"]
+
+    val vehicles = when (state) {
         is CategoriesState.Success -> state.categories.map { it.value }
         else -> listOf(
-            "Tractor - John Deere",
-            "Tractor - Mahindra",
-            "Truck - Tata",
             "Harvester",
             "Water Pump",
             "Generator",
             "Sprayer",
-            "Pickup Truck",
-            "Farm Utility Vehicle"
         )
     }
-    val vehicleNumbers = when (val state = categoriesStates["Vehicle-no"]) {
-        is CategoriesState.Success -> state.categories.map { it.value }
-        else -> listOf(
-            "TS-01-1234"
-        )
+    val vehicleNameToNumbers: Map<String, List<String>> = when (state) {
+        is CategoriesState.Success -> {
+            state.categories.associate { category ->
+                // category.value = vehicle name ("Truck", "Thor", etc.)
+                val vehicleNumbers = parseDetailsToGetVehicleNumbers(category.details)
+                category.value to vehicleNumbers
+            }
+        }
+        else -> emptyMap()
     }
+    val vehicleNumbers:List<String> = vehicleNameToNumbers[vehicleName] ?: emptyList()
+
     val drivers = when (val state = categoriesStates["Driver"]) {
         is CategoriesState.Success -> state.categories.map { it.value }
         else -> listOf(
             "Default"
         )
     }
-    LaunchedEffect(categoriesStates) {
-        Log.d("Categories", "Vehicles: $vehicles, VehicleNumbers: $vehicleNumbers, Drivers: $drivers")
-    }
-
 
     val fuelTypes = listOf(
         "Diesel", "Petrol", "CNG", "LPG", "Bio-diesel", "Electric"
@@ -1044,6 +1046,21 @@ fun FuelRequestScreen(
         }
     }
 }
+
+fun parseDetailsToGetVehicleNumbers(detailsJson: String): List<String> {
+    return try {
+        val jsonElement = Json.parseToJsonElement(detailsJson)
+        if (jsonElement is JsonObject) {
+            jsonElement.keys.toList()
+        } else {
+            emptyList()
+        }
+    } catch (e: Exception) {
+        emptyList()
+    }
+}
+
+
 
 private sealed class UploadState {
     object Idle : UploadState()

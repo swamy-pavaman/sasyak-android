@@ -100,6 +100,9 @@ fun SowingRequestScreen(
     var imageFiles by remember { mutableStateOf<List<File>?>(null) }
     var assignedTo by remember { mutableStateOf<Int?>(savedStateHandle?.get<Int>("assignedTo")) }
     var assignedToExpanded by remember { mutableStateOf(false) }
+    var valveName by remember { mutableStateOf(savedStateHandle?.get<String>("valveName") ?: "") }
+    var valveNameExpanded by remember { mutableStateOf(false) }
+
     var dueDateText by remember {
         mutableStateOf(
             savedStateHandle?.get<String>("dueDate")
@@ -140,7 +143,8 @@ fun SowingRequestScreen(
                 "assignedTo" to assignedTo,
                 "dueDate" to dueDateText,
                 "selectedRole" to selectedRole,
-                "selectedUser" to selectedUser
+                "selectedUser" to selectedUser,
+                "valveName" to valveName
             )
         }.collect { state ->
             state.forEach { (key, value) ->
@@ -150,23 +154,38 @@ fun SowingRequestScreen(
     }
 
     LaunchedEffect(Unit) {
-        categoryViewModel.fetchCategories("Crop")
-        categoryViewModel.fetchCategories("Seed-variety")
+        categoryViewModel.fetchCategories("Valve")
+        categoryViewModel.fetchCategories("Seed-variety") // TODO () Need to think how to pass seed varieties
     }
-
-    val crops = when (val state = categoriesStates["Crop"]) {
+    val valveDetails = when (val state = categoriesStates["Valve"]) {
+        is CategoriesState.Success -> {
+            state.valveDetails
+        }else -> {
+            emptyMap()
+        }
+    }
+    // Dynamic lists
+    val valves = when (val state = categoriesStates["Valve"]) {
         is CategoriesState.Success -> state.categories.map { it.value }
-        else -> listOf(
-            "Wheat", "Rice", "Maize", "Barley", "Sorghum",
-            "Mango", "Banana", "Apple", "Papaya", "Guava",
-            "Tomato", "Potato", "Onion", "Brinjal", "Cabbage",
-            "Sugarcane", "Groundnut", "Cotton", "Soybean", "Mustard"
-        )
+        else -> emptyList()
     }
 
-    val rows = (1..20).map { it.toString() }
+    val crops by remember(valveName) {
+        derivedStateOf {
+            val cropList = valveDetails[valveName]?.keys?.toList() ?: emptyList()
+            cropList
+        }
+    }
 
-    val seedVarieties = when (val state = categoriesStates["Seed-variety"]) {
+    val rows by remember(valveName, cropName) {
+        derivedStateOf {
+            val rowList =
+                valveDetails[valveName]?.get(cropName)?.rows?.keys?.toList() ?: emptyList()
+            rowList
+        }
+    }
+
+    val seedVarieties = when (val state = categoriesStates["Seed-variety"]) { // TODO ()
         is CategoriesState.Success -> state.categories.map { it.value }
         else -> listOf(
             "HD-2967", "PBW-343", "WH-542", "HD-3086", "DBW-17",
@@ -289,6 +308,63 @@ fun SowingRequestScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Valve Name Dropdown
+            ExposedDropdownMenuBox(
+                expanded = valveNameExpanded,
+                onExpandedChange = { valveNameExpanded = it },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    value = valveName,
+                    readOnly = false,
+                    onValueChange = { newValue ->
+                        valveName = newValue
+                        valveNameExpanded = true
+                    },
+                    label = { Text("Valve name *") },
+                    trailingIcon = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ){
+                            if (valveName.isNotEmpty()) {
+                                IconButton(onClick = { valveName = "" }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Clear valve name",
+                                        tint = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = valveNameExpanded)
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(),
+                    shape = RoundedCornerShape(8.dp)
+                )
+
+                ExposedDropdownMenu(
+                    expanded = valveNameExpanded,
+                    onDismissRequest = { valveNameExpanded = false }
+                ) {
+                    valves
+                        .filter { it.contains(valveName, ignoreCase = true) }
+                        .forEach { valve ->
+                            DropdownMenuItem(
+                                text = { Text(valve)},
+                                onClick = {
+                                    valveName = valve
+                                    valveNameExpanded = false
+                                }
+                            )
+                        }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             // Crop Name Dropdown
             ExposedDropdownMenuBox(
                 expanded = cropNameExpanded,
@@ -348,15 +424,59 @@ fun SowingRequestScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Row Dropdown
-            OutlinedTextField(
-                value = row,
-                onValueChange = {newValue ->
-                    row = newValue},
-                label = { Text("Row *") },
-                modifier = Modifier
-                    .fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp)
-            )
+            ExposedDropdownMenuBox(
+                expanded = rowExpanded,
+                onExpandedChange = { rowExpanded = it },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    value = row,
+                    readOnly = false,
+                    onValueChange = { newValue ->
+                        row = newValue
+                        rowExpanded = true
+                    },
+                    label = { Text("Row *") },
+                    trailingIcon = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (row.isNotEmpty()) {
+                                IconButton(onClick = { row = "" }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Clear row",
+                                        tint = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = rowExpanded)
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(),
+                    shape = RoundedCornerShape(8.dp)
+                )
+
+                ExposedDropdownMenu(
+                    expanded = rowExpanded,
+                    onDismissRequest = { rowExpanded = false }
+                ) {
+                    rows
+                        .filter { it.contains(row, ignoreCase = true) }
+                        .forEach { rowItem ->
+                            DropdownMenuItem(
+                                text = { Text(rowItem) },
+                                onClick = {
+                                    row = rowItem
+                                    rowExpanded = false
+                                }
+                            )
+                        }
+                }
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -925,7 +1045,7 @@ fun SowingRequestScreen(
             // Submit Button
             Button(
                 onClick = {
-                    if (cropName.isNotBlank() && row.isNotBlank() && seedVariety.isNotBlank() &&
+                    if (cropName.isNotBlank() && row.isNotBlank() && seedVariety.isNotBlank() && valveName.isNotBlank() &&
                         sowingMethod.isNotBlank() && isValidDueDate
                         && (userRole != "ADMIN" || assignedTo != null) &&
                         (userRole != "MANAGER" || assignedTo != null)) {
@@ -934,6 +1054,7 @@ fun SowingRequestScreen(
                                 sowingDate = sowingDate,
                                 cropName = cropName,
                                 row = row.toString(),
+                                valveName = valveName,
                                 fieldArea = fieldArea.ifBlank { null },
                                 seedVariety = seedVariety,
                                 seedQuantity = seedQuantity.ifBlank { null },
@@ -987,7 +1108,7 @@ fun SowingRequestScreen(
                         }
                     }
                 },
-                enabled = cropName.isNotBlank() && row.isNotBlank() && seedVariety.isNotBlank() &&
+                enabled = cropName.isNotBlank() && row.isNotBlank() && seedVariety.isNotBlank() && valveName.isNotBlank() &&
                         sowingMethod.isNotBlank() && isValidDueDate
                         && (userRole != "ADMIN" || assignedTo != null) &&
                         createSowingState !is SowingListViewModel.CreateSowingState.Loading &&
