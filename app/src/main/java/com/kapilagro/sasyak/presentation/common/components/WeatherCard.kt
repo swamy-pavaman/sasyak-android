@@ -109,7 +109,7 @@ fun WeatherCard(
                 ) {
                     WeatherMetricItem(
                         icon = Icons.Outlined.WaterDrop,
-                        title = "Rain Chance",
+                        title = "Rain",
                         value = "${weatherInfo.precipitationProbability}%",
                         tint = AgroPrimary
                     )

@@ -57,6 +57,7 @@ sealed class Screen(val route: String, val title: String, @DrawableRes val icon:
         fun createRoute(taskId: String) = "task_detail/$taskId"
     }
     object CreateTask : Screen("create_task", "Create Task")
+    object MyTasksScreen : Screen("my_tasks", "My Tasks")
 
     // Scanner related screens
     object ScanResult : Screen("scan_result", "Scan Result")

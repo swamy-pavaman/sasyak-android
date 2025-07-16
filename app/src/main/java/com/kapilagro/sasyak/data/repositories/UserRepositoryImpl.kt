@@ -198,6 +198,43 @@ class UserRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun getAdminTeam(): ApiResponse<List<TeamMember>> {
+        return try {
+            val response = apiService.getAdminTeam()
+            Log.d(TAG, "API call made for team, response: ${response.body()}")
+            if (response.isSuccessful && response.body() != null) {
+                ApiResponse.Success(response.body()!!.employees.map {
+                    TeamMember(
+                        id = it.id,
+                        name = it.name,
+                        email = it.email,
+                        role = it.role,
+                        profileImageUrl = it.profile,
+                        phoneNumber = it.phoneNumber,
+                        location = it.location
+                    )
+                })
+            } else {
+                ApiResponse.Error(response.errorBody()?.string() ?: "Failed to get team members")
+            }
+        } catch (e: Exception) {
+            ApiResponse.Error(e.message ?: "An unknown error occurred")
+        }
+    }
+
+    override suspend fun getAdminUserById(userId: Int): ApiResponse<User>{
+        return try {
+            val response = apiService.getAdminUserById(userId)
+            if (response.isSuccessful && response.body() != null) {
+                ApiResponse.Success(response.body()!!.toDomainModel())
+            } else {
+                ApiResponse.Error(response.errorBody()?.string() ?: "Failed to get user")
+            }
+        } catch (e: Exception) {
+            ApiResponse.Error(e.message ?: "An unknown error occurred")
+        }
+    }
+
     override suspend fun getAllSupervisors(): ApiResponse<List<TeamMember>> {
         return try {
             val response = apiService.getAllSupervisors()

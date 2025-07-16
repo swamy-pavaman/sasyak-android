@@ -109,7 +109,7 @@ fun TaskDetailScreen(
 
     LaunchedEffect(taskId, shouldRefresh) {
         viewModel.loadTaskDetail(taskId)
-        viewModel.getCurrentUserRole()
+        //viewModel.getCurrentUserRole()
         if (shouldRefresh) {
             shouldRefresh = false
         }
@@ -393,6 +393,19 @@ fun TaskDetailScreen(
                                 }
                                 Spacer(modifier = Modifier.height(8.dp))
 
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = " Assigned By: ",
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = task.createdBy,
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+
                             }
                         }
                     }
@@ -641,7 +654,7 @@ fun TaskDetailScreen(
 
                     // Role-based actions
                     when (userRole) {
-                        "MANAGER" -> {
+                        "MANAGER" , "ADMIN" -> {
                             if (task.status.equals("submitted", ignoreCase = true) ||
                                 task.status.equals("implemented", ignoreCase = true)
                             ) {
@@ -793,12 +806,9 @@ fun TaskDetailScreen(
                         }
 
                         "SUPERVISOR" -> {
-                            if ((task.status.equals(
-                                    "submitted",
-                                    ignoreCase = true
-                                ) && advices.isNotEmpty())
+                            if ((task.status.equals("submitted", ignoreCase = true) && advices.isNotEmpty())
                                 || task.status.equals("implemented", ignoreCase = true)
-                                || task.assignedTo != null
+                                || (task.status.equals("submitted", ignoreCase = true) && task.assignedTo != null)
                             ) {
 
                                 Spacer(modifier = Modifier.height(16.dp))
@@ -1493,11 +1503,14 @@ fun mergeAndSortCommunications(
         .map { it.first } // Extract the CommunicationItem
 }
 
+
 sealed class CommunicationItem {
     data class Advice(val advice: TaskAdvice) : CommunicationItem()
     data class Implementation(val implementation: com.kapilagro.sasyak.presentation.tasks.Implementation) : CommunicationItem()
 }
+
 */
+
 private sealed class UploadState {
     object Idle : UploadState()
     object Loading : UploadState()

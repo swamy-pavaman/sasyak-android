@@ -64,6 +64,7 @@ import com.kapilagro.sasyak.presentation.yield.YieldListViewModel
 import com.kapilagro.sasyak.presentation.yield.YieldRequestScreen
 import com.kapilagro.sasyak.presentation.yield.YieldScreen
 import com.kapilagro.sasyak.presentation.yield.YieldTaskDetailScreen
+import com.kapilagro.sasyak.presentation.tasks.MyTaskScreen
 import kotlinx.coroutines.CoroutineDispatcher
 import javax.inject.Inject
 
@@ -345,6 +346,9 @@ fun AppNavGraph(
                 onTaskClick = { taskId ->
                     navController.navigate(Screen.TaskDetail.createRoute(taskId))
                 },
+                onMyTasksClick = {
+                    navController.navigate(Screen.MyTasksScreen.route)
+                },
                 onCreateTaskClick = {
                     navController.navigate(Screen.CreateTask.route)
                 },
@@ -385,7 +389,11 @@ fun AppNavGraph(
         }
 
         composable(Screen.Reports.route) {
-            ReportScreen()
+            ReportScreen(
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
         }
 
         composable(Screen.Notifications.route) {
@@ -504,6 +512,22 @@ fun AppNavGraph(
                     }
                 },
                 navController = navController
+            )
+        }
+        composable(Screen.MyTasksScreen.route) {
+            val taskViewModel: TaskViewModel = hiltViewModel()
+            MyTaskScreen(
+                onTaskClick = { taskId ->
+                    navController.navigate(Screen.TaskDetail.createRoute(taskId.toString()))
+                },
+                onBackClick = {
+                    navController.navigate(Screen.Home.route) {
+                        popUpTo(Screen.Home.route) { inclusive = false }
+                        launchSingleTop = true
+                    }
+                },
+                navController = navController,
+                viewModel = taskViewModel
             )
         }
 

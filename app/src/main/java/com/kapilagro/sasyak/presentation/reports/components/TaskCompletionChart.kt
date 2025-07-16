@@ -10,14 +10,18 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.kapilagro.sasyak.domain.models.DailyTaskCount
 import com.kapilagro.sasyak.presentation.common.theme.Info
+import com.kapilagro.sasyak.presentation.common.theme.ScoutingIcon
 import com.kapilagro.sasyak.presentation.common.theme.SowingIcon
+import com.kapilagro.sasyak.presentation.common.theme.SprayingIcon
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -30,9 +34,10 @@ fun TaskCompletionChart(
     val maxCount = maxOf(
         completedTasks.maxOfOrNull { it.count } ?: 0,
         createdTasks.maxOfOrNull { it.count } ?: 0,
-        1 // Ensure minimum value to avoid division by zero
+        1
     )
-    val chartHeight = 200.dp
+    val chartHeight = 220.dp
+    val yAxisWidth = 36.dp
 
     Column(
         modifier = modifier
@@ -53,40 +58,33 @@ fun TaskCompletionChart(
                 Box(
                     modifier = Modifier
                         .size(12.dp)
-                        .background(Info, shape = MaterialTheme.shapes.small)
+                        .background(SprayingIcon, shape = MaterialTheme.shapes.small)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Completed",
-                    style = MaterialTheme.typography.bodySmall
-                )
+                Text(text = "Completed", style = MaterialTheme.typography.bodySmall)
             }
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
                         .size(12.dp)
-                        .background(SowingIcon, shape = MaterialTheme.shapes.small)
+                        .background(ScoutingIcon, shape = MaterialTheme.shapes.small)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Created",
-                    style = MaterialTheme.typography.bodySmall
-                )
+                Text(text = "Created", style = MaterialTheme.typography.bodySmall)
             }
         }
 
-        Box(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(chartHeight)
+                .height(chartHeight + 40.dp) // Extra for X-axis labels
         ) {
             // Y-axis labels
             Column(
                 modifier = Modifier
-                    .height(chartHeight)
-                    .align(Alignment.CenterStart),
+                    .width(yAxisWidth)
+                    .height(chartHeight-40.dp) // Match Canvas height
+                    .padding(end = 8.dp), // Add padding for spacing
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
                 for (i in maxCount downTo 0 step (maxCount / 4).coerceAtLeast(1)) {
@@ -94,29 +92,33 @@ fun TaskCompletionChart(
                         text = "$i",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(end = 8.dp)
+                        textAlign = TextAlign.End,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .wrapContentHeight(align = Alignment.CenterVertically) // Center vertically
                     )
-                    if (i > 0) Spacer(modifier = Modifier.weight(1f))
                 }
             }
 
-            // Chart and grid
+            // Chart + X-axis labels
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(chartHeight)
-                    .padding(start = 32.dp, top = 8.dp, bottom = 24.dp)
+                    .weight(1f)
+                    .fillMaxHeight()
             ) {
                 Canvas(
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.TopStart)
+                        .height(chartHeight -40.dp)
                 ) {
-                    val barGroupWidth = (size.width - 24.dp.toPx()) / completedTasks.size.coerceAtLeast(1)
-                    val barWidth = barGroupWidth * 0.4f // 40% width for each bar, leaving space between
-                    val spacing = barGroupWidth * 0.2f // 20% spacing between bars in a group
+                    val barGroupWidth = size.width / completedTasks.size.coerceAtLeast(1)
+                    val barWidth = barGroupWidth * 0.4f
+                    val spacing = barGroupWidth * 0.2f
 
                     // Draw grid lines
                     for (i in 0..4) {
-                        val y = size.height - (size.height * i / 4)
+                        val y = size.height * (1 - i / 4f) // Adjusted for better alignment
                         drawLine(
                             color = Color.LightGray.copy(alpha = 0.5f),
                             start = Offset(0f, y),
@@ -125,33 +127,26 @@ fun TaskCompletionChart(
                         )
                     }
 
-                    // Draw bars for completed and created tasks
+                    // Draw bars
                     completedTasks.forEachIndexed { index, dailyCount ->
-                        val completedHeight = if (maxCount > 0) {
-                            (dailyCount.count.toFloat() / maxCount) * size.height
-                        } else 0f
-
+                        val completedHeight = (dailyCount.count.toFloat() / maxCount) * size.height
                         val createdCount = createdTasks.getOrNull(index)?.count ?: 0
-                        val createdHeight = if (maxCount > 0) {
-                            (createdCount.toFloat() / maxCount) * size.height
-                        } else 0f
-
-                        val groupX = (index * barGroupWidth) + 12.dp.toPx()
+                        val createdHeight = (createdCount.toFloat() / maxCount) * size.height
+                        val groupX = index * barGroupWidth
 
                         // Completed tasks bar
                         drawRoundRect(
-                            color = Info,
+                            color = SprayingIcon,
                             topLeft = Offset(groupX, size.height - completedHeight),
                             size = Size(barWidth, completedHeight),
-                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(4.dp.toPx())
+                            cornerRadius = CornerRadius(4.dp.toPx())
                         )
-
                         // Created tasks bar
                         drawRoundRect(
-                            color = SowingIcon,
+                            color = ScoutingIcon,
                             topLeft = Offset(groupX + barWidth + spacing, size.height - createdHeight),
                             size = Size(barWidth, createdHeight),
-                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(4.dp.toPx())
+                            cornerRadius = CornerRadius(4.dp.toPx())
                         )
                     }
                 }
@@ -161,15 +156,18 @@ fun TaskCompletionChart(
                     modifier = Modifier
                         .fillMaxWidth()
                         .align(Alignment.BottomStart),
-                    horizontalArrangement = Arrangement.SpaceEvenly
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    completedTasks.forEach { dailyCount ->
+                    completedTasks.forEachIndexed { index, dailyCount ->
                         Text(
                             text = dailyCount.date,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
-                            modifier = Modifier.weight(1f)
+                            maxLines = 1,
+                            modifier = Modifier
+                                .weight(1f / completedTasks.size) // Evenly distribute
+                                .wrapContentWidth(align = Alignment.CenterHorizontally) // Center in group
                         )
                     }
                 }

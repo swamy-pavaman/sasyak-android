@@ -26,6 +26,7 @@ data class SowingDetails(
     val sowingDate: String,
     val cropName: String,
     val row: String,
+    val valveName: String,
     val fieldArea: String? = null,
     val seedVariety: String,
     val seedQuantity: String? = null,
