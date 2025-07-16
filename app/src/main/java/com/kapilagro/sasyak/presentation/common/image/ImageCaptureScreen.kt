@@ -1,12 +1,16 @@
 package com.kapilagro.sasyak.presentation.common.image
 
 import android.Manifest
+import android.content.ContentValues
+import android.content.Context
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.provider.MediaStore
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.video.*
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
@@ -27,9 +31,6 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil.compose.rememberAsyncImagePainter
-import java.io.File
-import java.text.SimpleDateFormat
-import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -37,55 +38,61 @@ import java.util.concurrent.Executors
 @Composable
 fun ImageCaptureScreen(
     folder: String,
-    maxImages: Int = 5,
-    onImagesSelected: (List<File>) -> Unit,
+    maxMedia: Int = 5,
+    onMediaSelected: (List<String>) -> Unit,
     onBackClick: () -> Unit,
     viewModel: ImageCaptureViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    val selectedImages by viewModel.selectedImages.collectAsState()
+    val selectedMediaUris by viewModel.selectedMediaUris.collectAsState()
 
     var hasCameraPermission by remember {
-        mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED &&
+                    ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+        )
     }
+    var isRecording by remember { mutableStateOf(false) }
+    var activeRecording by remember { mutableStateOf<Recording?>(null) }
 
     val cameraExecutor: ExecutorService = remember { Executors.newSingleThreadExecutor() }
     var imageCapture: ImageCapture? by remember { mutableStateOf(null) }
+    var videoCapture: VideoCapture<Recorder>? by remember { mutableStateOf(null) }
 
-    val cameraPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        hasCameraPermission = granted
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+        hasCameraPermission = permissions[Manifest.permission.CAMERA] == true &&
+                permissions[Manifest.permission.RECORD_AUDIO] == true
     }
 
     val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris: List<Uri> ->
-        uris.take(maxImages - selectedImages.size).forEach { uri ->
-            val file = createImageFileFromUri(context, uri)
-            file?.let { viewModel.addImage(it) }
+        uris.take(maxMedia - selectedMediaUris.size).forEach { uri ->
+            viewModel.addMediaUri(uri.toString())
         }
     }
 
     LaunchedEffect(Unit) {
         if (!hasCameraPermission) {
-            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+            permissionLauncher.launch(arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO))
         }
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Capture Images") },
+                title = { Text("Capture Media") },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
-                    if (selectedImages.isNotEmpty()) {
+                    if (selectedMediaUris.isNotEmpty()) {
                         TextButton(
-                            onClick = { onImagesSelected(selectedImages) },
-                            enabled = selectedImages.isNotEmpty()
+                            onClick = { onMediaSelected(selectedMediaUris) },
+                            enabled = selectedMediaUris.isNotEmpty()
                         ) {
-                            Text("Done (${selectedImages.size})")
+                            Text("Done (${selectedMediaUris.size})")
                         }
                     }
                 }
@@ -118,10 +125,14 @@ fun ImageCaptureScreen(
                                 it.setSurfaceProvider(previewView.surfaceProvider)
                             }
                             imageCapture = ImageCapture.Builder().build()
+                            val recorder = Recorder.Builder()
+                                .setExecutor(cameraExecutor)
+                                .build()
+                            videoCapture = VideoCapture.withOutput(recorder)
                             val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
                             try {
                                 cameraProvider.unbindAll()
-                                cameraProvider.bindToLifecycle(lifecycleOwner, cameraSelector, preview, imageCapture)
+                                cameraProvider.bindToLifecycle(lifecycleOwner, cameraSelector, preview, imageCapture, videoCapture)
                             } catch (exc: Exception) {
                                 // Handle exception
                             }
@@ -137,8 +148,8 @@ fun ImageCaptureScreen(
                     ) {
                         FloatingActionButton(
                             onClick = {
-                                if (selectedImages.size < maxImages) {
-                                    galleryLauncher.launch("image/*")
+                                if (selectedMediaUris.size < maxMedia) {
+                                    galleryLauncher.launch("image/*,video/*")
                                 }
                             },
                             modifier = Modifier.size(56.dp),
@@ -147,20 +158,47 @@ fun ImageCaptureScreen(
                             Icon(Icons.Default.Photo, contentDescription = "Gallery")
                         }
 
-                        Spacer(modifier = Modifier.width(32.dp))
+                        Spacer(modifier = Modifier.width(16.dp))
 
                         FloatingActionButton(
                             onClick = {
-                                if (selectedImages.size < maxImages) {
-                                    captureImage(context, imageCapture) { file ->
-                                        viewModel.addImage(file)
+                                if (selectedMediaUris.size < maxMedia) {
+                                    captureImage(context, imageCapture) { uri ->
+                                        viewModel.addMediaUri(uri.toString())
                                     }
                                 }
                             },
-                            modifier = Modifier.size(72.dp),
-                            containerColor = if (selectedImages.size >= maxImages) Color.Gray else MaterialTheme.colorScheme.primary
+                            modifier = Modifier.size(56.dp),
+                            containerColor = if (selectedMediaUris.size >= maxMedia) Color.Gray else MaterialTheme.colorScheme.primary
                         ) {
-                            Icon(Icons.Default.Camera, contentDescription = "Capture", modifier = Modifier.size(32.dp))
+                            Icon(Icons.Default.Camera, contentDescription = "Capture Image")
+                        }
+
+                        Spacer(modifier = Modifier.width(16.dp))
+
+                        FloatingActionButton(
+                            onClick = {
+                                if (selectedMediaUris.size < maxMedia) {
+                                    if (isRecording) {
+                                        stopVideoRecording(activeRecording)
+                                        isRecording = false
+                                        activeRecording = null
+                                    } else {
+                                        captureVideo(context, videoCapture) { uri, recording ->
+                                            viewModel.addMediaUri(uri.toString())
+                                            activeRecording = recording
+                                        }
+                                        isRecording = true
+                                    }
+                                }
+                            },
+                            modifier = Modifier.size(56.dp),
+                            containerColor = if (selectedMediaUris.size >= maxMedia || isRecording) Color.Gray else MaterialTheme.colorScheme.primary
+                        ) {
+                            Icon(
+                                if (isRecording) Icons.Default.Stop else Icons.Default.Videocam,
+                                contentDescription = if (isRecording) "Stop Video" else "Record Video"
+                            )
                         }
                     }
                 }
@@ -172,15 +210,15 @@ fun ImageCaptureScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Camera permission required")
-                        Button(onClick = { cameraPermissionLauncher.launch(Manifest.permission.CAMERA) }) {
-                            Text("Grant Permission")
+                        Text("Camera and audio permissions required")
+                        Button(onClick = { permissionLauncher.launch(arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)) }) {
+                            Text("Grant Permissions")
                         }
                     }
                 }
             }
 
-            if (selectedImages.isNotEmpty()) {
+            if (selectedMediaUris.isNotEmpty()) {
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -188,11 +226,11 @@ fun ImageCaptureScreen(
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text("Selected Images (${selectedImages.size}/$maxImages)", style = MaterialTheme.typography.titleMedium)
+                        Text("Selected Media (${selectedMediaUris.size}/$maxMedia)", style = MaterialTheme.typography.titleMedium)
                         Spacer(modifier = Modifier.height(8.dp))
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            items(selectedImages) { imageFile ->
-                                SelectedImageItem(imageFile = imageFile, onRemove = { viewModel.removeImage(imageFile) })
+                            items(selectedMediaUris) { uri ->
+                                SelectedMediaItem(mediaUri = uri, onRemove = { viewModel.removeMediaUri(uri) })
                             }
                         }
                     }
@@ -202,21 +240,25 @@ fun ImageCaptureScreen(
     }
 
     DisposableEffect(Unit) {
-        onDispose { cameraExecutor.shutdown() }
+        onDispose {
+            activeRecording?.stop()
+            cameraExecutor.shutdown()
+        }
     }
 }
 
 @Composable
-private fun SelectedImageItem(
-    imageFile: File,
+private fun SelectedMediaItem(
+    mediaUri: String,
     onRemove: () -> Unit
 ) {
     Box {
         Card(modifier = Modifier.size(80.dp), shape = RoundedCornerShape(8.dp)) {
             Image(
-                painter = rememberAsyncImagePainter(imageFile),
+                painter = rememberAsyncImagePainter(mediaUri),
                 contentDescription = null,
                 modifier = Modifier.fillMaxSize()
+
             )
         }
         IconButton(onClick = onRemove, modifier = Modifier.align(Alignment.TopEnd)) {
@@ -226,42 +268,73 @@ private fun SelectedImageItem(
 }
 
 private fun captureImage(
-    context: android.content.Context,
+    context: Context,
     imageCapture: ImageCapture?,
-    onImageCaptured: (File) -> Unit
+    onImageCaptured: (Uri) -> Unit
 ) {
-    val imageFile = File(
-        context.getExternalFilesDir(null),
-        SimpleDateFormat("yyyy-MM-dd-HH-mm-ss-SSS", Locale.US).format(System.currentTimeMillis()) + ".jpg"
-    )
-    val outputFileOptions = ImageCapture.OutputFileOptions.Builder(imageFile).build()
+    val contentValues = ContentValues().apply {
+        put(MediaStore.Images.Media.DISPLAY_NAME, "image_${System.currentTimeMillis()}.jpg")
+        put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+    }
+    val outputFileOptions = ImageCapture.OutputFileOptions.Builder(
+        context.contentResolver,
+        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+        contentValues
+    ).build()
 
     imageCapture?.takePicture(
         outputFileOptions,
         ContextCompat.getMainExecutor(context),
         object : ImageCapture.OnImageSavedCallback {
             override fun onImageSaved(output: ImageCapture.OutputFileResults) {
-                onImageCaptured(imageFile)
+                output.savedUri?.let { onImageCaptured(it) }
             }
-            override fun onError(exception: ImageCaptureException) {
+            override fun onError(exception: ImageCaptureException) { // Fixed syntax
                 // Handle error
             }
         }
     )
 }
+private fun captureVideo(
+    context: Context,
+    videoCapture: VideoCapture<Recorder>?,
+    onVideoCaptured: (Uri, Recording) -> Unit
+) {
+    if (videoCapture == null) return
 
-private fun createImageFileFromUri(context: android.content.Context, uri: Uri): File? {
-    return try {
-        val inputStream = context.contentResolver.openInputStream(uri)
-        val fileName = "gallery_${System.currentTimeMillis()}.jpg"
-        val file = File(context.getExternalFilesDir(null), fileName)
-        inputStream?.use { input ->
-            file.outputStream().use { output ->
-                input.copyTo(output)
+    // Step 1: Prepare ContentValues for MediaStore (this stores URI, not File)
+    val contentValues = ContentValues().apply {
+        put(MediaStore.Video.Media.DISPLAY_NAME, "video_${System.currentTimeMillis()}.mp4")
+        put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
+    }
+
+    // Step 2: Create MediaStoreOutputOptions
+    val mediaStoreOutput = MediaStoreOutputOptions.Builder(
+        context.contentResolver,
+        MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+    ).setContentValues(contentValues).build()
+
+    // Step 3: Declare recording outside to use in lambda
+    var recording: Recording? = null
+
+    // Step 4: Start recording
+    recording = videoCapture.output
+        .prepareRecording(context, mediaStoreOutput)
+        .start(ContextCompat.getMainExecutor(context)) { recordEvent ->
+
+            when (recordEvent) {
+                is VideoRecordEvent.Finalize -> {
+                    val uri = recordEvent.outputResults.outputUri
+                    if (uri != Uri.EMPTY) {
+                        recording?.let {
+                            onVideoCaptured(uri, it)
+                        }
+                    }
+                }
+                // Optionally handle Start, Status, Pause, Resume events if needed
             }
         }
-        file
-    } catch (e: Exception) {
-        null
-    }
+}
+private fun stopVideoRecording(activeRecording: Recording?) {
+    activeRecording?.stop()
 }

@@ -1,5 +1,7 @@
 package com.kapilagro.sasyak.domain.repositories
 
+import com.kapilagro.sasyak.data.api.models.requests.MediaAttachRequest
+import com.kapilagro.sasyak.data.api.models.responses.TaskImagesUpdateResponse
 import com.kapilagro.sasyak.data.api.models.responses.TrendReportResponse
 import com.kapilagro.sasyak.domain.models.ApiResponse
 import com.kapilagro.sasyak.domain.models.DailyTaskCount
@@ -25,4 +27,5 @@ interface TaskRepository {
     suspend fun getTasksByType(taskType: String, page: Int = 0, size: Int = 10): ApiResponse<Pair<List<Task>, Int>>
     suspend fun getTasksByStatus(status: String, page: Int, size: Int): ApiResponse<Pair<List<Task>, Int>>
     suspend fun getTasksBySupervisors(page: Int = 0, size: Int = 10): ApiResponse<Pair<List<Task>, Int>>
+    suspend fun attachMediaToTask( taskId: Int, media: List<String>): ApiResponse<TaskImagesUpdateResponse>
 }

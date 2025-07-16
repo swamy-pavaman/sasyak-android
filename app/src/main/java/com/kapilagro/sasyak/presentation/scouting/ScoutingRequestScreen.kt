@@ -1,5 +1,6 @@
 package com.kapilagro.sasyak.presentation.scouting
 
+import android.net.Uri
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
@@ -22,8 +23,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import coil.compose.rememberAsyncImagePainter
 import com.kapilagro.sasyak.data.api.ImageUploadService
 import com.kapilagro.sasyak.di.IoDispatcher
@@ -35,6 +39,7 @@ import com.kapilagro.sasyak.presentation.common.components.SuccessDialog
 import com.kapilagro.sasyak.presentation.common.navigation.Screen
 import com.kapilagro.sasyak.presentation.common.theme.AgroPrimary
 import com.kapilagro.sasyak.presentation.home.HomeViewModel
+import com.kapilagro.sasyak.worker.MediaUploadWorker
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.launch
 import java.io.File
@@ -56,6 +61,7 @@ fun ScoutingRequestScreen(
     @IoDispatcher ioDispatcher: CoroutineDispatcher,
     imageUploadService: ImageUploadService
 ) {
+    val context = LocalContext.current
     val createScoutingState by viewModel.createScoutingState.collectAsState()
     val userRole by homeViewModel.userRole.collectAsState()
     val supervisorsListState by homeViewModel.supervisorsListState.collectAsState()
@@ -87,9 +93,9 @@ fun ScoutingRequestScreen(
     var nameOfDisease by remember { mutableStateOf(savedStateHandle?.get<String>("nameOfDisease") ?: "") }
     var nameOfDiseaseExpanded by remember { mutableStateOf(false) }
     var description by remember { mutableStateOf(savedStateHandle?.get<String>("description") ?: "") }
-    var imageFiles by remember { mutableStateOf<List<File>?>(null) }
     var assignedTo by remember { mutableStateOf<Int?>(savedStateHandle?.get<Int>("assignedTo")) }
     var assignedToExpanded by remember { mutableStateOf(false) }
+    var imageUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
 
     var dueDateText by remember {
         mutableStateOf(
@@ -99,14 +105,12 @@ fun ScoutingRequestScreen(
     }
     var showDatePicker by remember { mutableStateOf(false) }
 
-
     val datePattern = Regex("\\d{2}-\\d{2}-\\d{4}")
     val isValidDueDate = dueDateText.matches(datePattern) && try {
         LocalDate.parse(dueDateText, DateTimeFormatter.ofPattern("dd-MM-yyyy")).isAfter(LocalDate.now())
     } catch (e: Exception) {
         false
     }
-
 
     // Save form state before navigating to ImageCaptureScreen
     LaunchedEffect(Unit) {
@@ -179,18 +183,33 @@ fun ScoutingRequestScreen(
         }
     }
 
-    // Handle navigation result from ImageCaptureScreen
+    // Listen for selected images from navigation
     LaunchedEffect(navController) {
-        navController.currentBackStackEntry?.savedStateHandle?.getStateFlow<List<File>>("selectedImages", emptyList())
-            ?.collect { files ->
-                imageFiles = files
+        navController.currentBackStackEntry
+            ?.savedStateHandle
+            ?.getStateFlow<List<String>>("selectedImages", emptyList())
+            ?.collect { uriStrings ->
+                imageUris = uriStrings.map { Uri.parse(it) }
             }
     }
 
-    // Handle task creation success
+    // Handle task creation success and start image upload
     LaunchedEffect(createScoutingState) {
         when (createScoutingState) {
             is ScoutingListViewModel.CreateScoutingState.Success -> {
+                val createdTask = (createScoutingState as ScoutingListViewModel.CreateScoutingState.Success).task
+
+                // If images exist, start WorkManager to upload them
+                if (imageUris.isNotEmpty()) {
+                    val imageUriStrings = imageUris.map { it.toString() }
+
+                    val uploadWorkRequest = OneTimeWorkRequestBuilder<MediaUploadWorker>()
+                        .setInputData(MediaUploadWorker.createInputData(createdTask.id, imageUriStrings))
+                        .build()
+
+                    WorkManager.getInstance(context).enqueue(uploadWorkRequest)
+                }
+
                 showSuccessDialog = true
             }
             else -> {
@@ -232,6 +251,9 @@ fun ScoutingRequestScreen(
                 savedStateHandle?.remove<String>("nameOfDisease")
                 savedStateHandle?.remove<String>("description")
                 savedStateHandle?.remove<Int>("assignedTo")
+                savedStateHandle?.remove<String>("valveName")
+                savedStateHandle?.remove<String>("dueDate")
+                savedStateHandle?.remove<List<String>>("selectedImages")
             }
         )
     }
@@ -294,20 +316,17 @@ fun ScoutingRequestScreen(
                     expanded = valveNameExpanded,
                     onDismissRequest = { valveNameExpanded = false }
                 ) {
-                    valves
-                        .forEach { valve ->
-                            DropdownMenuItem(
-                                text = { Text(valve)},
-                                onClick = {
-                                    valveName = valve
-                                    valveNameExpanded = false
-                                }
-                            )
-                        }
+                    valves.forEach { valve ->
+                        DropdownMenuItem(
+                            text = { Text(valve) },
+                            onClick = {
+                                valveName = valve
+                                valveNameExpanded = false
+                            }
+                        )
+                    }
                 }
             }
-
-
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -338,22 +357,21 @@ fun ScoutingRequestScreen(
                     expanded = cropNameExpanded,
                     onDismissRequest = { cropNameExpanded = false }
                 ) {
-                    crops
-                        .forEach { crop ->
-                            DropdownMenuItem(
-                                text = { Text(crop) },
-                                onClick = {
-                                    cropName = crop
-                                    cropNameExpanded = false
-                                }
-                            )
-                        }
+                    crops.forEach { crop ->
+                        DropdownMenuItem(
+                            text = { Text(crop) },
+                            onClick = {
+                                cropName = crop
+                                cropNameExpanded = false
+                            }
+                        )
+                    }
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Row Dropdown
+            // Row TextField
             OutlinedTextField(
                 value = row,
                 onValueChange = { newValue ->
@@ -366,7 +384,7 @@ fun ScoutingRequestScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Tree No Dropdown
+            // Tree No TextField
             OutlinedTextField(
                 value = treeNo,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -377,7 +395,6 @@ fun ScoutingRequestScreen(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(8.dp)
             )
-
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -444,19 +461,17 @@ fun ScoutingRequestScreen(
                     expanded = nameOfDiseaseExpanded,
                     onDismissRequest = { nameOfDiseaseExpanded = false }
                 ) {
-                    diseases
-                        .forEach { disease ->
-                            DropdownMenuItem(
-                                text = { Text(disease) },
-                                onClick = {
-                                    nameOfDisease = disease
-                                    nameOfDiseaseExpanded = false
-                                }
-                            )
-                        }
+                    diseases.forEach { disease ->
+                        DropdownMenuItem(
+                            text = { Text(disease) },
+                            onClick = {
+                                nameOfDisease = disease
+                                nameOfDiseaseExpanded = false
+                            }
+                        )
+                    }
                 }
             }
-
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -505,28 +520,13 @@ fun ScoutingRequestScreen(
                     }
                 }
 
-
-                // TODO ADD Due Date only to manager not for supervisor
-
-
                 Spacer(modifier = Modifier.height(16.dp))
-
-
             }
 
+            // Due Date (only for MANAGER)
             if (userRole == "MANAGER") {
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Due Date Validation
-                val datePattern = Regex("\\d{2}-\\d{2}-\\d{4}")
-                val isValidDueDate = dueDateText.matches(datePattern) && try {
-                    LocalDate.parse(dueDateText, DateTimeFormatter.ofPattern("dd-MM-yyyy")).isAfter(LocalDate.now())
-                } catch (e: Exception) {
-                    false
-                }
-
-                // Due Date Field
                 val datePickerState = rememberDatePickerState()
+
                 OutlinedTextField(
                     value = dueDateText,
                     onValueChange = { /* Read-only, updated via date picker */ },
@@ -560,8 +560,7 @@ fun ScoutingRequestScreen(
                                             .atZone(ZoneId.systemDefault())
                                             .toLocalDate()
                                         dueDateText = selectedDate.format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))
-
-                                        Log.d("due date ",dueDateText)
+                                        Log.d("due date", dueDateText)
                                     }
                                     showDatePicker = false
                                 }
@@ -604,7 +603,8 @@ fun ScoutingRequestScreen(
                     Text("Select Images")
                 }
 
-                if (imageFiles != null && imageFiles!!.isNotEmpty()) {
+                // Display selected images
+                if (imageUris.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(
                         modifier = Modifier
@@ -612,7 +612,7 @@ fun ScoutingRequestScreen(
                             .horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        imageFiles!!.forEach { file ->
+                        imageUris.forEach { uri ->
                             Box(
                                 modifier = Modifier.size(80.dp)
                             ) {
@@ -625,7 +625,7 @@ fun ScoutingRequestScreen(
                                     shape = RoundedCornerShape(8.dp)
                                 ) {
                                     Image(
-                                        painter = rememberAsyncImagePainter(file),
+                                        painter = rememberAsyncImagePainter(uri),
                                         contentDescription = "Selected image",
                                         modifier = Modifier.fillMaxSize(),
                                         contentScale = androidx.compose.ui.layout.ContentScale.Crop
@@ -633,7 +633,10 @@ fun ScoutingRequestScreen(
                                 }
                                 IconButton(
                                     onClick = {
-                                        imageFiles = imageFiles?.filter { it != file }
+                                        // Remove the selected image URI
+                                        imageUris = imageUris.filter { it != uri }
+                                        // Update saved state
+                                        savedStateHandle?.set("selectedImages", imageUris.map { it.toString() })
                                     },
                                     modifier = Modifier
                                         .align(Alignment.TopEnd)
@@ -644,10 +647,12 @@ fun ScoutingRequestScreen(
                                         imageVector = Icons.Default.Close,
                                         contentDescription = "Remove image",
                                         tint = Color.White,
-                                        modifier = Modifier.background(
-                                            color = Color.Black.copy(alpha = 0.6f),
-                                            shape = RoundedCornerShape(12.dp)
-                                        )
+                                        modifier = Modifier
+                                            .background(
+                                                color = Color.Black.copy(alpha = 0.6f),
+                                                shape = RoundedCornerShape(12.dp)
+                                            )
+                                            .padding(2.dp)
                                     )
                                 }
                             }
@@ -694,12 +699,13 @@ fun ScoutingRequestScreen(
             Button(
                 onClick = {
                     if (cropName.isNotBlank() && row.isNotBlank() && valveName.isNotBlank() && treeNo.isNotBlank() &&
-                        (userRole != "MANAGER" || assignedTo != null)){
+                        (userRole != "MANAGER" || (assignedTo != null && isValidDueDate))) {
+
                         scope.launch(ioDispatcher) {
                             val scoutingDetails = ScoutingDetails(
                                 scoutingDate = scoutingDate,
                                 cropName = cropName,
-                                row = row.toString(),
+                                row = row,
                                 treeNo = treeNo.toInt(),
                                 noOfFruitSeen = noOfFruitSeen.ifBlank { null },
                                 noOfFlowersSeen = noOfFlowersSeen.ifBlank { null },
@@ -710,47 +716,18 @@ fun ScoutingRequestScreen(
                             )
                             submittedEntry = scoutingDetails
 
-                            if (imageFiles.isNullOrEmpty()) {
-                                // No images to upload, proceed with task creation
-                                viewModel.createScoutingTask(
-                                    scoutingDetails = scoutingDetails,
-                                    description = description,
-                                    imagesJson = emptyList<String>(), // Pass null for imagesJson
-                                    assignedToId = if (userRole == "MANAGER") assignedTo else null
-                                )
-                                uploadState = UploadState.Idle
-                            } else {
-                                // Upload images
-                                uploadState = UploadState.Loading
-                                val uploadResult = imageUploadService.uploadImages(imageFiles!!, "SCOUTING")
-                                when (uploadResult) {
-                                    is ApiResponse.Success -> {
-                                        val imageUrls = uploadResult.data
-                                        if (imageUrls.isEmpty()) {
-                                            uploadState = UploadState.Error("Image upload failed, no URLs received")
-                                            return@launch
-                                        }
-                                        viewModel.createScoutingTask(
-                                            scoutingDetails = scoutingDetails,
-                                            description = description,
-                                            imagesJson = imageUrls,
-                                            assignedToId = if (userRole == "MANAGER") assignedTo else null
-                                        )
-                                        uploadState = UploadState.Idle
-                                    }
-                                    is ApiResponse.Error -> {
-                                        uploadState = UploadState.Error("Image upload failed: ${uploadResult.errorMessage}")
-                                    }
-                                    is ApiResponse.Loading -> {
-                                        uploadState = UploadState.Loading
-                                    }
-                                }
-                            }
+                            // First create task, then WorkManager will handle image upload
+                            viewModel.createScoutingTask(
+                                scoutingDetails = scoutingDetails,
+                                description = description,
+                                assignedToId = if (userRole == "MANAGER") assignedTo else null
+                            )
                         }
                     }
                 },
                 enabled = cropName.isNotBlank() && row.isNotBlank() && treeNo.isNotBlank() &&
-                        (userRole != "MANAGER" || assignedTo != null) && valveName.isNotBlank() &&
+                        valveName.isNotBlank() &&
+                        (userRole != "MANAGER" || (assignedTo != null && isValidDueDate)) &&
                         createScoutingState !is ScoutingListViewModel.CreateScoutingState.Loading &&
                         uploadState !is UploadState.Loading,
                 modifier = Modifier

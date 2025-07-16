@@ -7,6 +7,7 @@ import com.kapilagro.sasyak.data.api.models.requests.CreateTaskRequest
 import com.kapilagro.sasyak.data.api.models.requests.UpdateImplementationRequest
 import com.kapilagro.sasyak.data.api.models.requests.UpdateTaskStatusRequest
 import com.kapilagro.sasyak.data.api.models.responses.DailyTaskCount
+import com.kapilagro.sasyak.data.api.models.responses.TaskImagesUpdateResponse
 import com.kapilagro.sasyak.data.api.models.responses.TrendReportResponse
 import com.kapilagro.sasyak.domain.models.ApiResponse
 import com.kapilagro.sasyak.domain.models.Task
@@ -213,5 +214,12 @@ class TaskRepositoryImpl @Inject constructor(
         } catch (e: Exception) {
             ApiResponse.Error(e.message ?: "An unknown error occurred")
         }
+    }
+
+    override suspend fun attachMediaToTask(
+        taskId: Int,
+        media: List<String>
+    ): ApiResponse<TaskImagesUpdateResponse> {
+        TODO("Not yet implemented")
     }
 }

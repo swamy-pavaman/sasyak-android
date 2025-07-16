@@ -15,6 +15,8 @@ interface ApiService {
     @POST("api/minio/presigned-url/upload")
     suspend fun getPresignedUrls(@Body request: PresignedUrlRequest): Response<PresignedUrlResponse>
 
+    @POST("api/tasks/attach-media")
+    suspend fun attachMediaToTask(@Body request: MediaAttachRequest): Response<TaskImagesUpdateResponse>
 
     @GET("/api/manager/users/supervisor-list")
     suspend fun getSupervisorsList(): Response<List<SupervisorListResponse>>

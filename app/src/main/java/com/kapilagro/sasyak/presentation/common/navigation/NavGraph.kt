@@ -203,7 +203,6 @@ fun AppNavGraph(
                 imageUploadService = imageUploadService
             )
         }
-
         composable(
             route = Screen.ImageCapture.route,
             arguments = listOf(
@@ -213,8 +212,8 @@ fun AppNavGraph(
             val folder = backStackEntry.arguments?.getString("folder") ?: "SOWING"
             ImageCaptureScreen(
                 folder = folder,
-                maxImages = 5,
-                onImagesSelected = { images ->
+                maxMedia = 5,
+                onMediaSelected = { images -> // ✅ Changed from onImagesSelected to onMediaSelected
                     navController.previousBackStackEntry?.savedStateHandle?.set("selectedImages", images)
                     navController.popBackStack()
                 },
