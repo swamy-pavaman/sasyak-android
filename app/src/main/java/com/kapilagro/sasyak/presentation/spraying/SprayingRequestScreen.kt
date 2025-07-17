@@ -175,20 +175,13 @@ fun SprayingRequestScreen(
         }
     }
 
-    val diseaseList by remember(valveName, cropName) {
-        derivedStateOf {
-            val diseaseList = valveDetails[valveName]?.get(cropName)?.DISEASES?.map { it.trim() } ?: emptyList()
-            diseaseList
-        }
-    }
+    val diseaseList = listOf(
+        "Malformation","Gummosis","Powdery Mildew","Canker"
+    )
 
-    val pestList by remember(valveName, cropName) {
-        derivedStateOf {
-            val pestList =
-                valveDetails[valveName]?.get(cropName)?.PESTS?.map { it.trim() } ?: emptyList()
-            pestList
-        }
-    }
+    val pestList = listOf(
+        "Stem Borer","Nematodes","Thrips","Mealy Bugs","Scales","Hoppers","Caterpillars"
+    )
 
     val rows by remember(valveName, cropName) {
         derivedStateOf {
@@ -227,6 +220,13 @@ fun SprayingRequestScreen(
             homeViewModel.loadSupervisorsList()
         }
     }
+    // Load managers and supervisors lists for admin
+    LaunchedEffect(Unit) {
+        if (userRole == "ADMIN") {
+            taskViewModel.fetchManagers()
+            taskViewModel.fetchSupervisors()
+        }
+    }
 
     // Handle navigation result from ImageCaptureScreen
     LaunchedEffect(navController) {
@@ -245,6 +245,19 @@ fun SprayingRequestScreen(
             else -> {
                 // Handle other states if needed
             }
+        }
+    }
+    // Resets dependent fields
+    LaunchedEffect(valveName) {
+        if (valveName.isEmpty()) {
+            cropName = ""
+            row = ""
+        }
+    }
+
+    LaunchedEffect(cropName) {
+        if (cropName.isEmpty()) {
+            row = ""
         }
     }
 

@@ -73,6 +73,13 @@ fun TaskListScreen(
     LaunchedEffect(routeKey) {
         viewModel.getCurrentUserRole()
     }
+    // Load managers and supervisors lists for admin
+    LaunchedEffect(Unit) {
+        if (userRole == "ADMIN") {
+            viewModel.fetchManagers()
+            viewModel.fetchSupervisors()
+        }
+    }
 
     // Pagination logic
     LaunchedEffect(listState) {

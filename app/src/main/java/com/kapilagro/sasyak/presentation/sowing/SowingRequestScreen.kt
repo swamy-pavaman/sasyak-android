@@ -222,6 +222,13 @@ fun SowingRequestScreen(
             homeViewModel.loadSupervisorsList()
         }
     }
+    // Load managers and supervisors lists for admin
+    LaunchedEffect(Unit) {
+        if (userRole == "ADMIN") {
+            taskViewModel.fetchManagers()
+            taskViewModel.fetchSupervisors()
+        }
+    }
 
     // Handle navigation result from ImageCaptureScreen
     LaunchedEffect(navController) {
@@ -229,6 +236,19 @@ fun SowingRequestScreen(
             ?.collect { files ->
                 imageFiles = files
             }
+    }
+    // Resets dependent fields
+    LaunchedEffect(valveName) {
+        if (valveName.isEmpty()) {
+            cropName = ""
+            row = ""
+        }
+    }
+
+    LaunchedEffect(cropName) {
+        if (cropName.isEmpty()) {
+            row = ""
+        }
     }
 
     // Success Dialog

@@ -199,6 +199,13 @@ fun FuelRequestScreen(
             homeViewModel.loadSupervisorsList()
         }
     }
+    // Load managers and supervisors lists for admin
+    LaunchedEffect(Unit) {
+        if (userRole == "ADMIN") {
+            taskViewModel.fetchManagers()
+            taskViewModel.fetchSupervisors()
+        }
+    }
 
     // Handle navigation result from ImageCaptureScreen
     LaunchedEffect(navController) {
@@ -217,6 +224,12 @@ fun FuelRequestScreen(
             else -> {
                 // Handle other states if needed
             }
+        }
+    }
+    // Resets dependent fields
+    LaunchedEffect(vehicleName) {
+        if (vehicleName.isEmpty()) {
+            vehicleNumber = ""
         }
     }
 

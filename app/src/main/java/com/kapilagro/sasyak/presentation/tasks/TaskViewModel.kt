@@ -76,13 +76,6 @@ class TaskViewModel @Inject constructor(
     private val pageSize = 10
     private val accumulatedTasks = mutableListOf<Task>()
 
-    init {
-        getCurrentUserRole()
-        if (_userRole.value == "ADMIN") {
-            fetchManagers()
-            fetchSupervisors()
-        }
-    }
 
     fun getCurrentUserRole() {
         viewModelScope.launch {
