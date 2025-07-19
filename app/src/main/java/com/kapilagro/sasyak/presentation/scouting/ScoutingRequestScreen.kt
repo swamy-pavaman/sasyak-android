@@ -176,7 +176,9 @@ fun ScoutingRequestScreen(
 
     // Fetch valves
     LaunchedEffect(Unit) {
-        categoryViewModel.fetchCategories("Valve")
+        if (categoriesStates["Valve"] !is CategoriesState.Success) {
+            categoryViewModel.fetchCategories("Valve")
+        }
     }
 
     // Extract valve details
@@ -250,14 +252,14 @@ fun ScoutingRequestScreen(
 
     // Load supervisors list for MANAGER role
     LaunchedEffect(Unit) {
-        if (userRole == "MANAGER") {
+        if (userRole == "MANAGER"  && supervisorsListState !is HomeViewModel.SupervisorsListState.Success) {
             homeViewModel.loadSupervisorsList()
         }
     }
 
     // Load managers and supervisors lists for admin
     LaunchedEffect(Unit) {
-        if (userRole == "ADMIN") {
+        if ((userRole == "ADMIN") && (managersList.isEmpty() || supervisorsList.isEmpty())) {
             taskViewModel.fetchManagers()
             taskViewModel.fetchSupervisors()
         }

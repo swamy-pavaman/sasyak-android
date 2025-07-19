@@ -659,6 +659,7 @@ fun TaskDetailScreen(
                     }
 
                     // Role-based actions
+                    Log.d("userRole in TaskDetails Screen", "User Role: $userRole")
                     when (userRole) {
                         "MANAGER" , "ADMIN" -> {
                             if (task.status.equals("submitted", ignoreCase = true) ||
@@ -748,10 +749,8 @@ fun TaskDetailScreen(
                                 Spacer(modifier = Modifier.height(16.dp))
 
                                 // Approve/Reject buttons - only show if there's an implementation
-                                if (task.status.equals(
-                                        "submitted",
-                                        ignoreCase = true
-                                    ) || task.status.equals("implemented", ignoreCase = true)
+                                if (task.status.equals("submitted", ignoreCase = true)
+                                    || task.status.equals("implemented", ignoreCase = true)
                                 ) {
                                     Row(
                                         modifier = Modifier

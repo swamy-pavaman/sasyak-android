@@ -157,7 +157,7 @@ class SowingListViewModel @Inject constructor(
                 )) {
                     is ApiResponse.Success -> {
                         _createSowingState.value = CreateSowingState.Success(response.data)
-                        refreshTasks()
+                        //refreshTasks()
                     }
                     is ApiResponse.Error -> {
                         _createSowingState.value = CreateSowingState.Error(response.errorMessage)

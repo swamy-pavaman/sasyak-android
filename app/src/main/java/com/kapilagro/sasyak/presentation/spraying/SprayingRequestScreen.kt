@@ -151,8 +151,12 @@ fun SprayingRequestScreen(
     }
 
     LaunchedEffect(Unit) {
-        categoryViewModel.fetchCategories("Valve")
-        categoryViewModel.fetchCategories("Fertilizer")
+        if (categoriesStates["Valve"] !is CategoriesState.Success) {
+            categoryViewModel.fetchCategories("Valve")
+        }
+        if (categoriesStates["Fertilizer"] !is CategoriesState.Success) {
+            categoryViewModel.fetchCategories("Fertilizer")
+        }
     }
 
     val valveDetails = when (val state = categoriesStates["Valve"]) {
@@ -216,13 +220,13 @@ fun SprayingRequestScreen(
 
     // Load supervisors list for MANAGER role
     LaunchedEffect(Unit) {
-        if (userRole == "MANAGER") {
+        if (userRole == "MANAGER" && supervisorsListState !is HomeViewModel.SupervisorsListState.Success) {
             homeViewModel.loadSupervisorsList()
         }
     }
     // Load managers and supervisors lists for admin
     LaunchedEffect(Unit) {
-        if (userRole == "ADMIN") {
+        if ((userRole == "ADMIN") && (managersList.isEmpty() || supervisorsList.isEmpty())) {
             taskViewModel.fetchManagers()
             taskViewModel.fetchSupervisors()
         }
@@ -582,7 +586,8 @@ fun SprayingRequestScreen(
                     value = dosage,
                     onValueChange = { dosage = it },
                     label = { Text("Dosage") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
                         .weight(0.6f),
                     shape = RoundedCornerShape(8.dp),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)

@@ -47,9 +47,6 @@ class HomeViewModel @Inject constructor(
     private val _supervisorsListState = MutableStateFlow<SupervisorsListState>(SupervisorsListState.Idle)
     val supervisorsListState: StateFlow<SupervisorsListState> = _supervisorsListState.asStateFlow()
 
-
-
-
     private val _userRole = MutableStateFlow<String?>(null)
     val userRole: StateFlow<String?> = _userRole.asStateFlow()
     private val _userId = MutableStateFlow<Int?>(null)
@@ -70,14 +67,14 @@ class HomeViewModel @Inject constructor(
 
     init {
         loadUserData()
-        loadWeatherData()
+        //loadWeatherData()
 
         // Listen for role changes to load appropriate tasks
-        viewModelScope.launch {
-            userRole.collectLatest { role ->
-                loadTasksData()
-            }
-        }
+//        viewModelScope.launch {
+//            userRole.collectLatest { role ->
+//                loadTasksData()
+//            }
+//        }
     }
 
     fun loadSupervisorsList() {
@@ -182,14 +179,6 @@ class HomeViewModel @Inject constructor(
             }
         }
     }
-
-
-
-
-
-
-
-
 
     // Function to load assigned tasks
     fun loadAssignedTasks() {

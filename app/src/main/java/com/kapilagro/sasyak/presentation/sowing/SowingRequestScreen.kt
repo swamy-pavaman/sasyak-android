@@ -154,8 +154,12 @@ fun SowingRequestScreen(
     }
 
     LaunchedEffect(Unit) {
-        categoryViewModel.fetchCategories("Valve")
-        categoryViewModel.fetchCategories("Seed-variety") // TODO () Need to think how to pass seed varieties
+        if (categoriesStates["Valve"] !is CategoriesState.Success) {
+            categoryViewModel.fetchCategories("Valve")
+        }
+        if (categoriesStates["Seed-variety"] !is CategoriesState.Success) {
+            categoryViewModel.fetchCategories("Seed-variety") // TODO () Need to think how to pass seed varieties
+        }
     }
     val valveDetails = when (val state = categoriesStates["Valve"]) {
         is CategoriesState.Success -> {
@@ -185,7 +189,7 @@ fun SowingRequestScreen(
         }
     }
 
-    val seedVarieties = when (val state = categoriesStates["Seed-variety"]) { // TODO ()
+    val seedVarieties = when (val state = categoriesStates["Seed-variety"]) {
         is CategoriesState.Success -> state.categories.map { it.value }
         else -> listOf(
             "HD-2967", "PBW-343", "WH-542", "HD-3086", "DBW-17",
@@ -218,13 +222,13 @@ fun SowingRequestScreen(
     }
 
     LaunchedEffect(Unit) {
-        if (userRole == "MANAGER") {
+        if (userRole == "MANAGER" && supervisorsListState !is HomeViewModel.SupervisorsListState.Success) {
             homeViewModel.loadSupervisorsList()
         }
     }
     // Load managers and supervisors lists for admin
     LaunchedEffect(Unit) {
-        if (userRole == "ADMIN") {
+        if ((userRole == "ADMIN") && (managersList.isEmpty() || supervisorsList.isEmpty())) {
             taskViewModel.fetchManagers()
             taskViewModel.fetchSupervisors()
         }
@@ -1129,7 +1133,7 @@ fun SowingRequestScreen(
                     }
                 },
                 enabled = cropName.isNotBlank() && row.isNotBlank() && seedVariety.isNotBlank() && valveName.isNotBlank() &&
-                        sowingMethod.isNotBlank() && isValidDueDate
+                        sowingMethod.isNotBlank() && isValidDueDate && (userRole != "MANAGER" || assignedTo != null)
                         && (userRole != "ADMIN" || assignedTo != null) &&
                         createSowingState !is SowingListViewModel.CreateSowingState.Loading &&
                         uploadState !is UploadState.Loading,
