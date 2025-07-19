@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kapilagro.sasyak.presentation.common.theme.*
 import java.util.Locale
+import kotlin.math.ceil
 
 @Composable
 fun TaskByAvgCompletionTime(
@@ -25,10 +26,6 @@ fun TaskByAvgCompletionTime(
 ) {
     // Convert days to hours (1 day = 24 hours)
     val timeInHours = avgCompletionTimeByType.mapValues { it.value * 24 }
-    val totalAvg = timeInHours.values.average().let {
-        if (it.isNaN()) 0.0 else String.format(Locale.US, "%.2f", it).toDouble()
-    }
-    val maxTime = 3.0 // Fixed max time to match the chart's 0-3h range
     val taskTypes = timeInHours.keys.toList()
 
     Box(
@@ -51,6 +48,8 @@ fun TaskByAvgCompletionTime(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Chart area
+            val rawMaxTime = timeInHours.values.maxOrNull() ?: 1.0
+            val maxTime = ceil(rawMaxTime * 2) / 2
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -60,11 +59,11 @@ fun TaskByAvgCompletionTime(
                 Canvas(modifier = Modifier.fillMaxSize()) {
                     val width = size.width
                     val height = size.height
-                    val padding = 40f // Space for axis labels
+                    val padding = 50f // Space for axis labels
                     val graphHeight = height - padding
                     val graphWidth = width - padding
-                    val maxTime = 3.0 // Fixed max time to match the chart's 0-3h range
                     val barWidth = graphWidth / taskTypes.size / 1.5f // Adjusted for spacing
+                    val spacing = graphWidth / taskTypes.size
 
                     // Draw Y-axis
                     drawLine(
@@ -86,10 +85,13 @@ fun TaskByAvgCompletionTime(
                     taskTypes.forEachIndexed { index, taskType ->
                         val barColor = when (taskType.lowercase()) {
                             "scouting" -> ScoutingIcon
+                            "spraying" -> SprayingIcon
+                            "sowing" -> SowingIcon
                             "fuel" -> FuelIcon
+                            "yield" -> YieldIcon
                             else -> Color.Gray
                         }
-                        val x = padding + (index * graphWidth / (taskTypes.size - 1))
+                        val x = padding + spacing * index + spacing / 2
                         val barHeight = (timeInHours[taskType]!! / maxTime * graphHeight).toFloat()
                             .coerceAtMost(graphHeight)
                         val y = graphHeight - barHeight // Start from bottom, ensure y >= 0
@@ -97,7 +99,7 @@ fun TaskByAvgCompletionTime(
                         // Draw bar, constrained to graphHeight
                         drawRect(
                             color = barColor.copy(alpha = 0.3f),
-                            topLeft = Offset(x - barWidth / 2, y.coerceAtLeast(0f)),
+                            topLeft = Offset(x - barWidth / 2, y),
                             size = androidx.compose.ui.geometry.Size(barWidth, barHeight)
                         )
 
@@ -108,7 +110,7 @@ fun TaskByAvgCompletionTime(
                             (y - 10f).coerceAtLeast(0f),
                             android.graphics.Paint().apply {
                                 color = android.graphics.Color.BLACK
-                                textSize = 20f // Reduced text size to fit better
+                                textSize = 30f // Reduced text size to fit better
                                 textAlign = android.graphics.Paint.Align.CENTER
                             }
                         )
@@ -120,7 +122,7 @@ fun TaskByAvgCompletionTime(
                     modifier = Modifier
                         .fillMaxWidth()
                         .align(Alignment.BottomCenter)
-                        .padding(start = 20.dp, end = 8.dp),
+                        .padding(start = 16.dp, end = 8.dp),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     taskTypes.forEach { taskType ->
@@ -140,10 +142,12 @@ fun TaskByAvgCompletionTime(
                     modifier = Modifier
                         .fillMaxHeight()
                         .align(Alignment.TopStart)
-                        .padding(top = 13.dp, bottom = 44.dp),
+                        .padding( bottom = 12.dp),
                     verticalArrangement = Arrangement.SpaceBetween
                 ) {
-                    val steps = listOf(3.0, 2.0, 1.0, 0.0)
+                    val stepsCount = 5  // number of Y-axis labels (e.g., top/middle/bottom)
+                    val stepValue = maxTime / (stepsCount - 1)
+                    val steps = (0 until stepsCount).map { i -> maxTime - i * stepValue }
                     steps.forEach { value ->
                         Text(
                             text = String.format(Locale.UK, "%.1f", value) + "h",
@@ -173,7 +177,10 @@ fun TaskByAvgCompletionTime(
                         chunk.forEach { entry ->
                             val barColor = when (entry.key.lowercase()) {
                                 "scouting" -> ScoutingIcon
+                                "spraying" -> SprayingIcon
+                                "sowing" -> SowingIcon
                                 "fuel" -> FuelIcon
+                                "yield" -> YieldIcon
                                 else -> Color.Gray
                             }
                             Row(

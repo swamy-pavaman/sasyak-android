@@ -2,6 +2,7 @@
 package com.kapilagro.sasyak.presentation.common.navigation
 
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -496,11 +497,13 @@ fun AppNavGraph(
         }
 
         composable(Screen.TaskList.route) {
-            val taskViewModel: TaskViewModel = hiltViewModel()
-            LaunchedEffect(Unit) {
-                taskViewModel.getCurrentUserRole() // Ensure user role is fetched
-                taskViewModel.resetTabForNavigation() // Reset tab based on role
-            }
+// In the TaskListScreen we are loading it with launch effect
+//            val taskViewModel: TaskViewModel = hiltViewModel()
+//            LaunchedEffect(Unit) {
+//                Log.d("TaskListScreen", "LaunchedEffect triggered")
+//                taskViewModel.getCurrentUserRole() // Ensure user role is fetched
+//                taskViewModel.resetTabForNavigation() // Reset tab based on role
+//            }
             TaskListScreen(
                 onTaskClick = { taskId ->
                     navController.navigate(Screen.TaskDetail.createRoute(taskId.toString()))

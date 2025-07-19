@@ -64,8 +64,6 @@ fun HomeScreen(
     onYieldTaskClick: () -> Unit,
     onMyTasksClick: () -> Unit,
     onTeamClick:()->Unit,
-
-
     onReportsClick: () -> Unit,    // Added for Reports navigation
     onAdviceClick: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),

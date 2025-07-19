@@ -64,14 +64,23 @@ fun TaskListScreen(
     val supervisorTaskCount by viewModel.supervisorTaskCount.collectAsState()
     val createdTaskCount by viewModel.createdTaskCount.collectAsState()
     val assignedTaskCount by viewModel.assignedTaskCount.collectAsState()
+    val managerTaskCount  by viewModel.managerTaskCount.collectAsState()
+    val supervisorListTaskCount  by viewModel.supervisorListTaskCount.collectAsState()
 
     // Use the current route as a key to trigger reinitialization
     val currentRoute by navController.currentBackStackEntryAsState()
     val routeKey = currentRoute?.destination?.route
 
-    // Fetch user role and reinitialize when the route changes
-    LaunchedEffect(routeKey) {
-        viewModel.getCurrentUserRole()
+    // Fetch user role and data on first composition only
+    LaunchedEffect(true) {
+        viewModel.initializeOnce()
+    }
+    // Load managers and supervisors lists for admin
+    LaunchedEffect(Unit) {
+        if ((userRole == "ADMIN") && (managersList.isEmpty() || supervisorsList.isEmpty())) {
+            viewModel.fetchManagers()
+            viewModel.fetchSupervisors()
+        }
     }
 
     // Pagination logic
@@ -312,8 +321,8 @@ fun TaskListScreen(
                         TaskViewModel.TaskTab.ME -> createdTaskCount
                         TaskViewModel.TaskTab.ASSIGNED -> assignedTaskCount
                         TaskViewModel.TaskTab.CREATED -> createdTaskCount
-                        TaskViewModel.TaskTab.MANAGERS -> (taskListState as TaskViewModel.TaskListState.Success).tasks.size
-                        TaskViewModel.TaskTab.SUPERVISOR_LIST -> (taskListState as TaskViewModel.TaskListState.Success).tasks.size
+                        TaskViewModel.TaskTab.MANAGERS -> managerTaskCount
+                        TaskViewModel.TaskTab.SUPERVISOR_LIST -> supervisorListTaskCount
                     }
                     Surface(
                         color = MaterialTheme.colorScheme.secondaryContainer,

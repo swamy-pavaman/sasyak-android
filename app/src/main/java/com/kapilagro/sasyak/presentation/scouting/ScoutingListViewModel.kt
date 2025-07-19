@@ -123,7 +123,7 @@ class ScoutingListViewModel @Inject constructor(
                     is ApiResponse.Success -> {
                         _createScoutingState.value = CreateScoutingState.Success(response.data)
                         // Refresh the task list after successful creation
-                        refreshTasks()
+                        //refreshTasks()
                     }
                     is ApiResponse.Error -> {
                         _createScoutingState.value = CreateScoutingState.Error(response.errorMessage)
