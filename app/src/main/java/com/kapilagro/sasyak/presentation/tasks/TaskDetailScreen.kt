@@ -43,6 +43,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -165,10 +166,12 @@ fun TaskDetailScreen(
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Column {
-                            var imageUrls = Json.parseToJsonElement(task.imagesJson.toString())
+                            var imageUrls = try { Json.parseToJsonElement(task.imagesJson.toString())
                                 .jsonArray
                                 .map { it.jsonPrimitive.content }
-                            Log.d("imageUrls", imageUrls.toString())
+                            }catch (e:Exception){
+                                emptyList()
+                            }
                             if (imageUrls.isNullOrEmpty()) {
                                 imageUrls =
                                     listOf("https://minio.kapilagro.com:9000/sasyak/placeholder.png")
@@ -253,7 +256,10 @@ fun TaskDetailScreen(
                                         horizontal = 12.dp,
                                         vertical = 4.dp
                                     ),
-                                    style = MaterialTheme.typography.bodyMedium
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    maxLines = 1,
+                                    fontSize = 12.sp
                                 )
                             }
                         }
@@ -653,6 +659,7 @@ fun TaskDetailScreen(
                     }
 
                     // Role-based actions
+                    Log.d("userRole in TaskDetails Screen", "User Role: $userRole")
                     when (userRole) {
                         "MANAGER" , "ADMIN" -> {
                             if (task.status.equals("submitted", ignoreCase = true) ||
@@ -742,10 +749,8 @@ fun TaskDetailScreen(
                                 Spacer(modifier = Modifier.height(16.dp))
 
                                 // Approve/Reject buttons - only show if there's an implementation
-                                if (task.status.equals(
-                                        "submitted",
-                                        ignoreCase = true
-                                    ) || task.status.equals("implemented", ignoreCase = true)
+                                if (task.status.equals("submitted", ignoreCase = true)
+                                    || task.status.equals("implemented", ignoreCase = true)
                                 ) {
                                     Row(
                                         modifier = Modifier
@@ -1268,7 +1273,7 @@ fun TaskStatusChip(taskStatus: String) {
     Surface(
         shape = RoundedCornerShape(16.dp),
         color = backgroundColor,
-        modifier = Modifier.height(30.dp)
+        modifier = Modifier.height(24.dp)
     ) {
         Text(
             text = taskStatus.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() },
@@ -1313,13 +1318,14 @@ fun FormattedScoutingFields(detailsJson: String?) {
 
     json?.let {
         val fields = listOf(
-            "Disease" to it.optString("nameOfDisease", "None detected"),
-            "Fruits Count" to it.optString("noOfFruitSeen", ""),
-            "Flowers Count" to it.optString("noOfFlowersSeen", ""),
+            "Valve" to it.optString("valveName", ""),
+            "Crop" to it.optString("cropName", ""),
             "Row" to it.optString("row", ""),
             "Tree Number" to it.optString("treeNo", ""),
+            "Disease" to it.optString("targetPest", "None detected"),
+            "Fruits Count" to it.optString("noOfFruitSeen", ""),
+            "Flowers Count" to it.optString("noOfFlowersSeen", ""),
             "Fruits Dropped" to it.optString("noOfFruitsDropped", ""),
-            "Valve" to it.optString("valveName", ""),
             "Due Date" to it.optString("dueDate","noDue date")
         )
 

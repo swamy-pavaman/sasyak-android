@@ -39,9 +39,9 @@ fun MyTaskScreen(
     val listState = rememberLazyListState()
 
     // Fetch created tasks
-    LaunchedEffect(Unit) {
-        viewModel.getCurrentUserRole()
-        viewModel.loadMyTasks(0, 10)
+    // Fetch user role and data on first composition only
+    LaunchedEffect(true) {
+        viewModel.MyTaskInitialize()
     }
 
     // Pagination logic

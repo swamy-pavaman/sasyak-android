@@ -153,8 +153,12 @@ fun FuelRequestScreen(
     }
 
     LaunchedEffect(Unit) {
-        categoryViewModel.fetchCategories("Vehicle")
-        categoryViewModel.fetchCategories("Driver")
+        if (categoriesStates["Vehicle"] !is CategoriesState.Success) {
+            categoryViewModel.fetchCategories("Vehicle")
+        }
+        if (categoriesStates["Driver"] !is CategoriesState.Success) {
+            categoryViewModel.fetchCategories("Driver")
+        }
     }
 
     val state = categoriesStates["Vehicle"]
@@ -195,8 +199,15 @@ fun FuelRequestScreen(
 
     // Load supervisors list for MANAGER role
     LaunchedEffect(Unit) {
-        if (userRole == "MANAGER") {
+        if (userRole == "MANAGER"  && supervisorsListState !is HomeViewModel.SupervisorsListState.Success) {
             homeViewModel.loadSupervisorsList()
+        }
+    }
+    // Load managers and supervisors lists for admin
+    LaunchedEffect(Unit) {
+        if ((userRole == "ADMIN") && (managersList.isEmpty() || supervisorsList.isEmpty())) {
+            taskViewModel.fetchManagers()
+            taskViewModel.fetchSupervisors()
         }
     }
 
@@ -217,6 +228,12 @@ fun FuelRequestScreen(
             else -> {
                 // Handle other states if needed
             }
+        }
+    }
+    // Resets dependent fields
+    LaunchedEffect(vehicleName) {
+        if (vehicleName.isEmpty()) {
+            vehicleNumber = ""
         }
     }
 

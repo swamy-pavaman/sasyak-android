@@ -2,7 +2,6 @@ package com.kapilagro.sasyak.presentation.reports
 
 import android.os.Build
 import androidx.annotation.RequiresApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -12,9 +11,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.airbnb.lottie.compose.LottieAnimation
@@ -23,7 +19,6 @@ import com.airbnb.lottie.compose.LottieConstants
 import com.airbnb.lottie.compose.rememberLottieAnimatable
 import com.airbnb.lottie.compose.rememberLottieComposition
 import com.kapilagro.sasyak.R
-import com.kapilagro.sasyak.presentation.common.theme.*
 import com.kapilagro.sasyak.presentation.reports.components.TaskCompletionChart
 import com.kapilagro.sasyak.presentation.reports.components.TaskTypeSummary
 import com.kapilagro.sasyak.presentation.reports.components.TasksByUser
@@ -142,11 +137,8 @@ fun ReportScreen(
 
                     val report = (reportState as ReportViewModel.ReportState.Success).report
                     TaskTypeSummary(report.tasksByType)
-                    Spacer(modifier = Modifier.height(16.dp))
                     TaskByAvgCompletionTime(report.avgCompletionTimeByType)
-                    Spacer(modifier = Modifier.height(16.dp))
                     TaskByStatus(report.tasksByStatus)
-                    Spacer(modifier = Modifier.height(16.dp))
                     TasksByUser(report.tasksByUser)
                 }
 

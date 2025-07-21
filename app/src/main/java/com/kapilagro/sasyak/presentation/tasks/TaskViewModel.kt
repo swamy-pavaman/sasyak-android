@@ -1,5 +1,10 @@
 package com.kapilagro.sasyak.presentation.tasks
 
+import android.util.Log
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kapilagro.sasyak.data.api.models.responses.TeamMemberResponse
@@ -62,6 +67,12 @@ class TaskViewModel @Inject constructor(
     private val _assignedTaskCount = MutableStateFlow(0)
     val assignedTaskCount: StateFlow<Int> = _assignedTaskCount.asStateFlow()
 
+    private val _managerTaskCount = MutableStateFlow(0)
+    val managerTaskCount: StateFlow<Int> = _managerTaskCount.asStateFlow()
+
+    private val _supervisorListTaskCount = MutableStateFlow(0)
+    val supervisorListTaskCount: StateFlow<Int> = _supervisorListTaskCount.asStateFlow()
+
     // Admin-specific states
     private val _managersList = MutableStateFlow<List<TeamMemberResponse>>(emptyList())
     val managersList: StateFlow<List<TeamMemberResponse>> = _managersList.asStateFlow()
@@ -72,19 +83,44 @@ class TaskViewModel @Inject constructor(
     private val _selectedUserId = MutableStateFlow<Int?>(null)
     val selectedUserId: StateFlow<Int?> = _selectedUserId.asStateFlow()
 
+    private var _isInitialized = MutableStateFlow(false)
+    val isInitialized: StateFlow<Boolean> = _isInitialized.asStateFlow()
+
     private var currentPage = 0
     private val pageSize = 10
     private val accumulatedTasks = mutableListOf<Task>()
 
+    // Initialize user role
     init {
+        getUserRole()
+    }
+
+    fun initializeOnce() {
+        if (_isInitialized.value) return
+
         getCurrentUserRole()
-        if (_userRole.value == "ADMIN") {
-            fetchManagers()
-            fetchSupervisors()
+        _isInitialized.value = true
+    }
+
+    //for admin MyTasksScreen
+    fun MyTaskInitialize() {
+        if (_isInitialized.value) return
+
+        loadMyTasks(0, 10)
+        _isInitialized.value = true
+    }
+
+    fun getUserRole() {
+        viewModelScope.launch {
+            authRepository.getUserRole().collect { role ->
+                _userRole.value = role
+            }
         }
     }
 
+
     fun getCurrentUserRole() {
+        Log.d("TaskListScreen", "Fetching user role getCurrentUserRole ")
         viewModelScope.launch {
             authRepository.getUserRole().collect { role ->
                 _userRole.value = role
@@ -244,8 +280,8 @@ class TaskViewModel @Inject constructor(
                         TaskTab.ME -> _createdTaskCount.value = response.data.second
                         TaskTab.ASSIGNED -> _assignedTaskCount.value = response.data.second
                         TaskTab.CREATED -> _createdTaskCount.value = response.data.second
-                        TaskTab.MANAGERS -> {} // No count update for Admin tabs
-                        TaskTab.SUPERVISOR_LIST -> {} // No count update for Supervisor List tabs
+                        TaskTab.MANAGERS -> _managerTaskCount.value = response.data.second
+                        TaskTab.SUPERVISOR_LIST -> _supervisorListTaskCount.value = response.data.second
                     }
                     _taskListState.value = TaskListState.Success(
                         tasks = accumulatedTasks.toList(),
@@ -314,7 +350,7 @@ class TaskViewModel @Inject constructor(
             )) {
                 is ApiResponse.Success -> {
                     _createTaskState.value = CreateTaskState.Success(response.data)
-                    refreshTasks()
+                    //refreshTasks()
                 }
                 is ApiResponse.Error -> {
                     _createTaskState.value = CreateTaskState.Error(response.errorMessage)
@@ -333,7 +369,7 @@ class TaskViewModel @Inject constructor(
                 is ApiResponse.Success -> {
                     _updateTaskState.value = UpdateTaskState.Success(response.data)
                     loadTaskDetail(taskId)
-                    refreshTasks()
+                    //refreshTasks()
                 }
                 is ApiResponse.Error -> {
                     _updateTaskState.value = UpdateTaskState.Error(response.errorMessage)

@@ -205,7 +205,7 @@ fun TaskTab(
         color = if (selected) selectedColor.copy(alpha = 0.2f) else Color.Transparent,
         border = if (!selected) BorderStroke(1.dp, unselectedBorderColor) else null,
         modifier = modifier
-            .height(40.dp)
+            .height(32.dp)
             .clickable { onClick() }
     ) {
         Row(

@@ -317,7 +317,7 @@ fun ScoutingTaskDetailScreen(
                                 }
 
                                 // Disease information (if available)
-                                if (!scoutingDetails.nameOfDisease.isNullOrEmpty()) {
+                                if (!scoutingDetails.targetPest.isNullOrEmpty()) {
                                     Spacer(modifier = Modifier.height(16.dp))
                                     Divider(color = Purple200)
                                     Spacer(modifier = Modifier.height(16.dp))
@@ -334,7 +334,7 @@ fun ScoutingTaskDetailScreen(
                                     DetailRow(
                                         icon = Icons.Outlined.BugReport,
                                         label = "Disease",
-                                        value = scoutingDetails.nameOfDisease,
+                                        value = scoutingDetails.targetPest,
                                         valueColor = Color.Red
                                     )
                                 }

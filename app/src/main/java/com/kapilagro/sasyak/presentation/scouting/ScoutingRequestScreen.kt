@@ -119,7 +119,7 @@ fun ScoutingRequestScreen(
     var noOfFruitSeen by remember { mutableStateOf(savedStateHandle?.get<String>("noOfFruitSeen") ?: "") }
     var noOfFlowersSeen by remember { mutableStateOf(savedStateHandle?.get<String>("noOfFlowersSeen") ?: "") }
     var noOfFruitsDropped by remember { mutableStateOf(savedStateHandle?.get<String>("noOfFruitsDropped") ?: "") }
-    var nameOfDisease by remember { mutableStateOf(savedStateHandle?.get<String>("nameOfDisease") ?: "") }
+    var targetPest by remember { mutableStateOf(savedStateHandle?.get<String>("targetPest") ?: "") }
     var nameOfDiseaseExpanded by remember { mutableStateOf(false) }
     var description by remember { mutableStateOf(savedStateHandle?.get<String>("description") ?: "") }
     var imageFiles by remember { mutableStateOf<List<File>?>(null) }
@@ -128,6 +128,8 @@ fun ScoutingRequestScreen(
     // State for selected role and user
     var selectedRole by remember { mutableStateOf(savedStateHandle?.get<String>("selectedRole") ?:"Manager") }
     var selectedUser by remember { mutableStateOf(savedStateHandle?.get<String>("selectedUser") ?:"") }
+
+    var category by remember { mutableStateOf(savedStateHandle?.get<String>("category") ?: "Pest") }
 
     var dueDateText by remember {
         mutableStateOf(
@@ -156,13 +158,14 @@ fun ScoutingRequestScreen(
                 "noOfFruitSeen" to noOfFruitSeen,
                 "noOfFlowersSeen" to noOfFlowersSeen,
                 "noOfFruitsDropped" to noOfFruitsDropped,
-                "nameOfDisease" to nameOfDisease,
+                "targetPest" to targetPest,
                 "description" to description,
                 "assignedTo" to assignedTo,
                 "valveName" to valveName,
                 "dueDate" to dueDateText,
                 "selectedRole" to selectedRole,
-                "selectedUser" to selectedUser
+                "selectedUser" to selectedUser,
+                "category" to category
             )
         }.collect { state ->
             state.forEach { (key, value) ->
@@ -173,7 +176,9 @@ fun ScoutingRequestScreen(
 
     // Fetch valves
     LaunchedEffect(Unit) {
-        categoryViewModel.fetchCategories("Valve")
+        if (categoriesStates["Valve"] !is CategoriesState.Success) {
+            categoryViewModel.fetchCategories("Valve")
+        }
     }
 
     // Extract valve details
@@ -198,20 +203,15 @@ fun ScoutingRequestScreen(
         }
     }
 
-    val diseases by remember(valveName, cropName) {
-        derivedStateOf {
-            val diseaseList = valveDetails[valveName]?.get(cropName)?.DISEASES?.map { it.trim() } ?: emptyList()
-            diseaseList
-        }
-    }
+    val diseaseList = listOf(
+        "Malformation","Gummosis","Powdery Mildew","Canker"
+    )
 
-    val pests by remember(valveName, cropName) {
-        derivedStateOf {
-            val pestList =
-                valveDetails[valveName]?.get(cropName)?.PESTS?.map { it.trim() } ?: emptyList()
-            pestList
-        }
-    }
+    val pestList = listOf(
+        "Stem Borer","Nematodes","Thrips","Mealy Bugs","Scales","Hoppers","Caterpillars"
+    )
+
+    val targetItems = if (category == "Pest") pestList else diseaseList
 
     val rows by remember(valveName, cropName) {
         derivedStateOf {
@@ -228,33 +228,42 @@ fun ScoutingRequestScreen(
         }
     }
 
-    // Reset dependent fields
-//    LaunchedEffect(valveName) {
-//        Log.d("ScoutingRequestScreen", "Resetting fields due to valveName change: $valveName")
-//        cropName = ""
-//        nameOfDisease = ""
-//        row = ""
-//        treeNo = ""
-//    }
-//
-//    LaunchedEffect(cropName) {
-//        Log.d("ScoutingRequestScreen", "Resetting fields due to cropName change: $cropName")
-//        nameOfDisease = ""
-//        row = ""
-//        treeNo = ""
-//    }
-//
-//    LaunchedEffect(row) {
-//        Log.d("ScoutingRequestScreen", "Resetting treeNo due to row change: $row")
-//        treeNo = ""
-//    }
-//
-//    // Load supervisors list for MANAGER role
-//    LaunchedEffect(Unit) {
-//        if (userRole == "MANAGER") {
-//            homeViewModel.loadSupervisorsList()
-//        }
-//    }
+     // Reset dependent fields
+    LaunchedEffect(valveName) {
+        if (valveName.isEmpty()) {
+            cropName = ""
+            row = ""
+            treeNo = ""
+        }
+    }
+
+    LaunchedEffect(cropName) {
+        if (cropName.isEmpty()) {
+            row = ""
+            treeNo = ""
+        }
+    }
+
+    LaunchedEffect(row) {
+        if (row.isEmpty()) {
+        treeNo = ""
+            }
+    }
+
+    // Load supervisors list for MANAGER role
+    LaunchedEffect(Unit) {
+        if (userRole == "MANAGER"  && supervisorsListState !is HomeViewModel.SupervisorsListState.Success) {
+            homeViewModel.loadSupervisorsList()
+        }
+    }
+
+    // Load managers and supervisors lists for admin
+    LaunchedEffect(Unit) {
+        if ((userRole == "ADMIN") && (managersList.isEmpty() || supervisorsList.isEmpty())) {
+            taskViewModel.fetchManagers()
+            taskViewModel.fetchSupervisors()
+        }
+    }
 
     // Handle navigation result from ImageCaptureScreen
     LaunchedEffect(navController) {
@@ -286,7 +295,7 @@ fun ScoutingRequestScreen(
             "Fruits Seen" to (submittedEntry!!.noOfFruitSeen ?: "Not specified"),
             "Flowers Seen" to (submittedEntry!!.noOfFlowersSeen ?: "Not specified"),
             "Fruits Dropped" to (submittedEntry!!.noOfFruitsDropped ?: "Not specified"),
-            "Disease" to (submittedEntry!!.nameOfDisease ?: "None detected")
+            "Disease" to (submittedEntry!!.targetPest ?: "None detected")
         )
 
         SuccessDialog(
@@ -608,58 +617,105 @@ fun ScoutingRequestScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Name of the Disease Dropdown
-            ExposedDropdownMenuBox(
-                expanded = nameOfDiseaseExpanded,
-                onExpandedChange = { nameOfDiseaseExpanded = it },
-                modifier = Modifier.fillMaxWidth()
+            // Name of the Disease and Pest Dropdown
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                OutlinedTextField(
-                    value = nameOfDisease,
-                    readOnly = false,
-                    onValueChange = { newValue ->
-                        nameOfDisease = newValue
-                        nameOfDiseaseExpanded = true
-                    },
-                    label = { Text("Name of the Disease") },
-                    trailingIcon = {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            if (nameOfDisease.isNotEmpty()) {
-                                IconButton(onClick = { nameOfDisease = "" }) {
-                                    Icon(
-                                        imageVector = Icons.Default.Close,
-                                        contentDescription = "Clear name of the disease",
-                                        tint = MaterialTheme.colorScheme.onSurface
-                                    )
-                                }
-                            }
-                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = nameOfDiseaseExpanded)
-                            Spacer(modifier = Modifier.width(8.dp))
-                        }
-                    },
+                // First dropdown
+                var categoryExpanded by remember { mutableStateOf(false) }
+                ExposedDropdownMenuBox(
+                    expanded = categoryExpanded,
+                    onExpandedChange = { categoryExpanded = it },
                     modifier = Modifier
+                        .weight(0.4f)
                         .fillMaxWidth()
-                        .menuAnchor(),
-                    shape = RoundedCornerShape(8.dp)
-                )
-
-                ExposedDropdownMenu(
-                    expanded = nameOfDiseaseExpanded,
-                    onDismissRequest = { nameOfDiseaseExpanded = false }
                 ) {
-                    diseases
-                        .filter { it.contains(nameOfDisease, ignoreCase = true) }
-                        .forEach { disease ->
+                    OutlinedTextField(
+                        value = category,
+                        onValueChange = { category = it },
+                        readOnly = true,
+                        label = { Text("Category") },
+                        trailingIcon = {
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded)
+                        },
+                        modifier = Modifier
+                            .menuAnchor()
+                            .fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp)
+                    )
+
+                    ExposedDropdownMenu(
+                        expanded = categoryExpanded,
+                        onDismissRequest = { categoryExpanded = false }
+                    ) {
+                        listOf("Pest", "Disease").forEach { item ->
                             DropdownMenuItem(
-                                text = { Text(disease) },
+                                text = { Text(item) },
                                 onClick = {
-                                    nameOfDisease = disease
-                                    nameOfDiseaseExpanded = false
+                                    category = item
+                                    targetPest = "" // Reset target when category changes
+                                    categoryExpanded = false
                                 }
                             )
                         }
+                    }
+                }
+
+                // Second dropdown
+                var targetExpanded by remember { mutableStateOf(false) }
+                ExposedDropdownMenuBox(
+                    expanded = targetExpanded,
+                    onExpandedChange = { targetExpanded = it },
+                    modifier = Modifier
+                        .weight(0.6f)
+                        .fillMaxWidth()
+                ) {
+                    OutlinedTextField(
+                        value = targetPest,
+                        onValueChange = { targetPest = it },
+                        readOnly = false,
+                        label = { Text("Target ${category.lowercase()}") },
+                        trailingIcon = {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ){
+                                if (targetPest.isNotEmpty()) {
+                                    IconButton(onClick = { targetPest = "" }) {
+                                        Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = "Clear target pest",
+                                            tint = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                }
+                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = targetExpanded)
+                                Spacer(modifier = Modifier.width(8.dp))
+                            }
+                        },
+                        modifier = Modifier
+                            .menuAnchor()
+                            .fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp)
+                    )
+
+                    ExposedDropdownMenu(
+                        expanded = targetExpanded,
+                        onDismissRequest = { targetExpanded = false }
+                    ) {
+                        targetItems
+                            .filter { it.contains(targetPest, ignoreCase = true) }
+                            .forEach { item ->
+                                DropdownMenuItem(
+                                    text = { Text(item) },
+                                    onClick = {
+                                        targetPest = item
+                                        targetExpanded = false
+                                    }
+                                )
+                            }
+                    }
                 }
             }
 
@@ -999,7 +1055,7 @@ fun ScoutingRequestScreen(
                                 noOfFruitSeen = noOfFruitSeen.ifBlank { null },
                                 noOfFlowersSeen = noOfFlowersSeen.ifBlank { null },
                                 noOfFruitsDropped = noOfFruitsDropped.ifBlank { null },
-                                nameOfDisease = nameOfDisease.ifBlank { null },
+                                targetPest = if (targetPest.isNotBlank()) "$category : $targetPest" else null,
                                 valveName = valveName,
                                 dueDate = if (userRole == "MANAGER" || userRole == "ADMIN") dueDateText else null
                             )
