@@ -1,5 +1,6 @@
 package com.kapilagro.sasyak.presentation.sowing
 
+import android.net.Uri
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
@@ -21,10 +22,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import coil.compose.rememberAsyncImagePainter
 import com.kapilagro.sasyak.data.api.ImageUploadService
 import com.kapilagro.sasyak.di.IoDispatcher
@@ -42,7 +46,10 @@ import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import com.kapilagro.sasyak.presentation.common.catalog.CategoryViewModel
 import com.kapilagro.sasyak.presentation.common.catalog.CategoriesState
+import com.kapilagro.sasyak.presentation.common.image.ImageCaptureViewModel
 import com.kapilagro.sasyak.presentation.tasks.TaskViewModel
+import com.kapilagro.sasyak.worker.AttachUrlWorker
+import com.kapilagro.sasyak.worker.FileUploadWorker
 import java.time.Instant
 import java.time.ZoneId
 
@@ -60,6 +67,7 @@ fun SowingRequestScreen(
     @IoDispatcher ioDispatcher: CoroutineDispatcher,
     imageUploadService: ImageUploadService
 ) {
+    val context = LocalContext.current
     val createSowingState by viewModel.createSowingState.collectAsState()
     val userRole by homeViewModel.userRole.collectAsState()
     val supervisorsListState by homeViewModel.supervisorsListState.collectAsState()
@@ -68,10 +76,13 @@ fun SowingRequestScreen(
     val managersList by taskViewModel.managersList.collectAsState()
     val supervisorsList by taskViewModel.supervisorsList.collectAsState()
 
+
+    var imageUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
+
     // Dialog state
     var showSuccessDialog by remember { mutableStateOf(false) }
     var submittedEntry by remember { mutableStateOf<SowingDetails?>(null) }
-    var uploadState by remember { mutableStateOf<UploadState>(UploadState.Idle) }
+//    var uploadState by remember { mutableStateOf<UploadState>(UploadState.Idle) }
 
     // Form fields with saved state
     val savedStateHandle = navController.currentBackStackEntry?.savedStateHandle
@@ -97,7 +108,7 @@ fun SowingRequestScreen(
     var soilCondition by remember { mutableStateOf(savedStateHandle?.get<String>("soilCondition") ?: "") }
     var weatherCondition by remember { mutableStateOf(savedStateHandle?.get<String>("weatherCondition") ?: "") }
     var description by remember { mutableStateOf(savedStateHandle?.get<String>("description") ?: "") }
-    var imageFiles by remember { mutableStateOf<List<File>?>(null) }
+
     var assignedTo by remember { mutableStateOf<Int?>(savedStateHandle?.get<Int>("assignedTo")) }
     var assignedToExpanded by remember { mutableStateOf(false) }
     var valveName by remember { mutableStateOf(savedStateHandle?.get<String>("valveName") ?: "") }
@@ -209,17 +220,7 @@ fun SowingRequestScreen(
         "Seed Drill", "Zero Tillage", "Raised Bed"
     )
 
-    // Handle task creation success
-    LaunchedEffect(createSowingState) {
-        when (createSowingState) {
-            is SowingListViewModel.CreateSowingState.Success -> {
-                showSuccessDialog = true
-            }
-            else -> {
-                // Handle other states if needed
-            }
-        }
-    }
+
 
     LaunchedEffect(Unit) {
         if (userRole == "MANAGER" && supervisorsListState !is HomeViewModel.SupervisorsListState.Success) {
@@ -234,13 +235,63 @@ fun SowingRequestScreen(
         }
     }
 
+
+    LaunchedEffect(createSowingState) {
+        when (createSowingState) {
+            is SowingListViewModel.CreateSowingState.Success -> {
+                val createdTask = (createSowingState as SowingListViewModel.CreateSowingState.Success).task
+
+                // Check if there are any images to upload
+                if (imageUris.isNotEmpty()) {
+                    val imageFilePaths = imageUris.mapNotNull { uri ->
+                        ImageCaptureViewModel.copyUriToCachedFile(context, uri)?.absolutePath
+                    }
+
+                    // Create the work request to upload files
+                    val fileUploadRequest = OneTimeWorkRequestBuilder<FileUploadWorker>()
+                        .setInputData(
+                            FileUploadWorker.createInputData(
+                                taskId = createdTask.id,
+                                imagePaths = imageFilePaths,
+                                folder = "SOWING"
+                            )
+                        )
+                        .addTag(FileUploadWorker.UPLOAD_TAG)
+                        .build()
+
+                    // Create the work request to attach the URLs to the task
+                    val attachUrlRequest = OneTimeWorkRequestBuilder<AttachUrlWorker>()
+                        .build()
+
+                    // Chain the requests: upload first, then attach URLs
+                    WorkManager.getInstance(context)
+                        .beginWith(fileUploadRequest)
+                        .then(attachUrlRequest)
+                        .enqueue()
+                }
+
+                // Show success dialog immediately, don't wait for upload
+                showSuccessDialog = true
+            }
+            else -> {
+                // Handle other states like Error or Loading if needed
+            }
+        }
+    }
+
+
     // Handle navigation result from ImageCaptureScreen
     LaunchedEffect(navController) {
-        navController.currentBackStackEntry?.savedStateHandle?.getStateFlow<List<File>>("selectedImages", emptyList())
-            ?.collect { files ->
-                imageFiles = files
+        navController.currentBackStackEntry
+            ?.savedStateHandle
+            ?.getStateFlow<List<String>>("selectedImages", emptyList())
+            ?.collect { uriStrings ->
+                imageUris = uriStrings.map { Uri.parse(it) } // <-- CHANGE THIS LOGIC
+                // Also update the saved state handle so URIs persist on configuration change
+                savedStateHandle?.set("selectedImages", uriStrings)
             }
     }
+
     // Resets dependent fields
     LaunchedEffect(valveName) {
         if (valveName.isEmpty()) {
@@ -961,7 +1012,7 @@ fun SowingRequestScreen(
                     Text("Select Images")
                 }
 
-                if (imageFiles != null && imageFiles!!.isNotEmpty()) {
+                if (imageUris.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(
                         modifier = Modifier
@@ -969,7 +1020,7 @@ fun SowingRequestScreen(
                             .horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        imageFiles!!.forEach { file ->
+                        imageUris.forEach { uri ->
                             Box(
                                 modifier = Modifier.size(80.dp)
                             ) {
@@ -982,7 +1033,7 @@ fun SowingRequestScreen(
                                     shape = RoundedCornerShape(8.dp)
                                 ) {
                                     Image(
-                                        painter = rememberAsyncImagePainter(file),
+                                        painter = rememberAsyncImagePainter(uri),
                                         contentDescription = "Selected image",
                                         modifier = Modifier.fillMaxSize(),
                                         contentScale = androidx.compose.ui.layout.ContentScale.Crop
@@ -990,7 +1041,8 @@ fun SowingRequestScreen(
                                 }
                                 IconButton(
                                     onClick = {
-                                        imageFiles = imageFiles?.filter { it != file }
+                                        imageUris = imageUris.filter { it != uri }
+                                        savedStateHandle?.set("selectedImages", imageUris.map { it.toString() })
                                     },
                                     modifier = Modifier
                                         .align(Alignment.TopEnd)
@@ -1049,22 +1101,13 @@ fun SowingRequestScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             // Loading indicator
-            if (createSowingState is SowingListViewModel.CreateSowingState.Loading || uploadState is UploadState.Loading) {
+            if (createSowingState is SowingListViewModel.CreateSowingState.Loading) {
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = AgroPrimary)
                 }
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            // Error message for upload
-            if (uploadState is UploadState.Error) {
-                Text(
-                    text = (uploadState as UploadState.Error).message,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-            }
 
             // Submit Button
             Button(
@@ -1093,50 +1136,21 @@ fun SowingRequestScreen(
                             )
                             submittedEntry = sowingDetails
 
-                            if (imageFiles.isNullOrEmpty()) {
-                                // No images to upload, proceed with task creation with empty image list
-                                viewModel.createSowingTask(
-                                    sowingDetails = sowingDetails,
-                                    description = description,
-                                    imagesJson = emptyList<String>(), // Pass empty list instead of null
-                                    assignedToId = if (userRole == "MANAGER" || userRole == "ADMIN") assignedTo else null
-                                )
-                                uploadState = UploadState.Idle
-                            } else {
-                                // Upload images
-                                uploadState = UploadState.Loading
-                                val uploadResult = imageUploadService.uploadFilek(imageFiles!!, "SOWING")
-                                when (uploadResult) {
-                                    is ApiResponse.Success -> {
-                                        val imageUrls = uploadResult.data
-                                        if (imageUrls.isEmpty()) {
-                                            uploadState = UploadState.Error("Image upload failed, no URLs received")
-                                            return@launch
-                                        }
-                                        viewModel.createSowingTask(
-                                            sowingDetails = sowingDetails,
-                                            description = description,
-                                            imagesJson = imageUrls,
-                                            assignedToId = if (userRole == "MANAGER" || userRole == "ADMIN") assignedTo else null
-                                        )
-                                        uploadState = UploadState.Idle
-                                    }
-                                    is ApiResponse.Error -> {
-                                        uploadState = UploadState.Error("Image upload failed: ${uploadResult.errorMessage}")
-                                    }
-                                    is ApiResponse.Loading -> {
-                                        uploadState = UploadState.Loading
-                                    }
-                                }
-                            }
+                            // Create the task immediately with an empty image list.
+                            // The worker will add the images later.
+                            viewModel.createSowingTask(
+                                sowingDetails = sowingDetails,
+                                description = description,
+                                imagesJson = emptyList(), // <-- ALWAYS PASS AN EMPTY LIST HERE
+                                assignedToId = if (userRole == "MANAGER" || userRole == "ADMIN") assignedTo else null
+                            )
                         }
                     }
                 },
                 enabled = cropName.isNotBlank() && row.isNotBlank() && seedVariety.isNotBlank() && valveName.isNotBlank() &&
                         sowingMethod.isNotBlank() && isValidDueDate && (userRole != "MANAGER" || assignedTo != null)
                         && (userRole != "ADMIN" || assignedTo != null) &&
-                        createSowingState !is SowingListViewModel.CreateSowingState.Loading &&
-                        uploadState !is UploadState.Loading,
+                        createSowingState !is SowingListViewModel.CreateSowingState.Loading,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),

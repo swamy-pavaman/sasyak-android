@@ -652,10 +652,10 @@ fun SupervisorHomeContent(
 
         item{
             QuickActionButton(
-                icon = Icons.Outlined.Search,
+                icon = Icons.Outlined.Sync,
                 label = "Sync",
-                backgroundColor = ScoutingIcon,
-                containerColor = ScoutingContainer,
+                backgroundColor = SyncIcon,
+                containerColor = SyncContainer,
                 onClick = onSyncClick
             )
         }
@@ -665,7 +665,6 @@ fun SupervisorHomeContent(
 
     // UPDATED: Supervisor Task Sections with Status Tabs
     var selectedTaskTab by remember { mutableStateOf(0) }
-
     // Load the appropriate tasks when tab changes
     LaunchedEffect(selectedTaskTab) {
         when (selectedTaskTab) {

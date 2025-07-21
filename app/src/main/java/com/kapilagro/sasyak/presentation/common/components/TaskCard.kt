@@ -115,14 +115,20 @@ fun formatDateTime(dateTimeString: String): String {
 fun getFirstImageUrl(imagesJson: String?): String? {
     return try {
         if (imagesJson.isNullOrBlank()) return null
+
         val gson = Gson()
         val listType = object : TypeToken<List<String>>() {}.type
         val imagesList: List<String> = gson.fromJson(imagesJson, listType)
-        imagesList.firstOrNull()
+
+        if (imagesList.isEmpty()) return null
+
+        val nonMp4Url = imagesList.firstOrNull { !it.trim().endsWith(".mp4", ignoreCase = true) }
+        return nonMp4Url
     } catch (e: Exception) {
         null
     }
 }
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

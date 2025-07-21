@@ -3,6 +3,7 @@ package com.kapilagro.sasyak.presentation.scouting
 import android.content.Context
 import android.net.Uri
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -54,7 +55,6 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import kotlin.collections.filter
 import kotlinx.serialization.Serializable
-import com.kapilagro.sasyak.presentation.common.navigation.Screen
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.jsonArray
