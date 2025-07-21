@@ -31,12 +31,12 @@ import com.airbnb.lottie.compose.* // Import Lottie dependencies
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import com.kapilagro.sasyak.R // Import the R class to access the raw resource
+import com.kapilagro.sasyak.data.api.models.responses.TeamMemberResponse
 import com.kapilagro.sasyak.presentation.common.components.TaskCard
 import com.kapilagro.sasyak.presentation.common.navigation.Screen
 import com.kapilagro.sasyak.presentation.common.theme.*
 import com.kapilagro.sasyak.presentation.tasks.components.TabItem
 import com.kapilagro.sasyak.presentation.tasks.components.TaskTabRow
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -54,18 +54,33 @@ fun TaskListScreen(
     val isRefreshing by viewModel.refreshing.collectAsState()
     val listState = rememberLazyListState()
 
+    // Admin-specific states
+    val managersList by viewModel.managersList.collectAsState()
+    val supervisorsList by viewModel.supervisorsList.collectAsState()
+    val selectedUserId by viewModel.selectedUserId.collectAsState()
+    var selectedUser by remember { mutableStateOf<TeamMemberResponse?>(null) }
+
     // Task counts
     val supervisorTaskCount by viewModel.supervisorTaskCount.collectAsState()
     val createdTaskCount by viewModel.createdTaskCount.collectAsState()
     val assignedTaskCount by viewModel.assignedTaskCount.collectAsState()
+    val managerTaskCount  by viewModel.managerTaskCount.collectAsState()
+    val supervisorListTaskCount  by viewModel.supervisorListTaskCount.collectAsState()
 
     // Use the current route as a key to trigger reinitialization
     val currentRoute by navController.currentBackStackEntryAsState()
     val routeKey = currentRoute?.destination?.route
 
-    // Fetch user role and reinitialize when the route changes
-    LaunchedEffect(routeKey) {
-        viewModel.getCurrentUserRole()
+    // Fetch user role and data on first composition only
+    LaunchedEffect(true) {
+        viewModel.initializeOnce()
+    }
+    // Load managers and supervisors lists for admin
+    LaunchedEffect(Unit) {
+        if ((userRole == "ADMIN") && (managersList.isEmpty() || supervisorsList.isEmpty())) {
+            viewModel.fetchManagers()
+            viewModel.fetchSupervisors()
+        }
     }
 
     // Pagination logic
@@ -91,28 +106,17 @@ fun TaskListScreen(
     // Define tabs based on user role
     val tabs: List<TabItem<TaskViewModel.TaskTab>> = when (userRole) {
         "MANAGER" -> listOf(
-            TabItem(
-                id = TaskViewModel.TaskTab.ME,
-                title = "Me",
-                count = createdTaskCount
-            ),
-            TabItem(
-                id = TaskViewModel.TaskTab.SUPERVISORS,
-                title = "Supervisors",
-                count = supervisorTaskCount
-            )
+            TabItem(id = TaskViewModel.TaskTab.ME, title = "Me", count = createdTaskCount),
+            TabItem(id = TaskViewModel.TaskTab.SUPERVISORS, title = "Supervisors", count = supervisorTaskCount),
+            TabItem(id = TaskViewModel.TaskTab.ASSIGNED, title = "Assigned", count = assignedTaskCount)
         )
         "SUPERVISOR" -> listOf(
-            TabItem(
-                id = TaskViewModel.TaskTab.ASSIGNED,
-                title = "Assigned",
-                count = assignedTaskCount
-            ),
-            TabItem(
-                id = TaskViewModel.TaskTab.CREATED,
-                title = "Created",
-                count = createdTaskCount
-            )
+            TabItem(id = TaskViewModel.TaskTab.ASSIGNED, title = "Assigned", count = assignedTaskCount),
+            TabItem(id = TaskViewModel.TaskTab.CREATED, title = "Created", count = createdTaskCount)
+        )
+        "ADMIN" -> listOf(
+            TabItem(id = TaskViewModel.TaskTab.MANAGERS, title = "Managers", count = managersList.size),
+            TabItem(id = TaskViewModel.TaskTab.SUPERVISOR_LIST, title = "Supervisors", count = supervisorsList.size)
         )
         else -> emptyList()
     }
@@ -136,7 +140,7 @@ fun TaskListScreen(
             )
         },
         floatingActionButton = {
-            if (userRole == "MANAGER") {
+            if (userRole == "MANAGER" || userRole == "ADMIN") {
                 Column(horizontalAlignment = Alignment.End) {
                     AnimatedVisibility(
                         visible = isFabMenuOpen,
@@ -317,6 +321,8 @@ fun TaskListScreen(
                         TaskViewModel.TaskTab.ME -> createdTaskCount
                         TaskViewModel.TaskTab.ASSIGNED -> assignedTaskCount
                         TaskViewModel.TaskTab.CREATED -> createdTaskCount
+                        TaskViewModel.TaskTab.MANAGERS -> managerTaskCount
+                        TaskViewModel.TaskTab.SUPERVISOR_LIST -> supervisorListTaskCount
                     }
                     Surface(
                         color = MaterialTheme.colorScheme.secondaryContainer,
@@ -338,6 +344,7 @@ fun TaskListScreen(
                     tabs = tabs,
                     onTabSelected = { tab ->
                         viewModel.onTabSelected(tab)
+                        selectedUser = null
                     }
                 )
             } else {
@@ -354,7 +361,44 @@ fun TaskListScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
+
+            if (userRole == "ADMIN" && (selectedTab == TaskViewModel.TaskTab.MANAGERS || selectedTab == TaskViewModel.TaskTab.SUPERVISOR_LIST)) {
+                val items = if (selectedTab == TaskViewModel.TaskTab.MANAGERS) managersList else supervisorsList
+                var expanded by remember { mutableStateOf(false) }
+
+                ExposedDropdownMenuBox(
+                    expanded = expanded,
+                    onExpandedChange = { expanded = !expanded }
+                ) {
+                    OutlinedTextField(
+                        value = selectedUser?.name ?: "Select ${if (selectedTab == TaskViewModel.TaskTab.MANAGERS) "Manager" else "Supervisor"}",
+                        onValueChange = {},
+                        readOnly = true,
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth(0.6f)
+                            .menuAnchor()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        items.forEach { user ->
+                            DropdownMenuItem(
+                                text = { Text(user.name) },
+                                onClick = {
+                                    selectedUser = user
+                                    viewModel.selectUser(user.id)
+                                    expanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
 
             SwipeRefresh(
                 state = rememberSwipeRefreshState(isRefreshing),
@@ -445,6 +489,8 @@ fun EmptyStateForTasks(selectedTab: TaskViewModel.TaskTab) {
                 TaskViewModel.TaskTab.ME -> "No tasks created by you"
                 TaskViewModel.TaskTab.ASSIGNED -> "No assigned tasks"
                 TaskViewModel.TaskTab.CREATED -> "No created tasks"
+                TaskViewModel.TaskTab.MANAGERS -> "No manager tasks"
+                TaskViewModel.TaskTab.SUPERVISOR_LIST -> "No supervisor tasks"
             }
 
             Text(
@@ -461,6 +507,8 @@ fun EmptyStateForTasks(selectedTab: TaskViewModel.TaskTab) {
                     TaskViewModel.TaskTab.ME -> "Tasks created by you will appear here"
                     TaskViewModel.TaskTab.ASSIGNED -> "Assigned tasks will appear here"
                     TaskViewModel.TaskTab.CREATED -> "Tasks you created will appear here"
+                    TaskViewModel.TaskTab.MANAGERS -> "Select a manager to view their tasks"
+                    TaskViewModel.TaskTab.SUPERVISOR_LIST -> "Select a supervisor to view their tasks"
                 },
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center,

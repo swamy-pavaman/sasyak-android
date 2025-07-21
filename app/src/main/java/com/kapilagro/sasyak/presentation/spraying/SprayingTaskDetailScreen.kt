@@ -290,11 +290,11 @@ fun SprayingTaskDetailScreen(
                                     value = sprayingDetails.sprayingMethod
                                 )
 
-                                if (!sprayingDetails.targetPest.isNullOrEmpty()) {
+                                if (!sprayingDetails.target.isNullOrEmpty()) {
                                     DetailRow(
                                         icon = Icons.Outlined.BugReport,
                                         label = "Target",
-                                        value = sprayingDetails.targetPest
+                                        value = sprayingDetails.target
                                     )
                                 }
 

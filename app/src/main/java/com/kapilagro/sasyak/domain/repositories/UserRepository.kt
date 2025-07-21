@@ -19,4 +19,8 @@ suspend fun updateProfile(name: String?, phoneNumber: String?, password: String?
     suspend fun getTeamMembers(): ApiResponse<List<TeamMember>>
     suspend fun getAllSupervisors(): ApiResponse<List<TeamMember>>
     suspend fun getSupervisorsList(): ApiResponse<List<SupervisorListResponse>>
+
+    suspend fun getAdminTeam(): ApiResponse<List<TeamMember>>
+    suspend fun getAdminUserById(userId: Int): ApiResponse<User>
+
 }

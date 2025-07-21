@@ -31,10 +31,15 @@ class NotificationViewModel @Inject constructor(
 
     private val _userRole = MutableStateFlow<String?>(null)
     val userRole: StateFlow<String?> = _userRole.asStateFlow()
+    // For page nation
+    private var currentPage = 0
+    private val pageSize = 10
+    private var isLoadingMore = false
+    private var hasMoreData = true
 
     init {
-        loadNotifications()
-        loadUnreadCount()
+        //loadNotifications()
+        //loadUnreadCount()
 
         viewModelScope.launch {
             authRepository.getUserRole().collect { role ->
@@ -43,23 +48,15 @@ class NotificationViewModel @Inject constructor(
         }
     }
 
-
     fun loadNotifications() {
+        currentPage = 0
+        hasMoreData = true
         _notificationsState.value = NotificationsState.Loading
-        viewModelScope.launch(ioDispatcher) {
-            when (val response = notificationRepository.getNotifications(false, 0, 50)) {
-                is ApiResponse.Success -> {
-                    _notificationsState.value = NotificationsState.Success(response.data.first)
-                }
-                is ApiResponse.Error -> {
-                    _notificationsState.value = NotificationsState.Error(response.errorMessage)
-                }
-                is ApiResponse.Loading -> {
-                    _notificationsState.value = NotificationsState.Loading
-                }
-            }
-        }
+        loadMoreNotifications()
     }
+    fun isLoading(): Boolean = isLoadingMore
+    fun hasMoreData(): Boolean = hasMoreData
+
     fun loadUnreadCount() {
         _unreadCountState.value = UnreadCountState.Loading
         viewModelScope.launch(ioDispatcher) {
@@ -93,7 +90,7 @@ class NotificationViewModel @Inject constructor(
                     _notificationsState.value = NotificationsState.Success(updatedNotifications)
 
                     // Reload unread count
-                    loadUnreadCount()
+                    //loadUnreadCount()  //not needed as home Screen loads it on every navigation
                 }
                 else -> {
                     // Handle error if needed
@@ -118,6 +115,30 @@ class NotificationViewModel @Inject constructor(
                     // Handle error if needed
                 }
             }
+        }
+    }
+    fun loadMoreNotifications() {
+        if (isLoadingMore || !hasMoreData) return
+
+        isLoadingMore = true
+        viewModelScope.launch(ioDispatcher) {
+            when (val response = notificationRepository.getNotifications(false, currentPage, pageSize)) {
+                is ApiResponse.Success -> {
+                    val newNotifications = response.data.first
+                    val totalCount = response.data.second  // Total notifications count
+                    val existing = (_notificationsState.value as? NotificationsState.Success)?.notifications ?: emptyList()
+                    val combined = existing + newNotifications
+
+                    _notificationsState.value = NotificationsState.Success(combined)
+                    currentPage++
+                    hasMoreData = combined.size < totalCount
+                }
+                is ApiResponse.Error -> {
+                    _notificationsState.value = NotificationsState.Error(response.errorMessage)
+                }
+                is ApiResponse.Loading -> {}
+            }
+            isLoadingMore = false
         }
     }
 

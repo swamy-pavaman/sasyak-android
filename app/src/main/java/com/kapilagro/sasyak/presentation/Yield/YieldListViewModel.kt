@@ -120,7 +120,7 @@ class YieldListViewModel @Inject constructor(
                     is ApiResponse.Success -> {
                         _createYieldState.value = CreateYieldState.Success(response.data)
                         // Refresh the task list after successful creation
-                        refreshTasks()
+                        //refreshTasks()
                     }
                     is ApiResponse.Error -> {
                         _createYieldState.value = CreateYieldState.Error(response.errorMessage)

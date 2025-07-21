@@ -1,5 +1,6 @@
 package com.kapilagro.sasyak.presentation.fuel
 
+import android.R.attr.description
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
@@ -15,6 +16,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -23,6 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.kapilagro.sasyak.data.api.ImageUploadService
@@ -40,6 +43,11 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import com.kapilagro.sasyak.presentation.common.catalog.CategoryViewModel
 import com.kapilagro.sasyak.presentation.common.catalog.CategoriesState
+import com.kapilagro.sasyak.presentation.tasks.TaskViewModel
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import java.time.Instant
+import java.time.ZoneId
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
@@ -50,6 +58,7 @@ fun FuelRequestScreen(
     navController: NavController,
     viewModel: FuelListViewModel = hiltViewModel(),
     homeViewModel: HomeViewModel = hiltViewModel(),
+    taskViewModel: TaskViewModel = hiltViewModel(),
     categoryViewModel: CategoryViewModel = hiltViewModel(),
     @IoDispatcher ioDispatcher: CoroutineDispatcher,
     imageUploadService: ImageUploadService
@@ -59,6 +68,8 @@ fun FuelRequestScreen(
     val supervisorsListState by homeViewModel.supervisorsListState.collectAsState()
     val scope = rememberCoroutineScope()
     val categoriesStates by categoryViewModel.categoriesStates.collectAsState()
+    val managersList by taskViewModel.managersList.collectAsState()
+    val supervisorsList by taskViewModel.supervisorsList.collectAsState()
 
     // Dialog state
     var showSuccessDialog by remember { mutableStateOf(false) }
@@ -92,6 +103,24 @@ fun FuelRequestScreen(
     var imageFiles by remember { mutableStateOf<List<File>?>(null) }
     var assignedTo by remember { mutableStateOf<Int?>(savedStateHandle?.get<Int>("assignedTo")) }
     var assignedToExpanded by remember { mutableStateOf(false) }
+    var dueDateText by remember {
+        mutableStateOf(
+            savedStateHandle?.get<String>("dueDate")
+                ?: LocalDate.now().plusDays(7).format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))
+        )
+    }
+    var showDatePicker by remember { mutableStateOf(false) }
+    // State for selected role and user
+    var selectedRole by remember { mutableStateOf(savedStateHandle?.get<String>("selectedRole") ?:"Manager") }
+    var selectedUser by remember { mutableStateOf(savedStateHandle?.get<String>("selectedUser") ?:"") }
+
+
+    val datePattern = Regex("\\d{2}-\\d{2}-\\d{4}")
+    val isValidDueDate = dueDateText.matches(datePattern) && try {
+        LocalDate.parse(dueDateText, DateTimeFormatter.ofPattern("dd-MM-yyyy")).isAfter(LocalDate.now())
+    } catch (e: Exception) {
+        false
+    }
 
     // Save form state before navigating to ImageCaptureScreen
     LaunchedEffect(Unit) {
@@ -111,7 +140,10 @@ fun FuelRequestScreen(
                 "refillLocation" to refillLocation,
                 "notes" to notes,
                 "description" to description,
-                "assignedTo" to assignedTo
+                "assignedTo" to assignedTo,
+                "dueDate" to dueDateText,
+                "selectedRole" to selectedRole,
+                "selectedUser" to selectedUser
             )
         }.collect { state ->
             state.forEach { (key, value) ->
@@ -121,41 +153,43 @@ fun FuelRequestScreen(
     }
 
     LaunchedEffect(Unit) {
-        categoryViewModel.fetchCategories("Vehicle")
-        categoryViewModel.fetchCategories("Vehicle-no")
-        categoryViewModel.fetchCategories("Driver")
+        if (categoriesStates["Vehicle"] !is CategoriesState.Success) {
+            categoryViewModel.fetchCategories("Vehicle")
+        }
+        if (categoriesStates["Driver"] !is CategoriesState.Success) {
+            categoryViewModel.fetchCategories("Driver")
+        }
     }
 
-    val vehicles = when (val state = categoriesStates["Vehicle"]) {
+    val state = categoriesStates["Vehicle"]
+
+    val vehicles = when (state) {
         is CategoriesState.Success -> state.categories.map { it.value }
         else -> listOf(
-            "Tractor - John Deere",
-            "Tractor - Mahindra",
-            "Truck - Tata",
             "Harvester",
             "Water Pump",
             "Generator",
             "Sprayer",
-            "Pickup Truck",
-            "Farm Utility Vehicle"
         )
     }
-    val vehicleNumbers = when (val state = categoriesStates["Vehicle-no"]) {
-        is CategoriesState.Success -> state.categories.map { it.value }
-        else -> listOf(
-            "TS-01-1234"
-        )
+    val vehicleNameToNumbers: Map<String, List<String>> = when (state) {
+        is CategoriesState.Success -> {
+            state.categories.associate { category ->
+                // category.value = vehicle name ("Truck", "Thor", etc.)
+                val vehicleNumbers = parseDetailsToGetVehicleNumbers(category.details)
+                category.value to vehicleNumbers
+            }
+        }
+        else -> emptyMap()
     }
+    val vehicleNumbers:List<String> = vehicleNameToNumbers[vehicleName] ?: emptyList()
+
     val drivers = when (val state = categoriesStates["Driver"]) {
         is CategoriesState.Success -> state.categories.map { it.value }
         else -> listOf(
             "Default"
         )
     }
-    LaunchedEffect(categoriesStates) {
-        Log.d("Categories", "Vehicles: $vehicles, VehicleNumbers: $vehicleNumbers, Drivers: $drivers")
-    }
-
 
     val fuelTypes = listOf(
         "Diesel", "Petrol", "CNG", "LPG", "Bio-diesel", "Electric"
@@ -165,8 +199,15 @@ fun FuelRequestScreen(
 
     // Load supervisors list for MANAGER role
     LaunchedEffect(Unit) {
-        if (userRole == "MANAGER") {
+        if (userRole == "MANAGER"  && supervisorsListState !is HomeViewModel.SupervisorsListState.Success) {
             homeViewModel.loadSupervisorsList()
+        }
+    }
+    // Load managers and supervisors lists for admin
+    LaunchedEffect(Unit) {
+        if ((userRole == "ADMIN") && (managersList.isEmpty() || supervisorsList.isEmpty())) {
+            taskViewModel.fetchManagers()
+            taskViewModel.fetchSupervisors()
         }
     }
 
@@ -187,6 +228,12 @@ fun FuelRequestScreen(
             else -> {
                 // Handle other states if needed
             }
+        }
+    }
+    // Resets dependent fields
+    LaunchedEffect(vehicleName) {
+        if (vehicleName.isEmpty()) {
+            vehicleNumber = ""
         }
     }
 
@@ -272,14 +319,28 @@ fun FuelRequestScreen(
             ) {
                 OutlinedTextField(
                     value = vehicleName,
-                    readOnly = true,
+                    readOnly = false,
                     onValueChange = { newValue ->
                         vehicleName = newValue
                         vehicleNameExpanded = true
                     },
                     label = { Text("Vehicle name *") },
                     trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = vehicleNameExpanded)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ){
+                            if (vehicleName.isNotEmpty()) {
+                                IconButton(onClick = { vehicleName = "" }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Clear vehicle name",
+                                        tint = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = vehicleNameExpanded)
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -292,6 +353,7 @@ fun FuelRequestScreen(
                     onDismissRequest = { vehicleNameExpanded = false }
                 ) {
                     vehicles
+                        .filter { it.contains(vehicleName, ignoreCase = true) }
                         .forEach { vehicle ->
                             DropdownMenuItem(
                                 text = { Text(vehicle) },
@@ -314,14 +376,28 @@ fun FuelRequestScreen(
             ) {
                 OutlinedTextField(
                     value = vehicleNumber,
-                    readOnly = true,
+                    readOnly = false,
                     onValueChange = { newValue ->
                         vehicleNumber = newValue
                         vehicleNumberExpanded = true
                     },
                     label = { Text("Vehicle number") },
                     trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = vehicleNumberExpanded)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ){
+                            if (vehicleNumber.isNotEmpty()) {
+                                IconButton(onClick = { vehicleNumber = "" }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Clear vehicle number",
+                                        tint = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = vehicleNumberExpanded)
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -334,6 +410,7 @@ fun FuelRequestScreen(
                     onDismissRequest = { vehicleNumberExpanded = false }
                 ) {
                     vehicleNumbers
+                        .filter { it.contains(vehicleNumber, ignoreCase = true) }
                         .forEach { number ->
                             DropdownMenuItem(
                                 text = { Text(number) },
@@ -490,14 +567,28 @@ fun FuelRequestScreen(
             ) {
                 OutlinedTextField(
                     value = driverName,
-                    readOnly = true,
+                    readOnly = false,
                     onValueChange = { newValue ->
                         driverName = newValue
                         driverNameExpanded = true
                     },
                     label = { Text("Driver name") },
                     trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = driverNameExpanded)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ){
+                            if (driverName.isNotEmpty()) {
+                                IconButton(onClick = { driverName = "" }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Clear driver name",
+                                        tint = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = driverNameExpanded)
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -510,6 +601,7 @@ fun FuelRequestScreen(
                     onDismissRequest = { driverNameExpanded = false }
                 ) {
                     drivers
+                        .filter { it.contains(driverName, ignoreCase = true) }
                         .forEach { driver ->
                             DropdownMenuItem(
                                 text = { Text(driver) },
@@ -608,10 +700,173 @@ fun FuelRequestScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
             }
+            if (userRole == "ADMIN") {
+                val managerList = managersList
+                val supervisorList = supervisorsList
+
+                // State for dropdown
+                var expanded by remember { mutableStateOf(false) }
+
+
+                val userList = if (selectedRole == "Manager") managerList else supervisorList
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp)
+                ) {
+                    Text(
+                        text = "Select Role",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = selectedRole == "Manager",
+                            onClick = {
+                                selectedRole = "Manager"
+                                assignedTo = null
+                                selectedUser = "" // reset dropdown selection
+                            }
+                        )
+                        Text(text = "Manager")
+
+                        Spacer(modifier = Modifier.width(16.dp))
+
+                        RadioButton(
+                            selected = selectedRole == "Supervisor",
+                            onClick = {
+                                selectedRole = "Supervisor"
+                                assignedTo = null
+                                selectedUser = "" // reset dropdown selection
+                            }
+                        )
+                        Text(text = "Supervisor")
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    ExposedDropdownMenuBox(
+                        expanded = expanded,
+                        onExpandedChange = { expanded = !expanded }
+                    ) {
+                        OutlinedTextField(
+                            value = selectedUser,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Select $selectedRole") },
+                            trailingIcon = {
+                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                            },
+                            modifier = Modifier.menuAnchor(),
+                            shape = RoundedCornerShape(8.dp)
+                        )
+
+                        ExposedDropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false }
+                        ) {
+                            userList.forEach { user ->
+                                DropdownMenuItem(
+                                    text = { Text(user.name) },
+                                    onClick = {
+                                        selectedUser = user.name
+                                        assignedTo = user.id
+                                        expanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            if (userRole == "MANAGER" || userRole == "ADMIN") {
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Due Date Validation
+                val datePattern = Regex("\\d{2}-\\d{2}-\\d{4}")
+                val isValidDueDate = dueDateText.matches(datePattern) && try {
+                    LocalDate.parse(dueDateText, DateTimeFormatter.ofPattern("dd-MM-yyyy")).isAfter(LocalDate.now())
+                } catch (e: Exception) {
+                    false
+                }
+
+                // Due Date Field
+                val datePickerState = rememberDatePickerState()
+                OutlinedTextField(
+                    value = dueDateText,
+                    onValueChange = { /* Read-only, updated via date picker */ },
+                    label = { Text("Due Date *") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showDatePicker = true },
+                    enabled = false,
+                    trailingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.DateRange,
+                            contentDescription = "Calendar",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    },
+                    colors = TextFieldDefaults.outlinedTextFieldColors(
+                        disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                        disabledBorderColor = MaterialTheme.colorScheme.primary,
+                        disabledLabelColor = MaterialTheme.colorScheme.onSurface
+                    ),
+                    shape = RoundedCornerShape(8.dp),
+                    placeholder = { Text("dd-MM-yyyy") }
+                )
+
+                if (!isValidDueDate && dueDateText.isNotBlank()) {
+                    Text(
+                        text = "Please select a valid future date (dd-MM-yyyy)",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+                    )
+                }
+
+                if (showDatePicker) {
+                    DatePickerDialog(
+                        onDismissRequest = { showDatePicker = false },
+                        confirmButton = {
+                            TextButton(
+                                onClick = {
+                                    val selectedDateMillis = datePickerState.selectedDateMillis
+                                    if (selectedDateMillis != null) {
+                                        val selectedDate = Instant.ofEpochMilli(selectedDateMillis)
+                                            .atZone(ZoneId.systemDefault())
+                                            .toLocalDate()
+                                        dueDateText = selectedDate.format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))
+
+                                        Log.d("due date ",dueDateText)
+                                    }
+                                    showDatePicker = false
+                                }
+                            ) { Text("OK") }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
+                        }
+                    ) {
+                        DatePicker(state = datePickerState)
+                    }
+                }
+
+                LaunchedEffect(dueDateText) {
+                    savedStateHandle?.set("dueDate", dueDateText)
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+            }
 
             // Upload Section
             Text(
                 text = "Upload",
+
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
@@ -720,8 +975,12 @@ fun FuelRequestScreen(
             // Submit Button
             Button(
                 onClick = {
-                    if (vehicleName.isNotBlank() && fuelType.isNotBlank() && quantity.isNotBlank()
+                    if (vehicleName.isNotBlank() && fuelType.isNotBlank()
+                        && isValidDueDate
+                        && (userRole != "ADMIN" || assignedTo != null)
+                        && quantity.isNotBlank()
                         && (userRole != "MANAGER" || assignedTo != null)) {
+
                         scope.launch(ioDispatcher) {
                             val fuelDetails = FuelDetails(
                                 fuelDate = fuelDate,
@@ -737,6 +996,7 @@ fun FuelRequestScreen(
                                 purposeOfFuel = purposeOfFuel.ifBlank { null },
                                 refillLocation = refillLocation.ifBlank { null },
                                 notes = notes.ifBlank { null },
+                                dueDate = if (userRole == "MANAGER" || userRole == "ADMIN") dueDateText else null
                             )
                             submittedEntry = fuelDetails
 
@@ -746,7 +1006,7 @@ fun FuelRequestScreen(
                                     fuelDetails = fuelDetails,
                                     description = description,
                                     imagesJson = emptyList<String>(), // Pass empty list instead of null
-                                    assignedToId = if (userRole == "MANAGER") assignedTo else null
+                                    assignedToId = if (userRole == "MANAGER" || userRole == "ADMIN") assignedTo else null
                                 )
                                 uploadState = UploadState.Idle
                             } else {
@@ -764,7 +1024,7 @@ fun FuelRequestScreen(
                                             fuelDetails = fuelDetails,
                                             description = description,
                                             imagesJson = imageUrls,
-                                            assignedToId = if (userRole == "MANAGER") assignedTo else null
+                                            assignedToId = if (userRole == "MANAGER" || userRole == "ADMIN") assignedTo else null
                                         )
                                         uploadState = UploadState.Idle
                                     }
@@ -779,8 +1039,8 @@ fun FuelRequestScreen(
                         }
                     }
                 },
-                enabled = vehicleName.isNotBlank() && fuelType.isNotBlank() && quantity.isNotBlank()
-                        && (userRole != "MANAGER" || assignedTo != null) &&
+                enabled = vehicleName.isNotBlank() && fuelType.isNotBlank() && quantity.isNotBlank() && isValidDueDate
+                        && (userRole != "MANAGER" || assignedTo != null) && (userRole != "ADMIN" || assignedTo != null) &&
                         createFuelState !is FuelListViewModel.CreateFuelState.Loading &&
                         uploadState !is UploadState.Loading,
                 modifier = Modifier
@@ -803,6 +1063,21 @@ fun FuelRequestScreen(
         }
     }
 }
+
+fun parseDetailsToGetVehicleNumbers(detailsJson: String): List<String> {
+    return try {
+        val jsonElement = Json.parseToJsonElement(detailsJson)
+        if (jsonElement is JsonObject) {
+            jsonElement.keys.toList()
+        } else {
+            emptyList()
+        }
+    } catch (e: Exception) {
+        emptyList()
+    }
+}
+
+
 
 private sealed class UploadState {
     object Idle : UploadState()

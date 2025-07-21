@@ -47,11 +47,10 @@ class HomeViewModel @Inject constructor(
     private val _supervisorsListState = MutableStateFlow<SupervisorsListState>(SupervisorsListState.Idle)
     val supervisorsListState: StateFlow<SupervisorsListState> = _supervisorsListState.asStateFlow()
 
-
-
-
     private val _userRole = MutableStateFlow<String?>(null)
     val userRole: StateFlow<String?> = _userRole.asStateFlow()
+    private val _userId = MutableStateFlow<Int?>(null)
+    val userId: StateFlow<Int?> = _userId.asStateFlow()
 
     init {
         viewModelScope.launch {
@@ -59,18 +58,23 @@ class HomeViewModel @Inject constructor(
                 _userRole.value = role
             }
         }
+        viewModelScope.launch {
+            authRepository.getUserId().collect { userId ->
+                _userId.value = userId
+            }
+        }
     }
 
     init {
         loadUserData()
-        loadWeatherData()
+        //loadWeatherData()
 
         // Listen for role changes to load appropriate tasks
-        viewModelScope.launch {
-            userRole.collectLatest { role ->
-                loadTasksData()
-            }
-        }
+//        viewModelScope.launch {
+//            userRole.collectLatest { role ->
+//                loadTasksData()
+//            }
+//        }
     }
 
     fun loadSupervisorsList() {
@@ -94,9 +98,13 @@ class HomeViewModel @Inject constructor(
         _newTasksState.value = TasksState.Loading
         viewModelScope.launch(ioDispatcher){
             try {
-                val response = taskRepository.getTasksByStatus("submitted",0,3)
-                when(response){
-                    is ApiResponse.Success ->{
+                val managerId = if (userRole.value == "MANAGER") {
+                    userId.value
+                } else {
+                    null
+                }
+                val response = taskRepository.getTasksByFilter(status = "submitted", page = 0, size = 3, sortBy = "createdAt", sortDirection = "DESC", managerId = managerId)
+                when(response){is ApiResponse.Success ->{
                         _newTasksState.value = TasksState.Success(response.data.first)
                     }
                     is ApiResponse.Error -> {
@@ -171,14 +179,6 @@ class HomeViewModel @Inject constructor(
             }
         }
     }
-
-
-
-
-
-
-
-
 
     // Function to load assigned tasks
     fun loadAssignedTasks() {

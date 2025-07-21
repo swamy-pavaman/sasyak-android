@@ -177,7 +177,7 @@ fun EditProfileScreen(
 
                     OutlinedTextField(
                         value = password,
-                        onValueChange = { password = it },
+                        onValueChange = { password = it.trim() },
                         label = { Text("New Password") },
                         singleLine = true,
                         visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
@@ -198,7 +198,7 @@ fun EditProfileScreen(
 
                     OutlinedTextField(
                         value = confirmPassword,
-                        onValueChange = { confirmPassword = it },
+                        onValueChange = { confirmPassword = it.trim() },
                         label = { Text("Confirm New Password") },
                         singleLine = true,
                         visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),

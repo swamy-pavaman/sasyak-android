@@ -120,7 +120,7 @@ class FuelListViewModel @Inject constructor(
                     is ApiResponse.Success -> {
                         _createFuelState.value = CreateFuelState.Success(response.data)
                         // Refresh the task list after successful creation
-                        refreshTasks()
+                        //refreshTasks()
                     }
                     is ApiResponse.Error -> {
                         _createFuelState.value = CreateFuelState.Error(response.errorMessage)

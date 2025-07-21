@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
@@ -40,6 +41,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -70,6 +72,16 @@ fun NotificationScreen(
 
     var isRefreshing by remember { mutableStateOf(false) }
 
+    val listState = rememberLazyListState()
+    val shouldLoadMore = remember {
+        derivedStateOf {
+            val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            val totalItems = listState.layoutInfo.totalItemsCount
+            // Trigger when scrolled to the last 2 items
+            lastVisible >= totalItems - 2 && totalItems > 0
+        }
+    }
+
     val pullRefreshState = rememberPullRefreshState(
         refreshing = isRefreshing,
         onRefresh = {
@@ -82,6 +94,16 @@ fun NotificationScreen(
     LaunchedEffect(notificationsState) {
         if (notificationsState !is NotificationViewModel.NotificationsState.Loading) {
             isRefreshing = false
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.loadNotifications()
+    }
+
+    LaunchedEffect(shouldLoadMore.value) {
+        if (shouldLoadMore.value && !viewModel.isLoading() && viewModel.hasMoreData()) {
+            viewModel.loadMoreNotifications()
         }
     }
 
@@ -132,6 +154,7 @@ fun NotificationScreen(
                     } else {
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
+                            state = listState,
                             contentPadding = PaddingValues(16.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
@@ -139,13 +162,25 @@ fun NotificationScreen(
                                 NotificationItem(
                                     notification = notification,
                                     onClick = {
-                                        viewModel.markNotificationAsRead(notification.id)
+                                        if (notification.isRead == false) {
+                                            viewModel.markNotificationAsRead(notification.id)
+                                        }
                                         notification.taskId?.let { onTaskClick(it) }
                                     }
                                 )
                             }
+
                             item {
-                                Spacer(modifier = Modifier.height(16.dp))
+                                if (viewModel.isLoading()) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(16.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                                    }
+                                }
                             }
                         }
                     }

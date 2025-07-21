@@ -5,6 +5,7 @@ import com.kapilagro.sasyak.data.api.models.requests.*
 import com.kapilagro.sasyak.data.api.models.responses.*
 import com.kapilagro.sasyak.domain.models.ApiResponse
 import com.kapilagro.sasyak.domain.models.LoginRequest
+import com.kapilagro.sasyak.domain.models.User
 import retrofit2.Response
 import retrofit2.http.*
 
@@ -166,4 +167,22 @@ suspend fun categoryService(
     @Path("categoryType") categoryType: String
 ) : List<CategoryResponce>
 
+    @GET("api/admin/users")
+    suspend fun getAdminTeam(): Response<UserListResponse>
+
+    @GET("api/admin/users/{userId}")
+    suspend fun getAdminUserById(@Path("userId") userId: Int): Response<UserResponse>
+
+    @GET("api/tasks/by-user-id/{user_id}")
+    suspend fun getTasksByUserId(
+         @Path("user_id") userId: Int,
+         @Query("page") page: Int = 0,
+         @Query("size") size: Int = 10
+    ): Response<TaskListResponse>
+
+    @GET("api/admin/users/by-role/{role}")
+    suspend fun getUsersByRole(@Path("role") role: String): Response<TeamMemberListResponse>
+
+    @POST("api/tasks/filter")
+    suspend fun getTasksByFilter(@Body filterRequest: FilterRequest): Response<TaskListResponse>
 }

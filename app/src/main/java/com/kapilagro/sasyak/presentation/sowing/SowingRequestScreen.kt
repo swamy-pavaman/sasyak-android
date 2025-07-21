@@ -15,6 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -41,6 +42,9 @@ import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import com.kapilagro.sasyak.presentation.common.catalog.CategoryViewModel
 import com.kapilagro.sasyak.presentation.common.catalog.CategoriesState
+import com.kapilagro.sasyak.presentation.tasks.TaskViewModel
+import java.time.Instant
+import java.time.ZoneId
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
@@ -51,6 +55,7 @@ fun SowingRequestScreen(
     navController: NavController,
     viewModel: SowingListViewModel = hiltViewModel(),
     homeViewModel: HomeViewModel = hiltViewModel(),
+    taskViewModel: TaskViewModel = hiltViewModel(),
     categoryViewModel: CategoryViewModel = hiltViewModel(),
     @IoDispatcher ioDispatcher: CoroutineDispatcher,
     imageUploadService: ImageUploadService
@@ -60,6 +65,8 @@ fun SowingRequestScreen(
     val supervisorsListState by homeViewModel.supervisorsListState.collectAsState()
     val scope = rememberCoroutineScope()
     val categoriesStates by categoryViewModel.categoriesStates.collectAsState()
+    val managersList by taskViewModel.managersList.collectAsState()
+    val supervisorsList by taskViewModel.supervisorsList.collectAsState()
 
     // Dialog state
     var showSuccessDialog by remember { mutableStateOf(false) }
@@ -93,6 +100,27 @@ fun SowingRequestScreen(
     var imageFiles by remember { mutableStateOf<List<File>?>(null) }
     var assignedTo by remember { mutableStateOf<Int?>(savedStateHandle?.get<Int>("assignedTo")) }
     var assignedToExpanded by remember { mutableStateOf(false) }
+    var valveName by remember { mutableStateOf(savedStateHandle?.get<String>("valveName") ?: "") }
+    var valveNameExpanded by remember { mutableStateOf(false) }
+
+    var dueDateText by remember {
+        mutableStateOf(
+            savedStateHandle?.get<String>("dueDate")
+                ?: LocalDate.now().plusDays(7).format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))
+        )
+    }
+    var showDatePicker by remember { mutableStateOf(false) }
+    // State for selected role and user
+    var selectedRole by remember { mutableStateOf(savedStateHandle?.get<String>("selectedRole") ?:"Manager") }
+    var selectedUser by remember { mutableStateOf(savedStateHandle?.get<String>("selectedUser") ?:"") }
+
+
+    val datePattern = Regex("\\d{2}-\\d{2}-\\d{4}")
+    val isValidDueDate = dueDateText.matches(datePattern) && try {
+        LocalDate.parse(dueDateText, DateTimeFormatter.ofPattern("dd-MM-yyyy")).isAfter(LocalDate.now())
+    } catch (e: Exception) {
+        false
+    }
 
     // Save form state before navigating to ImageCaptureScreen
     LaunchedEffect(Unit) {
@@ -112,7 +140,11 @@ fun SowingRequestScreen(
                 "soilCondition" to soilCondition,
                 "weatherCondition" to weatherCondition,
                 "description" to description,
-                "assignedTo" to assignedTo
+                "assignedTo" to assignedTo,
+                "dueDate" to dueDateText,
+                "selectedRole" to selectedRole,
+                "selectedUser" to selectedUser,
+                "valveName" to valveName
             )
         }.collect { state ->
             state.forEach { (key, value) ->
@@ -122,21 +154,40 @@ fun SowingRequestScreen(
     }
 
     LaunchedEffect(Unit) {
-        categoryViewModel.fetchCategories("Crop")
-        categoryViewModel.fetchCategories("Seed-variety")
+        if (categoriesStates["Valve"] !is CategoriesState.Success) {
+            categoryViewModel.fetchCategories("Valve")
+        }
+        if (categoriesStates["Seed-variety"] !is CategoriesState.Success) {
+            categoryViewModel.fetchCategories("Seed-variety") // TODO () Need to think how to pass seed varieties
+        }
     }
-
-    val crops = when (val state = categoriesStates["Crop"]) {
+    val valveDetails = when (val state = categoriesStates["Valve"]) {
+        is CategoriesState.Success -> {
+            state.valveDetails
+        }else -> {
+            emptyMap()
+        }
+    }
+    // Dynamic lists
+    val valves = when (val state = categoriesStates["Valve"]) {
         is CategoriesState.Success -> state.categories.map { it.value }
-        else -> listOf(
-            "Wheat", "Rice", "Maize", "Barley", "Sorghum",
-            "Mango", "Banana", "Apple", "Papaya", "Guava",
-            "Tomato", "Potato", "Onion", "Brinjal", "Cabbage",
-            "Sugarcane", "Groundnut", "Cotton", "Soybean", "Mustard"
-        )
+        else -> emptyList()
     }
 
-    val rows = (1..20).map { it.toString() }
+    val crops by remember(valveName) {
+        derivedStateOf {
+            val cropList = valveDetails[valveName]?.keys?.toList() ?: emptyList()
+            cropList
+        }
+    }
+
+    val rows by remember(valveName, cropName) {
+        derivedStateOf {
+            val rowList =
+                valveDetails[valveName]?.get(cropName)?.rows?.keys?.toList() ?: emptyList()
+            rowList
+        }
+    }
 
     val seedVarieties = when (val state = categoriesStates["Seed-variety"]) {
         is CategoriesState.Success -> state.categories.map { it.value }
@@ -171,8 +222,15 @@ fun SowingRequestScreen(
     }
 
     LaunchedEffect(Unit) {
-        if (userRole == "MANAGER") {
+        if (userRole == "MANAGER" && supervisorsListState !is HomeViewModel.SupervisorsListState.Success) {
             homeViewModel.loadSupervisorsList()
+        }
+    }
+    // Load managers and supervisors lists for admin
+    LaunchedEffect(Unit) {
+        if ((userRole == "ADMIN") && (managersList.isEmpty() || supervisorsList.isEmpty())) {
+            taskViewModel.fetchManagers()
+            taskViewModel.fetchSupervisors()
         }
     }
 
@@ -182,6 +240,19 @@ fun SowingRequestScreen(
             ?.collect { files ->
                 imageFiles = files
             }
+    }
+    // Resets dependent fields
+    LaunchedEffect(valveName) {
+        if (valveName.isEmpty()) {
+            cropName = ""
+            row = ""
+        }
+    }
+
+    LaunchedEffect(cropName) {
+        if (cropName.isEmpty()) {
+            row = ""
+        }
     }
 
     // Success Dialog
@@ -261,6 +332,63 @@ fun SowingRequestScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Valve Name Dropdown
+            ExposedDropdownMenuBox(
+                expanded = valveNameExpanded,
+                onExpandedChange = { valveNameExpanded = it },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    value = valveName,
+                    readOnly = false,
+                    onValueChange = { newValue ->
+                        valveName = newValue
+                        valveNameExpanded = true
+                    },
+                    label = { Text("Valve name *") },
+                    trailingIcon = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ){
+                            if (valveName.isNotEmpty()) {
+                                IconButton(onClick = { valveName = "" }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Clear valve name",
+                                        tint = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = valveNameExpanded)
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(),
+                    shape = RoundedCornerShape(8.dp)
+                )
+
+                ExposedDropdownMenu(
+                    expanded = valveNameExpanded,
+                    onDismissRequest = { valveNameExpanded = false }
+                ) {
+                    valves
+                        .filter { it.contains(valveName, ignoreCase = true) }
+                        .forEach { valve ->
+                            DropdownMenuItem(
+                                text = { Text(valve)},
+                                onClick = {
+                                    valveName = valve
+                                    valveNameExpanded = false
+                                }
+                            )
+                        }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             // Crop Name Dropdown
             ExposedDropdownMenuBox(
                 expanded = cropNameExpanded,
@@ -269,14 +397,28 @@ fun SowingRequestScreen(
             ) {
                 OutlinedTextField(
                     value = cropName,
-                    readOnly = true,
+                    readOnly = false,
                     onValueChange = { newValue ->
                         cropName = newValue
                         cropNameExpanded = true
                     },
                     label = { Text("Crop name *") },
                     trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = cropNameExpanded)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ){
+                            if (cropName.isNotEmpty()) {
+                                IconButton(onClick = { cropName = "" }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Clear crop name",
+                                        tint = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = cropNameExpanded)
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -289,6 +431,7 @@ fun SowingRequestScreen(
                     onDismissRequest = { cropNameExpanded = false }
                 ) {
                     crops
+                        .filter { it.contains(cropName, ignoreCase = true) }
                         .forEach { crop ->
                             DropdownMenuItem(
                                 text = { Text(crop) },
@@ -305,15 +448,59 @@ fun SowingRequestScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Row Dropdown
-            OutlinedTextField(
-                value = row,
-                onValueChange = {newValue ->
-                    row = newValue},
-                label = { Text("Row *") },
-                modifier = Modifier
-                    .fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp)
-            )
+            ExposedDropdownMenuBox(
+                expanded = rowExpanded,
+                onExpandedChange = { rowExpanded = it },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    value = row,
+                    readOnly = false,
+                    onValueChange = { newValue ->
+                        row = newValue
+                        rowExpanded = true
+                    },
+                    label = { Text("Row *") },
+                    trailingIcon = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (row.isNotEmpty()) {
+                                IconButton(onClick = { row = "" }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Clear row",
+                                        tint = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = rowExpanded)
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(),
+                    shape = RoundedCornerShape(8.dp)
+                )
+
+                ExposedDropdownMenu(
+                    expanded = rowExpanded,
+                    onDismissRequest = { rowExpanded = false }
+                ) {
+                    rows
+                        .filter { it.contains(row, ignoreCase = true) }
+                        .forEach { rowItem ->
+                            DropdownMenuItem(
+                                text = { Text(rowItem) },
+                                onClick = {
+                                    row = rowItem
+                                    rowExpanded = false
+                                }
+                            )
+                        }
+                }
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -337,14 +524,28 @@ fun SowingRequestScreen(
             ) {
                 OutlinedTextField(
                     value = seedVariety,
-                    readOnly = true,
+                    readOnly = false,
                     onValueChange = { newValue ->
                         seedVariety = newValue
                         seedVarietyExpanded = true
                     },
                     label = { Text("Seed variety *") },
                     trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = seedVarietyExpanded)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ){
+                            if (seedVariety.isNotEmpty()) {
+                                IconButton(onClick = { seedVariety = "" }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Clear seed variety",
+                                        tint = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = seedVarietyExpanded)
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -357,6 +558,7 @@ fun SowingRequestScreen(
                     onDismissRequest = { seedVarietyExpanded = false }
                 ) {
                     seedVarieties
+                        .filter { it.contains(seedVariety, ignoreCase = true) }
                         .forEach { variety ->
                             DropdownMenuItem(
                                 text = { Text(variety) },
@@ -573,10 +775,173 @@ fun SowingRequestScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
             }
+            if (userRole == "ADMIN") {
+                val managerList = managersList
+                val supervisorList = supervisorsList
+
+                // State for dropdown
+                var expanded by remember { mutableStateOf(false) }
+
+
+                val userList = if (selectedRole == "Manager") managerList else supervisorList
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp)
+                ) {
+                    Text(
+                        text = "Select Role",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = selectedRole == "Manager",
+                            onClick = {
+                                selectedRole = "Manager"
+                                assignedTo = null
+                                selectedUser = "" // reset dropdown selection
+                            }
+                        )
+                        Text(text = "Manager")
+
+                        Spacer(modifier = Modifier.width(16.dp))
+
+                        RadioButton(
+                            selected = selectedRole == "Supervisor",
+                            onClick = {
+                                selectedRole = "Supervisor"
+                                assignedTo = null
+                                selectedUser = "" // reset dropdown selection
+                            }
+                        )
+                        Text(text = "Supervisor")
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    ExposedDropdownMenuBox(
+                        expanded = expanded,
+                        onExpandedChange = { expanded = !expanded }
+                    ) {
+                        OutlinedTextField(
+                            value = selectedUser,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Select $selectedRole") },
+                            trailingIcon = {
+                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                            },
+                            modifier = Modifier.menuAnchor(),
+                            shape = RoundedCornerShape(8.dp)
+                        )
+
+                        ExposedDropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false }
+                        ) {
+                            userList.forEach { user ->
+                                DropdownMenuItem(
+                                    text = { Text(user.name) },
+                                    onClick = {
+                                        selectedUser = user.name
+                                        assignedTo = user.id
+                                        expanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            if (userRole == "MANAGER" || userRole == "ADMIN") {
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Due Date Validation
+                val datePattern = Regex("\\d{2}-\\d{2}-\\d{4}")
+                val isValidDueDate = dueDateText.matches(datePattern) && try {
+                    LocalDate.parse(dueDateText, DateTimeFormatter.ofPattern("dd-MM-yyyy")).isAfter(LocalDate.now())
+                } catch (e: Exception) {
+                    false
+                }
+
+                // Due Date Field
+                val datePickerState = rememberDatePickerState()
+                OutlinedTextField(
+                    value = dueDateText,
+                    onValueChange = { /* Read-only, updated via date picker */ },
+                    label = { Text("Due Date *") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showDatePicker = true },
+                    enabled = false,
+                    trailingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.DateRange,
+                            contentDescription = "Calendar",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    },
+                    colors = TextFieldDefaults.outlinedTextFieldColors(
+                        disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                        disabledBorderColor = MaterialTheme.colorScheme.primary,
+                        disabledLabelColor = MaterialTheme.colorScheme.onSurface
+                    ),
+                    shape = RoundedCornerShape(8.dp),
+                    placeholder = { Text("dd-MM-yyyy") }
+                )
+
+                if (!isValidDueDate && dueDateText.isNotBlank()) {
+                    Text(
+                        text = "Please select a valid future date (dd-MM-yyyy)",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+                    )
+                }
+
+                if (showDatePicker) {
+                    DatePickerDialog(
+                        onDismissRequest = { showDatePicker = false },
+                        confirmButton = {
+                            TextButton(
+                                onClick = {
+                                    val selectedDateMillis = datePickerState.selectedDateMillis
+                                    if (selectedDateMillis != null) {
+                                        val selectedDate = Instant.ofEpochMilli(selectedDateMillis)
+                                            .atZone(ZoneId.systemDefault())
+                                            .toLocalDate()
+                                        dueDateText = selectedDate.format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))
+
+                                        Log.d("due date ",dueDateText)
+                                    }
+                                    showDatePicker = false
+                                }
+                            ) { Text("OK") }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
+                        }
+                    ) {
+                        DatePicker(state = datePickerState)
+                    }
+                }
+
+                LaunchedEffect(dueDateText) {
+                    savedStateHandle?.set("dueDate", dueDateText)
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+            }
 
             // Upload Section
             Text(
                 text = "Upload",
+
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
@@ -704,14 +1069,16 @@ fun SowingRequestScreen(
             // Submit Button
             Button(
                 onClick = {
-                    if (cropName.isNotBlank() && row.isNotBlank() && seedVariety.isNotBlank() &&
-                        sowingMethod.isNotBlank() &&
+                    if (cropName.isNotBlank() && row.isNotBlank() && seedVariety.isNotBlank() && valveName.isNotBlank() &&
+                        sowingMethod.isNotBlank() && isValidDueDate
+                        && (userRole != "ADMIN" || assignedTo != null) &&
                         (userRole != "MANAGER" || assignedTo != null)) {
                         scope.launch(ioDispatcher) {
                             val sowingDetails = SowingDetails(
                                 sowingDate = sowingDate,
                                 cropName = cropName,
                                 row = row.toString(),
+                                valveName = valveName,
                                 fieldArea = fieldArea.ifBlank { null },
                                 seedVariety = seedVariety,
                                 seedQuantity = seedQuantity.ifBlank { null },
@@ -722,6 +1089,7 @@ fun SowingRequestScreen(
                                 spacingBetweenPlants = spacingBetweenPlants.ifBlank { null },
                                 soilCondition = soilCondition.ifBlank { null },
                                 weatherCondition = weatherCondition.ifBlank { null },
+                                dueDate = if (userRole == "MANAGER" || userRole == "ADMIN") dueDateText else null
                             )
                             submittedEntry = sowingDetails
 
@@ -731,7 +1099,7 @@ fun SowingRequestScreen(
                                     sowingDetails = sowingDetails,
                                     description = description,
                                     imagesJson = emptyList<String>(), // Pass empty list instead of null
-                                    assignedToId = if (userRole == "MANAGER") assignedTo else null
+                                    assignedToId = if (userRole == "MANAGER" || userRole == "ADMIN") assignedTo else null
                                 )
                                 uploadState = UploadState.Idle
                             } else {
@@ -749,7 +1117,7 @@ fun SowingRequestScreen(
                                             sowingDetails = sowingDetails,
                                             description = description,
                                             imagesJson = imageUrls,
-                                            assignedToId = if (userRole == "MANAGER") assignedTo else null
+                                            assignedToId = if (userRole == "MANAGER" || userRole == "ADMIN") assignedTo else null
                                         )
                                         uploadState = UploadState.Idle
                                     }
@@ -764,8 +1132,9 @@ fun SowingRequestScreen(
                         }
                     }
                 },
-                enabled = cropName.isNotBlank() && row.isNotBlank() && seedVariety.isNotBlank() &&
-                        sowingMethod.isNotBlank() &&
+                enabled = cropName.isNotBlank() && row.isNotBlank() && seedVariety.isNotBlank() && valveName.isNotBlank() &&
+                        sowingMethod.isNotBlank() && isValidDueDate && (userRole != "MANAGER" || assignedTo != null)
+                        && (userRole != "ADMIN" || assignedTo != null) &&
                         createSowingState !is SowingListViewModel.CreateSowingState.Loading &&
                         uploadState !is UploadState.Loading,
                 modifier = Modifier

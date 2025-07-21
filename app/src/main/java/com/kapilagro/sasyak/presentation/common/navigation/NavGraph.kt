@@ -2,6 +2,7 @@
 package com.kapilagro.sasyak.presentation.common.navigation
 
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -65,6 +66,7 @@ import com.kapilagro.sasyak.presentation.yield.YieldListViewModel
 import com.kapilagro.sasyak.presentation.yield.YieldRequestScreen
 import com.kapilagro.sasyak.presentation.yield.YieldScreen
 import com.kapilagro.sasyak.presentation.yield.YieldTaskDetailScreen
+import com.kapilagro.sasyak.presentation.tasks.MyTaskScreen
 import kotlinx.coroutines.CoroutineDispatcher
 import javax.inject.Inject
 
@@ -354,6 +356,9 @@ fun AppNavGraph(
                 onTaskClick = { taskId ->
                     navController.navigate(Screen.TaskDetail.createRoute(taskId))
                 },
+                onMyTasksClick = {
+                    navController.navigate(Screen.MyTasksScreen.route)
+                },
                 onCreateTaskClick = {
                     navController.navigate(Screen.CreateTask.route)
                 },
@@ -397,7 +402,11 @@ fun AppNavGraph(
         }
 
         composable(Screen.Reports.route) {
-            ReportScreen()
+            ReportScreen(
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
         }
 
         composable(Screen.Notifications.route) {
@@ -500,11 +509,13 @@ fun AppNavGraph(
         }
 
         composable(Screen.TaskList.route) {
-            val taskViewModel: TaskViewModel = hiltViewModel()
-            LaunchedEffect(Unit) {
-                taskViewModel.getCurrentUserRole() // Ensure user role is fetched
-                taskViewModel.resetTabForNavigation() // Reset tab based on role
-            }
+// In the TaskListScreen we are loading it with launch effect
+//            val taskViewModel: TaskViewModel = hiltViewModel()
+//            LaunchedEffect(Unit) {
+//                Log.d("TaskListScreen", "LaunchedEffect triggered")
+//                taskViewModel.getCurrentUserRole() // Ensure user role is fetched
+//                taskViewModel.resetTabForNavigation() // Reset tab based on role
+//            }
             TaskListScreen(
                 onTaskClick = { taskId ->
                     navController.navigate(Screen.TaskDetail.createRoute(taskId.toString()))
@@ -516,6 +527,22 @@ fun AppNavGraph(
                     }
                 },
                 navController = navController
+            )
+        }
+        composable(Screen.MyTasksScreen.route) {
+            val taskViewModel: TaskViewModel = hiltViewModel()
+            MyTaskScreen(
+                onTaskClick = { taskId ->
+                    navController.navigate(Screen.TaskDetail.createRoute(taskId.toString()))
+                },
+                onBackClick = {
+                    navController.navigate(Screen.Home.route) {
+                        popUpTo(Screen.Home.route) { inclusive = false }
+                        launchSingleTop = true
+                    }
+                },
+                navController = navController,
+                viewModel = taskViewModel
             )
         }
 

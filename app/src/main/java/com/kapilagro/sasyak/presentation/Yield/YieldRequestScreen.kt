@@ -15,6 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,16 +30,26 @@ import com.kapilagro.sasyak.data.api.ImageUploadService
 import com.kapilagro.sasyak.di.IoDispatcher
 import com.kapilagro.sasyak.domain.models.ApiResponse
 import com.kapilagro.sasyak.domain.models.YieldDetails
+import com.kapilagro.sasyak.presentation.common.catalog.CategoriesState
+import com.kapilagro.sasyak.presentation.common.catalog.CategoryViewModel
 import com.kapilagro.sasyak.presentation.common.catalog.CropViewModel
 import com.kapilagro.sasyak.presentation.common.catalog.CropsState
 import com.kapilagro.sasyak.presentation.common.components.SuccessDialog
 import com.kapilagro.sasyak.presentation.common.navigation.Screen
 import com.kapilagro.sasyak.presentation.common.theme.AgroPrimary
 import com.kapilagro.sasyak.presentation.home.HomeViewModel
+import com.kapilagro.sasyak.presentation.tasks.TaskViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonPrimitive
 import java.io.File
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -50,15 +61,18 @@ fun YieldRequestScreen(
     navController: NavController,
     viewModel: YieldListViewModel = hiltViewModel(),
     homeViewModel: HomeViewModel = hiltViewModel(),
-    cropViewModel: CropViewModel = hiltViewModel(),
+    taskViewModel: TaskViewModel = hiltViewModel(),
+    categoryViewModel: CategoryViewModel = hiltViewModel(),
     @IoDispatcher ioDispatcher: CoroutineDispatcher,
     imageUploadService: ImageUploadService
 ) {
     val createYieldState by viewModel.createYieldState.collectAsState()
     val userRole by homeViewModel.userRole.collectAsState()
     val supervisorsListState by homeViewModel.supervisorsListState.collectAsState()
-    val cropsState by cropViewModel.cropsState.collectAsState()
+    val categoriesStates by categoryViewModel.categoriesStates.collectAsState()
     val scope = rememberCoroutineScope()
+    val managersList by taskViewModel.managersList.collectAsState()
+    val supervisorsList by taskViewModel.supervisorsList.collectAsState()
 
     // Dialog state
     var showSuccessDialog by remember { mutableStateOf(false) }
@@ -89,6 +103,27 @@ fun YieldRequestScreen(
     var imageFiles by remember { mutableStateOf<List<File>?>(null) }
     var assignedTo by remember { mutableStateOf<Int?>(savedStateHandle?.get<Int>("assignedTo")) }
     var assignedToExpanded by remember { mutableStateOf(false) }
+    var valveName by remember { mutableStateOf(savedStateHandle?.get<String>("valveName") ?: "") }
+    var valveNameExpanded by remember { mutableStateOf(false) }
+
+    var dueDateText by remember {
+        mutableStateOf(
+            savedStateHandle?.get<String>("dueDate")
+                ?: LocalDate.now().plusDays(7).format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))
+        )
+    }
+    var showDatePicker by remember { mutableStateOf(false) }
+    // State for selected role and user
+    var selectedRole by remember { mutableStateOf(savedStateHandle?.get<String>("selectedRole") ?:"Manager") }
+    var selectedUser by remember { mutableStateOf(savedStateHandle?.get<String>("selectedUser") ?:"") }
+
+
+    val datePattern = Regex("\\d{2}-\\d{2}-\\d{4}")
+    val isValidDueDate = dueDateText.matches(datePattern) && try {
+        LocalDate.parse(dueDateText, DateTimeFormatter.ofPattern("dd-MM-yyyy")).isAfter(LocalDate.now())
+    } catch (e: Exception) {
+        false
+    }
 
     // Save form state before navigating to ImageCaptureScreen
     LaunchedEffect(Unit) {
@@ -105,7 +140,11 @@ fun YieldRequestScreen(
                 "harvestMethod" to harvestMethod,
                 "notes" to notes,
                 "description" to description,
-                "assignedTo" to assignedTo
+                "assignedTo" to assignedTo,
+                "dueDate" to dueDateText,
+                "selectedRole" to selectedRole,
+                "selectedUser" to selectedUser,
+                "valveName" to valveName
             )
         }.collect { state ->
             state.forEach { (key, value) ->
@@ -113,24 +152,39 @@ fun YieldRequestScreen(
             }
         }
     }
-    Log.d("CropViewModel", "cropsState: $cropsState")
-    val crops = when (cropsState) {
-        is CropsState.Success -> (cropsState as CropsState.Success).crops.map { it.value }
-        else -> listOf(
-            "Wheat", "Rice", "Maize", "Barley", "Sorghum",
-            "Mango", "Banana", "Apple", "Papaya", "Guava",
-            "Tomato", "Potato", "Onion", "Brinjal", "Cabbage",
-            "Sugarcane", "Groundnut", "Cotton", "Soybean", "Mustard"
-        )
+    LaunchedEffect(Unit) {
+        if (categoriesStates["Valve"] !is CategoriesState.Success) {
+            categoryViewModel.fetchCategories("Valve")
+        }
     }
 
-   /* val crops = listOf(
-        "Wheat", "Rice", "Maize", "Barley", "Sorghum",
-        "Mango", "Banana", "Apple", "Papaya", "Guava",
-        "Tomato", "Potato", "Onion", "Brinjal", "Cabbage",
-        "Sugarcane", "Groundnut", "Cotton", "Soybean", "Mustard"
-    )*/
+    val valveDetails = when (val state = categoriesStates["Valve"]) {
+        is CategoriesState.Success -> {
+            state.valveDetails
+        }else -> {
+            emptyMap()
+        }
+    }
+    // Dynamic lists
+    val valves = when (val state = categoriesStates["Valve"]) {
+        is CategoriesState.Success -> state.categories.map { it.value }
+        else -> emptyList()
+    }
 
+    val crops by remember(valveName) {
+        derivedStateOf {
+            val cropList = valveDetails[valveName]?.keys?.toList() ?: emptyList()
+            cropList
+        }
+    }
+
+    val rows by remember(valveName, cropName) {
+        derivedStateOf {
+            val rowList =
+                valveDetails[valveName]?.get(cropName)?.rows?.keys?.toList() ?: emptyList()
+            rowList
+        }
+    }
 
     val units = listOf("kg", "tonnes", "quintals", "bags")
 
@@ -142,8 +196,15 @@ fun YieldRequestScreen(
 
     // Load supervisors list for MANAGER role
     LaunchedEffect(Unit) {
-        if (userRole == "MANAGER") {
+        if (userRole == "MANAGER" && supervisorsListState !is HomeViewModel.SupervisorsListState.Success) {
             homeViewModel.loadSupervisorsList()
+        }
+    }
+    // Load managers and supervisors lists for admin
+    LaunchedEffect(Unit) {
+        if ((userRole == "ADMIN") && (managersList.isEmpty() || supervisorsList.isEmpty())) {
+            taskViewModel.fetchManagers()
+            taskViewModel.fetchSupervisors()
         }
     }
 
@@ -164,6 +225,19 @@ fun YieldRequestScreen(
             else -> {
                 // Handle other states if needed
             }
+        }
+    }
+    // Resets dependent fields
+    LaunchedEffect(valveName) {
+        if (valveName.isEmpty()) {
+            cropName = ""
+            row = ""
+        }
+    }
+
+    LaunchedEffect(cropName) {
+        if (cropName.isEmpty()) {
+            row = ""
         }
     }
 
@@ -238,6 +312,63 @@ fun YieldRequestScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Valve Name Dropdown
+            ExposedDropdownMenuBox(
+                expanded = valveNameExpanded,
+                onExpandedChange = { valveNameExpanded = it },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    value = valveName,
+                    readOnly = false,
+                    onValueChange = { newValue ->
+                        valveName = newValue
+                        valveNameExpanded = true
+                    },
+                    label = { Text("Valve name *") },
+                    trailingIcon = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ){
+                            if (valveName.isNotEmpty()) {
+                                IconButton(onClick = { valveName = "" }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Clear valve name",
+                                        tint = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = valveNameExpanded)
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(),
+                    shape = RoundedCornerShape(8.dp)
+                )
+
+                ExposedDropdownMenu(
+                    expanded = valveNameExpanded,
+                    onDismissRequest = { valveNameExpanded = false }
+                ) {
+                    valves
+                        .filter { it.contains(valveName, ignoreCase = true) }
+                        .forEach { valve ->
+                            DropdownMenuItem(
+                                text = { Text(valve)},
+                                onClick = {
+                                    valveName = valve
+                                    valveNameExpanded = false
+                                }
+                            )
+                        }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             // Crop Name Dropdown
             ExposedDropdownMenuBox(
                 expanded = cropNameExpanded,
@@ -246,14 +377,28 @@ fun YieldRequestScreen(
             ) {
                 OutlinedTextField(
                     value = cropName,
-                    readOnly = true,
+                    readOnly = false,
                     onValueChange = { newValue ->
                         cropName = newValue
                         cropNameExpanded = true
                     },
                     label = { Text("Crop name *") },
                     trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = cropNameExpanded)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ){
+                            if (cropName.isNotEmpty()) {
+                                IconButton(onClick = { cropName = "" }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Clear crop name",
+                                        tint = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = cropNameExpanded)
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -266,6 +411,7 @@ fun YieldRequestScreen(
                     onDismissRequest = { cropNameExpanded = false }
                 ) {
                     crops
+                        .filter { it.contains(cropName, ignoreCase = true) }
                         .forEach { crop ->
                             DropdownMenuItem(
                                 text = { Text(crop) },
@@ -281,15 +427,59 @@ fun YieldRequestScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Row Dropdown
-            OutlinedTextField(
-                value = row,
-                onValueChange = {newValue ->
-                    row = newValue
-                },
-                label = { Text("Row *") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp)
-            )
+            ExposedDropdownMenuBox(
+                expanded = rowExpanded,
+                onExpandedChange = { rowExpanded = it },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    value = row,
+                    readOnly = false,
+                    onValueChange = { newValue ->
+                        row = newValue
+                        rowExpanded = true
+                    },
+                    label = { Text("Row *") },
+                    trailingIcon = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (row.isNotEmpty()) {
+                                IconButton(onClick = { row = "" }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Clear row",
+                                        tint = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = rowExpanded)
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(),
+                    shape = RoundedCornerShape(8.dp)
+                )
+
+                ExposedDropdownMenu(
+                    expanded = rowExpanded,
+                    onDismissRequest = { rowExpanded = false }
+                ) {
+                    rows
+                        .filter { it.contains(row, ignoreCase = true) }
+                        .forEach { rowItem ->
+                            DropdownMenuItem(
+                                text = { Text(rowItem) },
+                                onClick = {
+                                    row = rowItem
+                                    rowExpanded = false
+                                }
+                            )
+                        }
+                }
+            }
 
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -501,10 +691,173 @@ fun YieldRequestScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
             }
+            if (userRole == "ADMIN") {
+                val managerList = managersList
+                val supervisorList = supervisorsList
+
+                // State for dropdown
+                var expanded by remember { mutableStateOf(false) }
+
+
+                val userList = if (selectedRole == "Manager") managerList else supervisorList
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp)
+                ) {
+                    Text(
+                        text = "Select Role",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = selectedRole == "Manager",
+                            onClick = {
+                                selectedRole = "Manager"
+                                assignedTo = null
+                                selectedUser = "" // reset dropdown selection
+                            }
+                        )
+                        Text(text = "Manager")
+
+                        Spacer(modifier = Modifier.width(16.dp))
+
+                        RadioButton(
+                            selected = selectedRole == "Supervisor",
+                            onClick = {
+                                selectedRole = "Supervisor"
+                                assignedTo = null
+                                selectedUser = "" // reset dropdown selection
+                            }
+                        )
+                        Text(text = "Supervisor")
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    ExposedDropdownMenuBox(
+                        expanded = expanded,
+                        onExpandedChange = { expanded = !expanded }
+                    ) {
+                        OutlinedTextField(
+                            value = selectedUser,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Select $selectedRole") },
+                            trailingIcon = {
+                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                            },
+                            modifier = Modifier.menuAnchor(),
+                            shape = RoundedCornerShape(8.dp)
+                        )
+
+                        ExposedDropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false }
+                        ) {
+                            userList.forEach { user ->
+                                DropdownMenuItem(
+                                    text = { Text(user.name) },
+                                    onClick = {
+                                        selectedUser = user.name
+                                        assignedTo = user.id
+                                        expanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            if (userRole == "MANAGER" || userRole == "ADMIN") {
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Due Date Validation
+                val datePattern = Regex("\\d{2}-\\d{2}-\\d{4}")
+                val isValidDueDate = dueDateText.matches(datePattern) && try {
+                    LocalDate.parse(dueDateText, DateTimeFormatter.ofPattern("dd-MM-yyyy")).isAfter(LocalDate.now())
+                } catch (e: Exception) {
+                    false
+                }
+
+                // Due Date Field
+                val datePickerState = rememberDatePickerState()
+                OutlinedTextField(
+                    value = dueDateText,
+                    onValueChange = { /* Read-only, updated via date picker */ },
+                    label = { Text("Due Date *") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showDatePicker = true },
+                    enabled = false,
+                    trailingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.DateRange,
+                            contentDescription = "Calendar",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    },
+                    colors = TextFieldDefaults.outlinedTextFieldColors(
+                        disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                        disabledBorderColor = MaterialTheme.colorScheme.primary,
+                        disabledLabelColor = MaterialTheme.colorScheme.onSurface
+                    ),
+                    shape = RoundedCornerShape(8.dp),
+                    placeholder = { Text("dd-MM-yyyy") }
+                )
+
+                if (!isValidDueDate && dueDateText.isNotBlank()) {
+                    Text(
+                        text = "Please select a valid future date (dd-MM-yyyy)",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+                    )
+                }
+
+                if (showDatePicker) {
+                    DatePickerDialog(
+                        onDismissRequest = { showDatePicker = false },
+                        confirmButton = {
+                            TextButton(
+                                onClick = {
+                                    val selectedDateMillis = datePickerState.selectedDateMillis
+                                    if (selectedDateMillis != null) {
+                                        val selectedDate = Instant.ofEpochMilli(selectedDateMillis)
+                                            .atZone(ZoneId.systemDefault())
+                                            .toLocalDate()
+                                        dueDateText = selectedDate.format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))
+
+                                        Log.d("due date ",dueDateText)
+                                    }
+                                    showDatePicker = false
+                                }
+                            ) { Text("OK") }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
+                        }
+                    ) {
+                        DatePicker(state = datePickerState)
+                    }
+                }
+
+                LaunchedEffect(dueDateText) {
+                    savedStateHandle?.set("dueDate", dueDateText)
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+            }
 
             // Upload Section
             Text(
                 text ="Upload",
+
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
@@ -613,14 +966,16 @@ fun YieldRequestScreen(
             // Submit Button
             Button(
                 onClick = {
-                    if (cropName.isNotBlank() && row.isNotBlank() && yieldQuantity.isNotBlank() &&
-                        yieldUnit.isNotBlank() &&
+                    if (cropName.isNotBlank() && row.isNotBlank() && yieldQuantity.isNotBlank() && valveName.isNotBlank() &&
+                        yieldUnit.isNotBlank() && isValidDueDate
+                        && (userRole != "ADMIN" || assignedTo != null) &&
                         (userRole != "MANAGER" || assignedTo != null)) {
                         scope.launch(ioDispatcher) {
                             val yieldDetails = YieldDetails(
                                 harvestDate = harvestDate,
                                 cropName = cropName,
                                 row = row.toString(),
+                                valveName = valveName,
                                 fieldArea = fieldArea.ifBlank { null },
                                 yieldQuantity = yieldQuantity,
                                 yieldUnit = yieldUnit,
@@ -628,6 +983,7 @@ fun YieldRequestScreen(
                                 moistureContent = moistureContent.ifBlank { null },
                                 harvestMethod = harvestMethod.ifBlank { null },
                                 notes = notes.ifBlank { null },
+                                dueDate = if (userRole == "MANAGER" || userRole == "ADMIN") dueDateText else null
                             )
                             submittedEntry = yieldDetails
 
@@ -637,7 +993,7 @@ fun YieldRequestScreen(
                                     yieldDetails = yieldDetails,
                                     description = description,
                                     imagesJson = emptyList<String>(), // Pass empty list instead of null
-                                    assignedToId = if (userRole == "MANAGER") assignedTo else null
+                                    assignedToId = if (userRole == "MANAGER" || userRole == "ADMIN") assignedTo else null
                                 )
                                 uploadState = UploadState.Idle
                             } else {
@@ -655,7 +1011,7 @@ fun YieldRequestScreen(
                                             yieldDetails = yieldDetails,
                                             description = description,
                                             imagesJson = imageUrls,
-                                            assignedToId = if (userRole == "MANAGER") assignedTo else null
+                                            assignedToId = if (userRole == "MANAGER" || userRole == "ADMIN") assignedTo else null
                                         )
                                         uploadState = UploadState.Idle
                                     }
@@ -670,9 +1026,9 @@ fun YieldRequestScreen(
                         }
                     }
                 },
-                enabled = cropName.isNotBlank() && row.isNotBlank() && yieldQuantity.isNotBlank() &&
-                        yieldUnit.isNotBlank() &&
-                        (userRole != "MANAGER" || assignedTo != null) &&
+                enabled = cropName.isNotBlank() && row.isNotBlank() && yieldQuantity.isNotBlank() && valveName.isNotBlank() &&
+                        yieldUnit.isNotBlank() && (userRole != "ADMIN" || assignedTo != null) &&
+                        (userRole != "MANAGER" || assignedTo != null) && isValidDueDate &&
                         createYieldState !is YieldListViewModel.CreateYieldState.Loading &&
                         uploadState !is UploadState.Loading,
                 modifier = Modifier

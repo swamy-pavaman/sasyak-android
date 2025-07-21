@@ -119,7 +119,7 @@ class SprayingListViewModel @Inject constructor(
                 )) {
                     is ApiResponse.Success -> {
                         _createSprayingState.value = CreateSprayingState.Success(response.data)
-                        refreshTasks()
+                        //refreshTasks()
                     }
                     is ApiResponse.Error -> {
                         _createSprayingState.value = CreateSprayingState.Error(response.errorMessage)
