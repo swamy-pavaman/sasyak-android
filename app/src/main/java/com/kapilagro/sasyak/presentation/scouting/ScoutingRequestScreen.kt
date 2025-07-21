@@ -30,6 +30,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
+import coil.ImageLoaderFactory
 import coil.compose.rememberAsyncImagePainter
 import com.kapilagro.sasyak.data.api.ImageUploadService
 import com.kapilagro.sasyak.di.IoDispatcher
@@ -1018,7 +1019,13 @@ fun ScoutingRequestScreen(
                             .horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
+
+
                         imageUris.forEach { uri ->
+
+//                            val mimeType = LocalContext.current.contentResolver.getType(uri)
+//                            Log.d("ScoutingPreview", "URI: $uri, MIME Type: $mimeType")
+
                             Box(
                                 modifier = Modifier.size(80.dp)
                             ) {
