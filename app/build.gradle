@@ -3,7 +3,6 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.parcelize)
     alias(libs.plugins.dagger.hilt)
-    // ❌ Remove this line: id("org.jetbrains.kotlin.kapt")
     alias(libs.plugins.ksp)
     alias(libs.plugins.kotlin.serialization)
 }
@@ -72,7 +71,7 @@ dependencies {
 
     implementation(libs.work.runtime.ktx)
     implementation(libs.hilt.work)
-    ksp(libs.hilt.work.compiler) // ✅ Changed from kapt to ksp
+    ksp(libs.hilt.work.compiler)
 
     // location
     implementation(libs.playservices.location)
@@ -107,8 +106,12 @@ dependencies {
     implementation(libs.camera.lifecycle)
     implementation(libs.camera.view)
 
+    implementation("androidx.concurrent:concurrent-futures-ktx:1.1.0") // ★★★ ADD THIS LINE
+
+
     implementation(libs.accompanist.swiperefresh)
     implementation(libs.coil.compose)
+    implementation("androidx.startup:startup-runtime:1.1.1")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

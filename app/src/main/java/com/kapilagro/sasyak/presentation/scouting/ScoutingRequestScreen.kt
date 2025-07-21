@@ -1,5 +1,6 @@
 package com.kapilagro.sasyak.presentation.scouting
 
+import android.content.Context
 import android.net.Uri
 import android.os.Build
 import android.util.Log
@@ -36,9 +37,12 @@ import com.kapilagro.sasyak.domain.models.ScoutingDetails
 import com.kapilagro.sasyak.presentation.common.catalog.CategoryViewModel
 import com.kapilagro.sasyak.presentation.common.catalog.CategoriesState
 import com.kapilagro.sasyak.presentation.common.components.SuccessDialog
+import com.kapilagro.sasyak.presentation.common.image.ImageCaptureViewModel
 import com.kapilagro.sasyak.presentation.common.navigation.Screen
 import com.kapilagro.sasyak.presentation.common.theme.AgroPrimary
 import com.kapilagro.sasyak.presentation.home.HomeViewModel
+import com.kapilagro.sasyak.worker.AttachUrlWorker
+import com.kapilagro.sasyak.worker.FileUploadWorker
 import com.kapilagro.sasyak.worker.MediaUploadWorker
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.launch
@@ -198,25 +202,51 @@ fun ScoutingRequestScreen(
         when (createScoutingState) {
             is ScoutingListViewModel.CreateScoutingState.Success -> {
                 val createdTask = (createScoutingState as ScoutingListViewModel.CreateScoutingState.Success).task
-
-                // If images exist, start WorkManager to upload them
                 if (imageUris.isNotEmpty()) {
-                    val imageUriStrings = imageUris.map { it.toString() }
 
-                    val uploadWorkRequest = OneTimeWorkRequestBuilder<MediaUploadWorker>()
-                        .setInputData(MediaUploadWorker.createInputData(createdTask.id, imageUriStrings))
-                        .build()
+                    val imageFilePaths = imageUris.mapNotNull { uri ->
+                        // Use the new static method from the ViewModel's companion object.
+                        ImageCaptureViewModel.copyUriToCachedFile(context, uri)?.absolutePath
+                    }
+                    if (imageFilePaths.isNotEmpty()) {
+                        // 1. Create the first work request for uploading files.
+                        val fileUploadRequest = OneTimeWorkRequestBuilder<FileUploadWorker>()
 
-                    WorkManager.getInstance(context).enqueue(uploadWorkRequest)
+                            .setInputData(
+                                FileUploadWorker.createInputData(
+                                    taskId = createdTask.id,
+                                    imagePaths = imageFilePaths,
+                                    folder = "SCOUTING"
+                                )
+                            )
+                            .addTag(FileUploadWorker.UPLOAD_TAG)
+                            .build()
+
+                        // 2. Create the second work request for attaching the URLs.
+                        //    It doesn't need input data here because it gets it from the first worker.
+                        val attachUrlRequest = OneTimeWorkRequestBuilder<AttachUrlWorker>()
+                            .build()
+
+                        // 3. Chain the requests and enqueue the sequence.
+                        WorkManager.getInstance(context)
+                            .beginWith(fileUploadRequest) // Start with uploading
+                            .then(attachUrlRequest)       // Then, attach the URLs
+                            .enqueue()
+
+                    } else {
+                        Log.e("RequestScreen", "No valid image files after URI conversion.")
+                    }
                 }
 
                 showSuccessDialog = true
             }
+
             else -> {
                 // Handle other states if needed
             }
         }
     }
+
 
     // Success Dialog
     if (showSuccessDialog && submittedEntry != null) {
@@ -600,7 +630,7 @@ fun ScoutingRequestScreen(
                         .height(56.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
-                    Text("Select Images")
+                    Text("Select Media")
                 }
 
                 // Display selected images
@@ -750,6 +780,22 @@ fun ScoutingRequestScreen(
         }
     }
 }
+
+//TODO put this in utilty
+private fun copyUriToFile(context: Context, uri: Uri): File? {
+    return try {
+        val inputStream = context.contentResolver.openInputStream(uri) ?: return null
+        val file = File(context.cacheDir, "media_${System.currentTimeMillis()}")
+        file.outputStream().use { outputStream ->
+            inputStream.copyTo(outputStream)
+        }
+        file
+    } catch (e: Exception) {
+        e.printStackTrace()
+        null
+    }
+}
+
 
 private sealed class UploadState {
     object Idle : UploadState()

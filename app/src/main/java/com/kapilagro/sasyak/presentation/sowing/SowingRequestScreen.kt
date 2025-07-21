@@ -737,7 +737,7 @@ fun SowingRequestScreen(
                             } else {
                                 // Upload images
                                 uploadState = UploadState.Loading
-                                val uploadResult = imageUploadService.uploadImages(imageFiles!!, "SOWING")
+                                val uploadResult = imageUploadService.uploadFilek(imageFiles!!, "SOWING")
                                 when (uploadResult) {
                                     is ApiResponse.Success -> {
                                         val imageUrls = uploadResult.data

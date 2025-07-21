@@ -4,14 +4,18 @@ import com.kapilagro.sasyak.data.api.ApiService
 import com.kapilagro.sasyak.data.api.mappers.TaskMapper
 import com.kapilagro.sasyak.data.api.mappers.toDomainModel
 import com.kapilagro.sasyak.data.api.models.requests.CreateTaskRequest
+import com.kapilagro.sasyak.data.api.models.requests.MediaAttachRequest
 import com.kapilagro.sasyak.data.api.models.requests.UpdateImplementationRequest
 import com.kapilagro.sasyak.data.api.models.requests.UpdateTaskStatusRequest
+import com.kapilagro.sasyak.data.api.models.responses.ApiResponseDTO
 import com.kapilagro.sasyak.data.api.models.responses.DailyTaskCount
+import com.kapilagro.sasyak.data.api.models.responses.SuccessResponse
 import com.kapilagro.sasyak.data.api.models.responses.TaskImagesUpdateResponse
 import com.kapilagro.sasyak.data.api.models.responses.TrendReportResponse
 import com.kapilagro.sasyak.domain.models.ApiResponse
 import com.kapilagro.sasyak.domain.models.Task
 import com.kapilagro.sasyak.domain.models.TaskAdvice
+import retrofit2.Response
 import com.kapilagro.sasyak.domain.models.TaskReport
 import com.kapilagro.sasyak.domain.repositories.TaskRepository
 import javax.inject.Inject
@@ -216,10 +220,18 @@ class TaskRepositoryImpl @Inject constructor(
         }
     }
 
+    // Fixed function implementation
     override suspend fun attachMediaToTask(
-        taskId: Int,
-        media: List<String>
-    ): ApiResponse<TaskImagesUpdateResponse> {
-        TODO("Not yet implemented")
+        task_Id: Int,
+        mediaFileNames: List<String>
+    ): Response<ApiResponseDTO> {
+        val request = MediaAttachRequest(
+            media = mediaFileNames,
+            task_id = task_Id
+        )
+        return apiService.attachMediaToTask(request)
     }
+
+
+
 }

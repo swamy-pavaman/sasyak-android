@@ -62,6 +62,9 @@ fun HomeScreen(
     onSowingTaskClick: () -> Unit,
     onSprayingTaskClick: () -> Unit,
     onYieldTaskClick: () -> Unit,
+    onSyncClick:()->Unit,
+
+
 
     onTeamClick:()->Unit,
 
@@ -316,7 +319,8 @@ fun HomeScreen(
                         onFuelRequestClick = onFuelRequestClick,
                         onSowingTaskClick = onSowingTaskClick,
                         onSprayingTaskClick = onSprayingTaskClick,
-                        onYieldTaskClick = onYieldTaskClick
+                        onYieldTaskClick = onYieldTaskClick,
+                        onSyncClick= onSyncClick
                     )
                 }
                 else -> {
@@ -328,6 +332,7 @@ fun HomeScreen(
                         onSowingTaskClick = onSowingTaskClick,
                         onSprayingTaskClick = onSprayingTaskClick,
                         onYieldTaskClick = onYieldTaskClick
+
                     )
                 }
             }
@@ -562,6 +567,7 @@ fun SupervisorHomeContent(
     onSowingTaskClick: () -> Unit,
     onSprayingTaskClick: () -> Unit,
     onYieldTaskClick: () -> Unit,
+    onSyncClick:()->Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     // Supervisor-specific quick actions
@@ -626,6 +632,16 @@ fun SupervisorHomeContent(
                 backgroundColor = YieldIcon,
                 containerColor = YieldContainer,
                 onClick = onYieldTaskClick
+            )
+        }
+
+        item{
+            QuickActionButton(
+                icon = Icons.Outlined.Search,
+                label = "Sync",
+                backgroundColor = ScoutingIcon,
+                containerColor = ScoutingContainer,
+                onClick = onSyncClick
             )
         }
     }

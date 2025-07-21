@@ -53,6 +53,7 @@ import com.kapilagro.sasyak.presentation.spraying.SprayingListViewModel
 import com.kapilagro.sasyak.presentation.spraying.SprayingRequestScreen
 import com.kapilagro.sasyak.presentation.spraying.SprayingScreen
 import com.kapilagro.sasyak.presentation.spraying.SprayingTaskDetailScreen
+import com.kapilagro.sasyak.presentation.sync.SyncScreen
 import com.kapilagro.sasyak.presentation.tasks.CreateTaskScreen
 import com.kapilagro.sasyak.presentation.tasks.TaskDetailScreen
 import com.kapilagro.sasyak.presentation.tasks.TaskListScreen
@@ -153,6 +154,15 @@ fun AppNavGraph(
                 }
             )
         }
+
+
+
+        composable(Screen.Sync.route) {
+            SyncScreen(
+
+            )
+        }
+
 
         composable(FuelRequestScreen.route) {
             val fuelListViewModel: FuelListViewModel = hiltViewModel()
@@ -379,6 +389,9 @@ fun AppNavGraph(
                 },
                 onAdviceClick = {
                     navController.navigate(Screen.Advice.route)
+                },
+                onSyncClick = {
+                    navController.navigate(Screen.Sync.route)
                 }
             )
         }

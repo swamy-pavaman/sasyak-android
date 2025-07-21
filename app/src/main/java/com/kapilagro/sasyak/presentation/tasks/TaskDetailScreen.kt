@@ -950,7 +950,7 @@ fun TaskDetailScreen(
                                                         if (implementationImages?.isNotEmpty() == true) {
                                                             uploadState = UploadState.Loading
                                                             val uploadResult =
-                                                                imageUploadService.uploadImages(
+                                                                imageUploadService.uploadFilek(
                                                                     implementationImages!!,
                                                                     "TASK_$taskId"
                                                                 )

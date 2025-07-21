@@ -643,7 +643,7 @@ fun YieldRequestScreen(
                             } else {
                                 // Upload images
                                 uploadState = UploadState.Loading
-                                val uploadResult = imageUploadService.uploadImages(imageFiles!!, "YIELD")
+                                val uploadResult = imageUploadService.uploadFilek(imageFiles!!, "YIELD")
                                 when (uploadResult) {
                                     is ApiResponse.Success -> {
                                         val imageUrls = uploadResult.data

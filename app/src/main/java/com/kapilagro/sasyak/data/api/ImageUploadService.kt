@@ -1,5 +1,7 @@
 package com.kapilagro.sasyak.data.api
 
+import android.util.Log
+import android.webkit.MimeTypeMap
 import com.kapilagro.sasyak.domain.models.ApiResponse
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -12,6 +14,7 @@ import java.io.File
 import javax.inject.Inject
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.util.Locale
 
 data class PresignedUrlRequest(
     val fileNames: List<String>,
@@ -33,9 +36,21 @@ class ImageUploadService @Inject constructor(
     private val apiService: ApiService,
     private val okHttpClient: OkHttpClient
 ) {
-    suspend fun uploadImages(imageFiles: List<File>, folder: String): ApiResponse<List<String>> = withContext(Dispatchers.IO) {
+
+    private fun getMimeTypeFromFile(file: File): String {
+        val extension = file.extension.lowercase(Locale.ROOT)
+        return MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension) ?: "application/octet-stream"
+    }
+
+    suspend fun uploadFilek( files: List<File>, folder: String): ApiResponse<List<String>> = withContext(Dispatchers.IO) {
+        // this is dummy method just to show how it can be done
+        return@withContext uploadFiles(files, folder)
+    }
+    suspend fun uploadFiles(files: List<File>, folder: String): ApiResponse<List<String>> = withContext(Dispatchers.IO) {
         try {
-            val fileNames = imageFiles.map { it.name }
+            // This is now correct, as File objects will have names with extensions (e.g., "media_123.jpg")
+            val fileNames = files.map { it.name }
+
             val request = PresignedUrlRequest(
                 fileNames = fileNames,
                 expiryHours = 1,
@@ -44,6 +59,7 @@ class ImageUploadService @Inject constructor(
 
             val response = apiService.getPresignedUrls(request)
             if (!response.isSuccessful) {
+                Log.e("ImageUploadService", "Presigned URL errorBody: ${response.errorBody()?.string()}")
                 return@withContext ApiResponse.Error("Failed to get presigned URLs: ${response.message()}")
             }
 
@@ -53,26 +69,33 @@ class ImageUploadService @Inject constructor(
             }
 
             val uploadedUrls = mutableListOf<String>()
-            for (file in imageFiles) {
+            for (file in files) {
                 val presignedUrl = presignedResponse.presignedUrls[file.name]
                     ?: return@withContext ApiResponse.Error("No presigned URL for ${file.name}")
 
-                val requestBody = file.asRequestBody("image/jpeg".toMediaType())
-                val request = Request.Builder()
+                // ★★★ FIX: Dynamically determine MIME type instead of hardcoding "image/jpeg".
+                val mimeType = getMimeTypeFromFile(file)
+                val requestBody = file.asRequestBody(mimeType.toMediaType())
+
+                val putRequest = Request.Builder()
                     .url(presignedUrl)
                     .put(requestBody)
-                    .addHeader("Content-Type", "image/jpeg")
+                    .addHeader("Content-Type", mimeType) // This MUST match the type used for signing.
                     .build()
 
-                val uploadResponse = okHttpClient.newCall(request).execute()
+                val uploadResponse = okHttpClient.newCall(putRequest).execute()
                 if (uploadResponse.isSuccessful) {
+                    Log.d("ImageUploadService", "uploaded succefully with oresigned url: $presignedUrl")
                     uploadedUrls.add(extractCleanUrl(presignedUrl))
+                    Log.d("ImageUploadService", "Upload successful after presginerfdurl extracted presignedUrl "+extractCleanUrl(presignedUrl))
                 } else {
+                    Log.e("ImageUploadService", "Upload failed for ${file.name}. Code: ${uploadResponse.code}. Message: ${uploadResponse.message}.")
                     return@withContext ApiResponse.Error("Failed to upload ${file.name}: ${uploadResponse.message}")
                 }
             }
             ApiResponse.Success(uploadedUrls)
         } catch (e: Exception) {
+            Log.e("ImageUploadService", "Exception during upload", e)
             ApiResponse.Error(e.message ?: "Unknown error during upload")
         }
     }

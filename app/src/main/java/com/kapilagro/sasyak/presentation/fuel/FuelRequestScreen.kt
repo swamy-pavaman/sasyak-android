@@ -752,7 +752,7 @@ fun FuelRequestScreen(
                             } else {
                                 // Upload images
                                 uploadState = UploadState.Loading
-                                val uploadResult = imageUploadService.uploadImages(imageFiles!!, "FUEL")
+                                val uploadResult = imageUploadService.uploadFilek(imageFiles!!, "FUEL")
                                 when (uploadResult) {
                                     is ApiResponse.Success -> {
                                         val imageUrls = uploadResult.data

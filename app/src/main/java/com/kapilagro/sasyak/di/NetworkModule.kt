@@ -70,6 +70,23 @@ object NetworkModule {
             .build()
     }
 
+    @Singleton
+    @Provides
+    @Named("uploadClient") // New named provider for file uploads
+    fun provideUploadOkHttpClient(
+        httpLoggingInterceptor: HttpLoggingInterceptor,
+        networkConnectivityInterceptor: NetworkConnectivityInterceptor
+    ): OkHttpClient {
+        // This client is ONLY for uploading to presigned URLs.
+        // It MUST NOT include the AuthInterceptor or TokenAuthenticator.
+        return OkHttpClient.Builder()
+            .addInterceptor(httpLoggingInterceptor)
+            .addInterceptor(networkConnectivityInterceptor)
+            .connectTimeout(60, TimeUnit.SECONDS) // Longer timeout for uploads
+            .readTimeout(60, TimeUnit.SECONDS)
+            .writeTimeout(60, TimeUnit.SECONDS)
+            .build()
+    }
 
 
     @Singleton
