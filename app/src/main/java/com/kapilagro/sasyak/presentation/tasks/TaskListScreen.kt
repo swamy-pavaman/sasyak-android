@@ -32,12 +32,14 @@ import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import com.kapilagro.sasyak.R // Import the R class to access the raw resource
 import com.kapilagro.sasyak.data.api.models.responses.TeamMemberResponse
+import com.kapilagro.sasyak.presentation.common.components.ErrorView
 import com.kapilagro.sasyak.presentation.common.components.TaskCard
 import com.kapilagro.sasyak.presentation.common.navigation.Screen
 import com.kapilagro.sasyak.presentation.common.theme.*
 import com.kapilagro.sasyak.presentation.tasks.components.TabItem
 import com.kapilagro.sasyak.presentation.tasks.components.TaskTabRow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.launch
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
@@ -52,6 +54,7 @@ fun TaskListScreen(
     val taskListState by viewModel.taskListState.collectAsState()
     val userRole by viewModel.userRole.collectAsState()
     val isRefreshing by viewModel.refreshing.collectAsState()
+    val coroutineScope = rememberCoroutineScope()
     val listState = rememberLazyListState()
 
     // Admin-specific states
@@ -345,6 +348,9 @@ fun TaskListScreen(
                     onTabSelected = { tab ->
                         viewModel.onTabSelected(tab)
                         selectedUser = null
+                        coroutineScope.launch {
+                            listState.scrollToItem(0)
+                        }
                     }
                 )
             } else {
