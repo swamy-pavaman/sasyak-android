@@ -1,5 +1,6 @@
 package com.kapilagro.sasyak.presentation.yield
 
+import android.net.Uri
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
@@ -21,10 +22,15 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import androidx.work.Constraints
+import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import coil.compose.rememberAsyncImagePainter
 import com.kapilagro.sasyak.data.api.ImageUploadService
 import com.kapilagro.sasyak.di.IoDispatcher
@@ -33,10 +39,14 @@ import com.kapilagro.sasyak.domain.models.YieldDetails
 import com.kapilagro.sasyak.presentation.common.catalog.CategoriesState
 import com.kapilagro.sasyak.presentation.common.catalog.CategoryViewModel
 import com.kapilagro.sasyak.presentation.common.components.SuccessDialog
+import com.kapilagro.sasyak.presentation.common.image.ImageCaptureViewModel
 import com.kapilagro.sasyak.presentation.common.navigation.Screen
 import com.kapilagro.sasyak.presentation.common.theme.AgroPrimary
 import com.kapilagro.sasyak.presentation.home.HomeViewModel
+import com.kapilagro.sasyak.presentation.spraying.SprayingListViewModel
 import com.kapilagro.sasyak.presentation.tasks.TaskViewModel
+import com.kapilagro.sasyak.worker.AttachUrlWorker
+import com.kapilagro.sasyak.worker.FileUploadWorker
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.launch
 import java.io.File
@@ -57,7 +67,7 @@ fun YieldRequestScreen(
     taskViewModel: TaskViewModel = hiltViewModel(),
     categoryViewModel: CategoryViewModel = hiltViewModel(),
     @IoDispatcher ioDispatcher: CoroutineDispatcher,
-    imageUploadService: ImageUploadService
+
 ) {
     val createYieldState by viewModel.createYieldState.collectAsState()
     val userRole by homeViewModel.userRole.collectAsState()
@@ -67,10 +77,13 @@ fun YieldRequestScreen(
     val managersList by taskViewModel.managersList.collectAsState()
     val supervisorsList by taskViewModel.supervisorsList.collectAsState()
 
+    val context = LocalContext.current
+    var imageUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
+
     // Dialog state
     var showSuccessDialog by remember { mutableStateOf(false) }
     var submittedEntry by remember { mutableStateOf<YieldDetails?>(null) }
-    var uploadState by remember { mutableStateOf<UploadState>(UploadState.Idle) }
+
 
     // Form fields with saved state
     val savedStateHandle = navController.currentBackStackEntry?.savedStateHandle
@@ -93,7 +106,6 @@ fun YieldRequestScreen(
     var harvestMethodExpanded by remember { mutableStateOf(false) }
     var notes by remember { mutableStateOf(savedStateHandle?.get<String>("notes") ?: "") }
     var description by remember { mutableStateOf(savedStateHandle?.get<String>("description") ?: "") }
-    var imageFiles by remember { mutableStateOf<List<File>?>(null) }
     var assignedTo by remember { mutableStateOf<Int?>(savedStateHandle?.get<Int>("assignedTo")) }
     var assignedToExpanded by remember { mutableStateOf(false) }
     var valveName by remember { mutableStateOf(savedStateHandle?.get<String>("valveName") ?: "") }
@@ -203,9 +215,13 @@ fun YieldRequestScreen(
 
     // Handle navigation result from ImageCaptureScreen
     LaunchedEffect(navController) {
-        navController.currentBackStackEntry?.savedStateHandle?.getStateFlow<List<File>>("selectedImages", emptyList())
-            ?.collect { files ->
-                imageFiles = files
+        navController.currentBackStackEntry
+            ?.savedStateHandle
+            ?.getStateFlow<List<String>>("selectedImages", emptyList())
+            ?.collect { uriStrings ->
+                imageUris = uriStrings.map { Uri.parse(it) } // <-- CHANGE THIS LOGIC
+                // Also update the saved state handle so URIs persist on configuration change
+                savedStateHandle?.set("selectedImages", uriStrings)
             }
     }
 
@@ -213,11 +229,41 @@ fun YieldRequestScreen(
     LaunchedEffect(createYieldState) {
         when (createYieldState) {
             is YieldListViewModel.CreateYieldState.Success -> {
+                val createdTask = (createYieldState as YieldListViewModel.CreateYieldState.Success).task
+                if (imageUris.isNotEmpty()) {
+                    val imageFilePaths = imageUris.mapNotNull { uri ->
+                        ImageCaptureViewModel.copyUriToCachedFile(context, uri)?.absolutePath
+                    }
+
+                    val constraints = Constraints.Builder()
+                        .setRequiredNetworkType(NetworkType.CONNECTED)
+                        .build()
+
+
+                    val fileUploadRequest = OneTimeWorkRequestBuilder<FileUploadWorker>()
+                        .setInputData(
+                            FileUploadWorker.createInputData(
+                                taskId = createdTask.id,
+                                imagePaths = imageFilePaths,
+                                folder = "YIELD"
+                            )
+                        )
+                        .setConstraints(constraints)
+                        .addTag(FileUploadWorker.UPLOAD_TAG)
+                        .build()
+
+                    val attachUrlRequest = OneTimeWorkRequestBuilder<AttachUrlWorker>()
+                        .setConstraints(constraints)
+                        .build()
+
+                    WorkManager.getInstance(context)
+                        .beginWith(fileUploadRequest)
+                        .then(attachUrlRequest)
+                        .enqueue()
+                }
                 showSuccessDialog = true
             }
-            else -> {
-                // Handle other states if needed
-            }
+            else -> Unit
         }
     }
     // Resets dependent fields
@@ -867,10 +913,10 @@ fun YieldRequestScreen(
                         .height(56.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
-                    Text("Select Images")
+                    Text("Select Media")
                 }
 
-                if (imageFiles != null && imageFiles!!.isNotEmpty()) {
+                if (imageUris.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(
                         modifier = Modifier
@@ -878,7 +924,7 @@ fun YieldRequestScreen(
                             .horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        imageFiles!!.forEach { file ->
+                        imageUris.forEach { uri ->
                             Box(
                                 modifier = Modifier.size(80.dp)
                             ) {
@@ -891,7 +937,7 @@ fun YieldRequestScreen(
                                     shape = RoundedCornerShape(8.dp)
                                 ) {
                                     Image(
-                                        painter = rememberAsyncImagePainter(file),
+                                        painter = rememberAsyncImagePainter(uri),
                                         contentDescription = "Selected image",
                                         modifier = Modifier.fillMaxSize(),
                                         contentScale = androidx.compose.ui.layout.ContentScale.Crop
@@ -899,7 +945,8 @@ fun YieldRequestScreen(
                                 }
                                 IconButton(
                                     onClick = {
-                                        imageFiles = imageFiles?.filter { it != file }
+                                        imageUris = imageUris.filter { it != uri }
+                                        savedStateHandle?.set("selectedImages", imageUris.map { it.toString() })
                                     },
                                     modifier = Modifier
                                         .align(Alignment.TopEnd)
@@ -939,22 +986,14 @@ fun YieldRequestScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             // Loading indicator
-            if (createYieldState is YieldListViewModel.CreateYieldState.Loading || uploadState is UploadState.Loading) {
+            if (createYieldState is YieldListViewModel.CreateYieldState.Loading ) {
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = AgroPrimary)
                 }
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            // Error message for upload
-            if (uploadState is UploadState.Error) {
-                Text(
-                    text = (uploadState as UploadState.Error).message,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-            }
+
 
             // Submit Button
             Button(
@@ -980,50 +1019,22 @@ fun YieldRequestScreen(
                             )
                             submittedEntry = yieldDetails
 
-                            if (imageFiles.isNullOrEmpty()) {
-                                // No images to upload, proceed with task creation with empty image list
-                                viewModel.createYieldTask(
-                                    yieldDetails = yieldDetails,
-                                    description = description,
-                                    imagesJson = emptyList<String>(), // Pass empty list instead of null
-                                    assignedToId = if (userRole == "MANAGER" || userRole == "ADMIN") assignedTo else null
-                                )
-                                uploadState = UploadState.Idle
-                            } else {
-                                // Upload images
-                                uploadState = UploadState.Loading
-                                val uploadResult = imageUploadService.uploadImages(imageFiles!!, "YIELD")
-                                when (uploadResult) {
-                                    is ApiResponse.Success -> {
-                                        val imageUrls = uploadResult.data
-                                        if (imageUrls.isEmpty()) {
-                                            uploadState = UploadState.Error("Image upload failed, no URLs received")
-                                            return@launch
-                                        }
-                                        viewModel.createYieldTask(
-                                            yieldDetails = yieldDetails,
-                                            description = description,
-                                            imagesJson = imageUrls,
-                                            assignedToId = if (userRole == "MANAGER" || userRole == "ADMIN") assignedTo else null
-                                        )
-                                        uploadState = UploadState.Idle
-                                    }
-                                    is ApiResponse.Error -> {
-                                        uploadState = UploadState.Error("Image upload failed: ${uploadResult.errorMessage}")
-                                    }
-                                    is ApiResponse.Loading -> {
-                                        uploadState = UploadState.Loading
-                                    }
-                                }
-                            }
+                            viewModel.createYieldTask(
+                                yieldDetails = yieldDetails,
+                                description = description,
+                                imagesJson = emptyList<String>(), // Pass empty list instead of null
+                                assignedToId = if (userRole == "MANAGER" || userRole == "ADMIN") assignedTo else null
+                            )
+
+
                         }
                     }
                 },
                 enabled = cropName.isNotBlank() && row.isNotBlank() && yieldQuantity.isNotBlank() && valveName.isNotBlank() &&
                         yieldUnit.isNotBlank() && (userRole != "ADMIN" || assignedTo != null) &&
                         (userRole != "MANAGER" || assignedTo != null) && isValidDueDate &&
-                        createYieldState !is YieldListViewModel.CreateYieldState.Loading &&
-                        uploadState !is UploadState.Loading,
+                        createYieldState !is YieldListViewModel.CreateYieldState.Loading,
+
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
@@ -1045,8 +1056,3 @@ fun YieldRequestScreen(
     }
 }
 
-private sealed class UploadState {
-    object Idle : UploadState()
-    object Loading : UploadState()
-    data class Error(val message: String) : UploadState()
-}

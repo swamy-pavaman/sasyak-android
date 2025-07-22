@@ -4,16 +4,21 @@ import com.kapilagro.sasyak.data.api.ApiService
 import com.kapilagro.sasyak.data.api.mappers.TaskMapper
 import com.kapilagro.sasyak.data.api.mappers.toDomainModel
 import com.kapilagro.sasyak.data.api.models.requests.CreateTaskRequest
+import com.kapilagro.sasyak.data.api.models.requests.MediaAttachRequest
 import com.kapilagro.sasyak.data.api.models.requests.FilterRequest
 import com.kapilagro.sasyak.data.api.models.requests.UpdateImplementationRequest
 import com.kapilagro.sasyak.data.api.models.requests.UpdateTaskStatusRequest
+import com.kapilagro.sasyak.data.api.models.responses.ApiResponseDTO
 import com.kapilagro.sasyak.data.api.models.responses.DailyTaskCount
 import com.kapilagro.sasyak.data.api.models.responses.TaskListResponse
 import com.kapilagro.sasyak.data.api.models.responses.TeamMemberListResponse
+import com.kapilagro.sasyak.data.api.models.responses.SuccessResponse
+import com.kapilagro.sasyak.data.api.models.responses.TaskImagesUpdateResponse
 import com.kapilagro.sasyak.data.api.models.responses.TrendReportResponse
 import com.kapilagro.sasyak.domain.models.ApiResponse
 import com.kapilagro.sasyak.domain.models.Task
 import com.kapilagro.sasyak.domain.models.TaskAdvice
+import retrofit2.Response
 import com.kapilagro.sasyak.domain.models.TaskReport
 import com.kapilagro.sasyak.domain.repositories.TaskRepository
 import javax.inject.Inject
@@ -217,6 +222,21 @@ class TaskRepositoryImpl @Inject constructor(
             ApiResponse.Error(e.message ?: "An unknown error occurred")
         }
     }
+
+    // Fixed function implementation
+    override suspend fun attachMediaToTask(
+        task_Id: Int,
+        mediaFileNames: List<String>
+    ): Response<ApiResponseDTO> {
+        val request = MediaAttachRequest(
+            media = mediaFileNames,
+            task_id = task_Id
+        )
+        return apiService.attachMediaToTask(request)
+    }
+
+
+
 
     override suspend fun getTasksByUserId(userId: Int, page: Int, size: Int): ApiResponse<Pair<List<Task>, Int>> {
         return try {

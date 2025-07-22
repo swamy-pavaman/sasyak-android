@@ -63,6 +63,10 @@ fun HomeScreen(
     onSprayingTaskClick: () -> Unit,
     onYieldTaskClick: () -> Unit,
     onMyTasksClick: () -> Unit,
+    onSyncClick:()->Unit,
+
+
+
     onTeamClick:()->Unit,
     onReportsClick: () -> Unit,    // Added for Reports navigation
     onAdviceClick: () -> Unit,
@@ -318,7 +322,8 @@ fun HomeScreen(
                         onFuelRequestClick = onFuelRequestClick,
                         onSowingTaskClick = onSowingTaskClick,
                         onSprayingTaskClick = onSprayingTaskClick,
-                        onYieldTaskClick = onYieldTaskClick
+                        onYieldTaskClick = onYieldTaskClick,
+                        onSyncClick= onSyncClick
                     )
                 }
                 "ADMIN" -> {
@@ -342,6 +347,7 @@ fun HomeScreen(
                         onSowingTaskClick = onSowingTaskClick,
                         onSprayingTaskClick = onSprayingTaskClick,
                         onYieldTaskClick = onYieldTaskClick
+
                     )
                 }
             }
@@ -576,6 +582,7 @@ fun SupervisorHomeContent(
     onSowingTaskClick: () -> Unit,
     onSprayingTaskClick: () -> Unit,
     onYieldTaskClick: () -> Unit,
+    onSyncClick:()->Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     // Supervisor-specific quick actions
@@ -642,13 +649,22 @@ fun SupervisorHomeContent(
                 onClick = onYieldTaskClick
             )
         }
+
+        item{
+            QuickActionButton(
+                icon = Icons.Outlined.Sync,
+                label = "Sync",
+                backgroundColor = SyncIcon,
+                containerColor = SyncContainer,
+                onClick = onSyncClick
+            )
+        }
     }
 
     Spacer(modifier = Modifier.height(16.dp))
 
     // UPDATED: Supervisor Task Sections with Status Tabs
     var selectedTaskTab by remember { mutableStateOf(0) }
-
     // Load the appropriate tasks when tab changes
     LaunchedEffect(selectedTaskTab) {
         when (selectedTaskTab) {

@@ -29,6 +29,7 @@ kotlin-android = { id = "org.jetbrains.kotlin.android", version = "1.9.20" }
 kotlin-parcelize = { id = "org.jetbrains.kotlin.plugin.parcelize", version = "1.9.20" }
 dagger-hilt = { id = "com.google.dagger.hilt.android", version = "2.48" }
 ksp = { id = "com.google.devtools.ksp", version = "1.9.20-1.0.14" }
+
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin-serialization-plugin" }
 
 
@@ -36,6 +37,10 @@ kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", versi
 
 
 [libraries]
+work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version = "2.10.2" }
+hilt-work = { module = "androidx.hilt:hilt-work", version = "1.2.0" }
+hilt-work-compiler = { module = "androidx.hilt:hilt-compiler", version = "1.2.0" }
+
 accompanist-swiperefresh = { module = "com.google.accompanist:accompanist-swiperefresh", version.ref = "accompanist" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlin-serialization" }
 

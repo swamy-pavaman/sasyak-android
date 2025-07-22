@@ -5,16 +5,11 @@ import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
@@ -35,12 +30,9 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -54,6 +46,7 @@ import com.kapilagro.sasyak.di.IoDispatcher
 import com.kapilagro.sasyak.data.api.ImageUploadService
 import com.kapilagro.sasyak.domain.models.ApiResponse
 import com.kapilagro.sasyak.domain.models.TaskAdvice
+import com.kapilagro.sasyak.presentation.common.mediaplayer.ImageSlideshow
 import com.kapilagro.sasyak.presentation.common.components.TaskTypeChip
 import com.kapilagro.sasyak.presentation.common.navigation.Screen
 import com.kapilagro.sasyak.presentation.common.theme.*
@@ -965,7 +958,7 @@ fun TaskDetailScreen(
                                                         if (implementationImages?.isNotEmpty() == true) {
                                                             uploadState = UploadState.Loading
                                                             val uploadResult =
-                                                                imageUploadService.uploadImages(
+                                                                imageUploadService.uploadFilek(
                                                                     implementationImages!!,
                                                                     "TASK_$taskId"
                                                                 )
@@ -1080,186 +1073,7 @@ fun TaskDetailScreen(
     }
 }
 
-@Composable
-fun ImageSlideshow(imageUrls: List<String>) {
-    var currentImageIndex by remember { mutableStateOf(0) }
-    var showPreview by remember { mutableStateOf(false) }
-    val numberOfImages = imageUrls.size
 
-    // Auto-scroll effect
-    LaunchedEffect(currentImageIndex) {
-        delay(3000)
-        currentImageIndex = (currentImageIndex + 1) % numberOfImages
-    }
-
-    // Smooth transition animation
-    val animatedOffset by animateFloatAsState(
-        targetValue = -currentImageIndex.toFloat(),
-        animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
-        label = "slideOffset"
-    )
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(250.dp)
-    ) {
-        // Image container with swipe support
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .pointerInput(numberOfImages) {
-                    detectDragGestures(
-                        onDragEnd = {
-                            // Handle swipe completion if needed
-                        }
-                    ) { _, dragAmount ->
-                        val swipeThreshold = 50f
-                        if (dragAmount.x > swipeThreshold) {
-                            // Swipe right - previous image
-                            currentImageIndex = if (currentImageIndex > 0) {
-                                currentImageIndex - 1
-                            } else {
-                                numberOfImages - 1
-                            }
-                        } else if (dragAmount.x < -swipeThreshold) {
-                            // Swipe left - next image
-                            currentImageIndex = (currentImageIndex + 1) % numberOfImages
-                        }
-                    }
-                }
-                .clickable {
-                    showPreview = true
-                }
-        ) {
-            AsyncImage(
-                model = imageUrls[currentImageIndex],
-                contentDescription = "Image ${currentImageIndex + 1}",
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
-            )
-        }
-
-        // Indicator dots with smooth transitions
-        Row(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            repeat(numberOfImages) { index ->
-                val isSelected = index == currentImageIndex
-                val animatedSize by animateFloatAsState(
-                    targetValue = if (isSelected) 10f else 8f,
-                    animationSpec = tween(200),
-                    label = "dotSize"
-                )
-                val animatedAlpha by animateFloatAsState(
-                    targetValue = if (isSelected) 1f else 0.5f,
-                    animationSpec = tween(200),
-                    label = "dotAlpha"
-                )
-
-                Box(
-                    modifier = Modifier
-                        .size(animatedSize.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = animatedAlpha))
-                        .clickable {
-                            currentImageIndex = index
-                        }
-                )
-            }
-        }
-    }
-
-    // Full-screen preview dialog
-    if (showPreview) {
-        Dialog(
-            onDismissRequest = { showPreview = false },
-            properties = DialogProperties(
-                usePlatformDefaultWidth = false
-            )
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black)
-                    .clickable { showPreview = false }
-            ) {
-                var previewIndex by remember { mutableStateOf(currentImageIndex) }
-
-                // Full screen image with swipe support
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .pointerInput(numberOfImages) {
-                            detectDragGestures { _, dragAmount ->
-                                val swipeThreshold = 100f
-                                if (dragAmount.x > swipeThreshold) {
-                                    previewIndex = if (previewIndex > 0) {
-                                        previewIndex - 1
-                                    } else {
-                                        numberOfImages - 1
-                                    }
-                                } else if (dragAmount.x < -swipeThreshold) {
-                                    previewIndex = (previewIndex + 1) % numberOfImages
-                                }
-                            }
-                        }
-                ) {
-                    AsyncImage(
-                        model = imageUrls[previewIndex],
-                        contentDescription = "Preview image ${previewIndex + 1}",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Fit
-                    )
-                }
-
-                // Close button
-                IconButton(
-                    onClick = { showPreview = false },
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(16.dp)
-                        .background(
-                            Color.Black.copy(alpha = 0.5f),
-                            CircleShape
-                        )
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "Close preview",
-                        tint = Color.White
-                    )
-                }
-
-                // Preview indicator dots
-                Row(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = 32.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    repeat(numberOfImages) { index ->
-                        val isSelected = index == previewIndex
-                        Box(
-                            modifier = Modifier
-                                .size(if (isSelected) 10.dp else 8.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    Color.White.copy(alpha = if (isSelected) 1f else 0.5f)
-                                )
-                                .clickable {
-                                    previewIndex = index
-                                }
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
 
 @Composable
 fun TaskStatusChip(taskStatus: String) {

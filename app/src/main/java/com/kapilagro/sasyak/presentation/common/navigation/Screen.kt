@@ -19,6 +19,8 @@ sealed class Screen(val route: String, val title: String, @DrawableRes val icon:
     object Sowing : Screen("sowing", "Sowing")
     object Spraying : Screen("spraying", "Spraying")
 
+    object Sync : Screen("sync", "Sync")
+
     // Main screens with bottom navigation
     object Home : Screen("home", "Home", R.drawable.ic_home)
     object TaskList : Screen("task_list", "Tasks", R.drawable.ic_baseline_analytics_24)

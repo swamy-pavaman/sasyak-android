@@ -33,6 +33,9 @@ val StatusRejected = Color(0xFFEF4444)
 val Green500 = Color(0xFF1A9E5C)
 
 // Supervisor Quick Action Colors
+
+val SyncIcon = Color(0xFF009688)        // Blue
+val SyncContainer = Color(0xFFE7FAF9)  // Light blue background
 val ScoutingIcon = Color(0xFF4285F4)    // Blue
 val ScoutingContainer = Color(0xFFECF3FE) // Light blue background
 val SprayingIcon = Color(0xFF4CAF50)    // Green
@@ -67,6 +70,8 @@ val TasksIcon = Color(0xFF8A56FF)       // Purple
 val TasksContainer = Color(0xFFF3EFFE)   // Light purple background
 val AdviceIcon = Color(0xFFF5A623)      // Orange
 val AdviceContainer = Color(0xFFFFF8E6)  // Light orange/yellow background
+
+
 
 // Additional dark mode colors
 val BackgroundDark = Color(0xFF121212)

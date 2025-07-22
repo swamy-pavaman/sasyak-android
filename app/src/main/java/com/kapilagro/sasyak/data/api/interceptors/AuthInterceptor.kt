@@ -16,7 +16,7 @@ class AuthInterceptor @Inject constructor(
         val url = originalRequest.url.toString()
 
         // Skip adding auth token for MinIO presigned URLs
-        if (url.contains("13.203.61.201:9000") || url.contains("/sasyak/")) {
+        if (url.contains("https://minio.kapilagro.com:9000/")) { // || url.contains("/sasyak/")
             return chain.proceed(originalRequest)
 
         }

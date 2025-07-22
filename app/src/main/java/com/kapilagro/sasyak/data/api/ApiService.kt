@@ -3,6 +3,7 @@ package com.kapilagro.sasyak.data.api
 
 import com.kapilagro.sasyak.data.api.models.requests.*
 import com.kapilagro.sasyak.data.api.models.responses.*
+import com.kapilagro.sasyak.domain.models.ApiResponse
 import com.kapilagro.sasyak.domain.models.LoginRequest
 import com.kapilagro.sasyak.domain.models.User
 import retrofit2.Response
@@ -16,6 +17,8 @@ interface ApiService {
     @POST("api/minio/presigned-url/upload")
     suspend fun getPresignedUrls(@Body request: PresignedUrlRequest): Response<PresignedUrlResponse>
 
+    @POST("api/tasks/attach-media")
+    suspend fun attachMediaToTask(@Body request: MediaAttachRequest): Response<ApiResponseDTO>
 
     @GET("/api/manager/users/supervisor-list")
     suspend fun getSupervisorsList(): Response<List<SupervisorListResponse>>

@@ -1,6 +1,9 @@
 package com.kapilagro.sasyak.presentation.scouting
 
+import android.content.Context
+import android.net.Uri
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -22,8 +25,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import androidx.work.Constraints
+import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import coil.ImageLoaderFactory
 import coil.compose.rememberAsyncImagePainter
 import com.kapilagro.sasyak.data.api.ImageUploadService
 import com.kapilagro.sasyak.di.IoDispatcher
@@ -32,8 +41,13 @@ import com.kapilagro.sasyak.domain.models.ScoutingDetails
 import com.kapilagro.sasyak.presentation.common.catalog.CategoryViewModel
 import com.kapilagro.sasyak.presentation.common.catalog.CategoriesState
 import com.kapilagro.sasyak.presentation.common.components.SuccessDialog
+import com.kapilagro.sasyak.presentation.common.image.ImageCaptureViewModel
+import com.kapilagro.sasyak.presentation.common.navigation.Screen
 import com.kapilagro.sasyak.presentation.common.theme.AgroPrimary
 import com.kapilagro.sasyak.presentation.home.HomeViewModel
+import com.kapilagro.sasyak.worker.AttachUrlWorker
+import com.kapilagro.sasyak.worker.FileUploadWorker
+import com.kapilagro.sasyak.worker.MediaUploadWorker
 import com.kapilagro.sasyak.presentation.tasks.TaskViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.launch
@@ -44,7 +58,6 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import kotlin.collections.filter
 import kotlinx.serialization.Serializable
-import com.kapilagro.sasyak.presentation.common.navigation.Screen
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.jsonArray
@@ -89,6 +102,7 @@ fun ScoutingRequestScreen(
     @IoDispatcher ioDispatcher: CoroutineDispatcher,
     imageUploadService: ImageUploadService
 ) {
+    val context = LocalContext.current
     val createScoutingState by viewModel.createScoutingState.collectAsState()
     val userRole by homeViewModel.userRole.collectAsState()
     val supervisorsListState by homeViewModel.supervisorsListState.collectAsState()
@@ -122,9 +136,9 @@ fun ScoutingRequestScreen(
     var targetPest by remember { mutableStateOf(savedStateHandle?.get<String>("targetPest") ?: "") }
     var nameOfDiseaseExpanded by remember { mutableStateOf(false) }
     var description by remember { mutableStateOf(savedStateHandle?.get<String>("description") ?: "") }
-    var imageFiles by remember { mutableStateOf<List<File>?>(null) }
     var assignedTo by remember { mutableStateOf<Int?>(savedStateHandle?.get<Int>("assignedTo")) }
     var assignedToExpanded by remember { mutableStateOf(false) }
+    var imageUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
     // State for selected role and user
     var selectedRole by remember { mutableStateOf(savedStateHandle?.get<String>("selectedRole") ?:"Manager") }
     var selectedUser by remember { mutableStateOf(savedStateHandle?.get<String>("selectedUser") ?:"") }
@@ -145,7 +159,6 @@ fun ScoutingRequestScreen(
     } catch (e: Exception) {
         false
     }
-
 
     // Save form state before navigating to ImageCaptureScreen
     LaunchedEffect(Unit) {
@@ -257,6 +270,7 @@ fun ScoutingRequestScreen(
         }
     }
 
+    // Listen for selected images from navigation
     // Load managers and supervisors lists for admin
     LaunchedEffect(Unit) {
         if ((userRole == "ADMIN") && (managersList.isEmpty() || supervisorsList.isEmpty())) {
@@ -267,23 +281,71 @@ fun ScoutingRequestScreen(
 
     // Handle navigation result from ImageCaptureScreen
     LaunchedEffect(navController) {
-        navController.currentBackStackEntry?.savedStateHandle?.getStateFlow<List<File>>("selectedImages", emptyList())
-            ?.collect { files ->
-                imageFiles = files
+        navController.currentBackStackEntry
+            ?.savedStateHandle
+            ?.getStateFlow<List<String>>("selectedImages", emptyList())
+            ?.collect { uriStrings ->
+                imageUris = uriStrings.map { Uri.parse(it) }
             }
     }
 
-    // Handle task creation success
+    // Handle task creation success and start image upload
     LaunchedEffect(createScoutingState) {
         when (createScoutingState) {
             is ScoutingListViewModel.CreateScoutingState.Success -> {
+                val createdTask = (createScoutingState as ScoutingListViewModel.CreateScoutingState.Success).task
+                if (imageUris.isNotEmpty()) {
+
+                    val imageFilePaths = imageUris.mapNotNull { uri ->
+                        // Use the new static method from the ViewModel's companion object.
+                        ImageCaptureViewModel.copyUriToCachedFile(context, uri)?.absolutePath
+                    }
+                    if (imageFilePaths.isNotEmpty()) {
+                        // 1. Create the first work request for uploading files.
+
+                        val constraints = Constraints.Builder()
+                            .setRequiredNetworkType(NetworkType.CONNECTED)
+                            .build()
+
+                        val fileUploadRequest = OneTimeWorkRequestBuilder<FileUploadWorker>()
+
+                            .setInputData(
+                                FileUploadWorker.createInputData(
+                                    taskId = createdTask.id,
+                                    imagePaths = imageFilePaths,
+                                    folder = "SCOUTING"
+                                )
+                            )
+                            .setConstraints(constraints)
+                            .addTag(FileUploadWorker.UPLOAD_TAG)
+                            .build()
+
+                        // 2. Create the second work request for attaching the URLs.
+                        //    It doesn't need input data here because it gets it from the first worker.
+                        val attachUrlRequest = OneTimeWorkRequestBuilder<AttachUrlWorker>()
+                            .setConstraints(constraints)
+                            .build()
+
+                        // 3. Chain the requests and enqueue the sequence.
+                        WorkManager.getInstance(context)
+                            .beginWith(fileUploadRequest) // Start with uploading
+                            .then(attachUrlRequest)       // Then, attach the URLs
+                            .enqueue()
+
+                    } else {
+                        Log.e("RequestScreen", "No valid image files after URI conversion.")
+                    }
+                }
+
                 showSuccessDialog = true
             }
+
             else -> {
                 // Handle other states if needed
             }
         }
     }
+
 
     // Success Dialog
     if (showSuccessDialog && submittedEntry != null) {
@@ -318,6 +380,9 @@ fun ScoutingRequestScreen(
                 savedStateHandle?.remove<String>("nameOfDisease")
                 savedStateHandle?.remove<String>("description")
                 savedStateHandle?.remove<Int>("assignedTo")
+                savedStateHandle?.remove<String>("valveName")
+                savedStateHandle?.remove<String>("dueDate")
+                savedStateHandle?.remove<List<String>>("selectedImages")
             }
         )
     }
@@ -865,6 +930,7 @@ fun ScoutingRequestScreen(
 
                 // Due Date Field
                 val datePickerState = rememberDatePickerState()
+
                 OutlinedTextField(
                     value = dueDateText,
                     onValueChange = { /* Read-only, updated via date picker */ },
@@ -950,10 +1016,11 @@ fun ScoutingRequestScreen(
                         .height(56.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
-                    Text("Select Images")
+                    Text("Select Media")
                 }
 
-                if (imageFiles != null && imageFiles!!.isNotEmpty()) {
+                // Display selected images
+                if (imageUris.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(
                         modifier = Modifier
@@ -961,7 +1028,13 @@ fun ScoutingRequestScreen(
                             .horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        imageFiles!!.forEach { file ->
+
+
+                        imageUris.forEach { uri ->
+
+//                            val mimeType = LocalContext.current.contentResolver.getType(uri)
+//                            Log.d("ScoutingPreview", "URI: $uri, MIME Type: $mimeType")
+
                             Box(
                                 modifier = Modifier.size(80.dp)
                             ) {
@@ -974,7 +1047,7 @@ fun ScoutingRequestScreen(
                                     shape = RoundedCornerShape(8.dp)
                                 ) {
                                     Image(
-                                        painter = rememberAsyncImagePainter(file),
+                                        painter = rememberAsyncImagePainter(uri),
                                         contentDescription = "Selected image",
                                         modifier = Modifier.fillMaxSize(),
                                         contentScale = androidx.compose.ui.layout.ContentScale.Crop
@@ -982,7 +1055,10 @@ fun ScoutingRequestScreen(
                                 }
                                 IconButton(
                                     onClick = {
-                                        imageFiles = imageFiles?.filter { it != file }
+                                        // Remove the selected image URI
+                                        imageUris = imageUris.filter { it != uri }
+                                        // Update saved state
+                                        savedStateHandle?.set("selectedImages", imageUris.map { it.toString() })
                                     },
                                     modifier = Modifier
                                         .align(Alignment.TopEnd)
@@ -993,10 +1069,12 @@ fun ScoutingRequestScreen(
                                         imageVector = Icons.Default.Close,
                                         contentDescription = "Remove image",
                                         tint = Color.White,
-                                        modifier = Modifier.background(
-                                            color = Color.Black.copy(alpha = 0.6f),
-                                            shape = RoundedCornerShape(12.dp)
-                                        )
+                                        modifier = Modifier
+                                            .background(
+                                                color = Color.Black.copy(alpha = 0.6f),
+                                                shape = RoundedCornerShape(12.dp)
+                                            )
+                                            .padding(2.dp)
                                     )
                                 }
                             }
@@ -1061,42 +1139,12 @@ fun ScoutingRequestScreen(
                             )
                             submittedEntry = scoutingDetails
 
-                            if (imageFiles.isNullOrEmpty()) {
-                                // No images to upload, proceed with task creation
-                                viewModel.createScoutingTask(
-                                    scoutingDetails = scoutingDetails,
-                                    description = description,
-                                    imagesJson = emptyList<String>(), // Pass null for imagesJson
-                                    assignedToId = if (userRole == "MANAGER" || userRole == "ADMIN") assignedTo else null
-                                )
-                                uploadState = UploadState.Idle
-                            } else {
-                                // Upload images
-                                uploadState = UploadState.Loading
-                                val uploadResult = imageUploadService.uploadImages(imageFiles!!, "SCOUTING")
-                                when (uploadResult) {
-                                    is ApiResponse.Success -> {
-                                        val imageUrls = uploadResult.data
-                                        if (imageUrls.isEmpty()) {
-                                            uploadState = UploadState.Error("Image upload failed, no URLs received")
-                                            return@launch
-                                        }
-                                        viewModel.createScoutingTask(
-                                            scoutingDetails = scoutingDetails,
-                                            description = description,
-                                            imagesJson = imageUrls,
-                                            assignedToId = if (userRole == "MANAGER" || userRole == "ADMIN") assignedTo else null
-                                        )
-                                        uploadState = UploadState.Idle
-                                    }
-                                    is ApiResponse.Error -> {
-                                        uploadState = UploadState.Error("Image upload failed: ${uploadResult.errorMessage}")
-                                    }
-                                    is ApiResponse.Loading -> {
-                                        uploadState = UploadState.Loading
-                                    }
-                                }
-                            }
+                            // First create task, then WorkManager will handle image upload
+                            viewModel.createScoutingTask(
+                                scoutingDetails = scoutingDetails,
+                                description = description,
+                                assignedToId = if (userRole == "MANAGER") assignedTo else null
+                            )
                         }
                     }
                 },
@@ -1124,6 +1172,22 @@ fun ScoutingRequestScreen(
         }
     }
 }
+
+//TODO put this in utilty
+private fun copyUriToFile(context: Context, uri: Uri): File? {
+    return try {
+        val inputStream = context.contentResolver.openInputStream(uri) ?: return null
+        val file = File(context.cacheDir, "media_${System.currentTimeMillis()}")
+        file.outputStream().use { outputStream ->
+            inputStream.copyTo(outputStream)
+        }
+        file
+    } catch (e: Exception) {
+        e.printStackTrace()
+        null
+    }
+}
+
 
 private sealed class UploadState {
     object Idle : UploadState()

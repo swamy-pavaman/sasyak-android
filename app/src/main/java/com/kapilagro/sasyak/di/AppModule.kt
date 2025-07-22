@@ -1,8 +1,10 @@
-// File: app/src/main/java/com/kapilagro/sasyak/di/AppModule.kt
 package com.kapilagro.sasyak.di
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.work.WorkManager
+import coil.ImageLoader
+import coil.decode.VideoFrameDecoder
 import com.kapilagro.sasyak.data.api.ApiService
 import com.kapilagro.sasyak.data.api.ImageUploadService
 import com.kapilagro.sasyak.utils.LocationService
@@ -43,10 +45,31 @@ object AppModule {
     @Provides
     fun provideImageUploadService(
         apiService: ApiService,
-        @Named("mainClient") okHttpClient: OkHttpClient // Specify mainClient
+        @Named("uploadClient") okHttpClient: OkHttpClient // Changed from "mainClient" to "uploadClient"
     ): ImageUploadService {
         return ImageUploadService(apiService, okHttpClient)
     }
+
+
+    @Singleton
+    @Provides
+    fun provideWorkManager(
+        @ApplicationContext context: Context
+    ): WorkManager {
+        return WorkManager.getInstance(context)
+    }
+
+
+//    @Provides
+//    @Singleton
+//    fun provideImageLoader(@ApplicationContext context: Context): ImageLoader {
+//        return ImageLoader.Builder(context)
+//            .components {
+//                // ✨ Add the VideoFrameDecoder to the component registry ✨
+//                add(VideoFrameDecoder.Factory())
+//            }
+//            .build()
+//    }
 
 
 

@@ -54,6 +54,7 @@ import com.kapilagro.sasyak.presentation.spraying.SprayingListViewModel
 import com.kapilagro.sasyak.presentation.spraying.SprayingRequestScreen
 import com.kapilagro.sasyak.presentation.spraying.SprayingScreen
 import com.kapilagro.sasyak.presentation.spraying.SprayingTaskDetailScreen
+import com.kapilagro.sasyak.presentation.sync.SyncScreen
 import com.kapilagro.sasyak.presentation.tasks.CreateTaskScreen
 import com.kapilagro.sasyak.presentation.tasks.TaskDetailScreen
 import com.kapilagro.sasyak.presentation.tasks.TaskListScreen
@@ -156,6 +157,15 @@ fun AppNavGraph(
             )
         }
 
+
+
+        composable(Screen.Sync.route) {
+            SyncScreen(
+
+            )
+        }
+
+
         composable(FuelRequestScreen.route) {
             val fuelListViewModel: FuelListViewModel = hiltViewModel()
             val homeViewModel: HomeViewModel = hiltViewModel()
@@ -169,8 +179,7 @@ fun AppNavGraph(
                 navController = navController,
                 viewModel = fuelListViewModel,
                 homeViewModel = homeViewModel,
-                ioDispatcher = ioDispatcher,
-                imageUploadService = imageUploadService
+                ioDispatcher = ioDispatcher
             )
         }
 
@@ -202,10 +211,8 @@ fun AppNavGraph(
                 viewModel = sowingListViewModel,
                 homeViewModel = homeViewModel,
                 ioDispatcher = ioDispatcher,
-                imageUploadService = imageUploadService
             )
         }
-
         composable(
             route = Screen.ImageCapture.route,
             arguments = listOf(
@@ -215,8 +222,8 @@ fun AppNavGraph(
             val folder = backStackEntry.arguments?.getString("folder") ?: "SOWING"
             ImageCaptureScreen(
                 folder = folder,
-                maxImages = 5,
-                onImagesSelected = { images ->
+                maxMedia = 5,
+                onMediaSelected = { images -> // ✅ Changed from onImagesSelected to onMediaSelected
                     navController.previousBackStackEntry?.savedStateHandle?.set("selectedImages", images)
                     navController.popBackStack()
                 },
@@ -254,7 +261,6 @@ fun AppNavGraph(
                 viewModel = sprayingListViewModel,
                 homeViewModel = homeViewModel,
                 ioDispatcher = ioDispatcher,
-                imageUploadService = imageUploadService
             )
         }
 
@@ -285,8 +291,7 @@ fun AppNavGraph(
                 navController = navController,
                 viewModel = yieldListViewModel,
                 homeViewModel = homeViewModel,
-                ioDispatcher = ioDispatcher,
-                imageUploadService = imageUploadService
+                ioDispatcher = ioDispatcher
             )
         }
 
@@ -385,6 +390,9 @@ fun AppNavGraph(
                 },
                 onAdviceClick = {
                     navController.navigate(Screen.Advice.route)
+                },
+                onSyncClick = {
+                    navController.navigate(Screen.Sync.route)
                 }
             )
         }

@@ -2,6 +2,7 @@ package com.kapilagro.sasyak
 
 import android.os.Build
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.annotation.RequiresApi
@@ -51,6 +52,17 @@ class MainActivity : ComponentActivity() {
                 MainScreen(ioDispatcher, imageUploadService)
             }
         }
+    }
+
+
+    override fun onResume() {
+        super.onResume()
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
 }
 
