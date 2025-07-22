@@ -38,8 +38,6 @@ import com.kapilagro.sasyak.domain.models.ApiResponse
 import com.kapilagro.sasyak.domain.models.YieldDetails
 import com.kapilagro.sasyak.presentation.common.catalog.CategoriesState
 import com.kapilagro.sasyak.presentation.common.catalog.CategoryViewModel
-import com.kapilagro.sasyak.presentation.common.catalog.CropViewModel
-import com.kapilagro.sasyak.presentation.common.catalog.CropsState
 import com.kapilagro.sasyak.presentation.common.components.SuccessDialog
 import com.kapilagro.sasyak.presentation.common.image.ImageCaptureViewModel
 import com.kapilagro.sasyak.presentation.common.navigation.Screen
@@ -51,11 +49,6 @@ import com.kapilagro.sasyak.worker.AttachUrlWorker
 import com.kapilagro.sasyak.worker.FileUploadWorker
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.launch
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonPrimitive
 import java.io.File
 import java.time.Instant
 import java.time.LocalDate
