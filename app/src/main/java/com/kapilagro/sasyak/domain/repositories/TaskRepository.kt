@@ -30,5 +30,5 @@ interface TaskRepository {
     //Admin
     suspend fun getTasksByUserId(userId: Int, page: Int = 0, size: Int = 10): ApiResponse<Pair<List<Task>, Int>>
     suspend fun getUsersByRole(role: String): ApiResponse<TeamMemberListResponse>
-    suspend fun getTasksByFilter(status: String, page: Int = 0, size: Int = 10,sortBy: String,sortDirection : String, managerId : Int? = null): ApiResponse<Pair<List<Task>, Int>>
+    suspend fun getTasksByFilter(status: String, page: Int = 0, size: Int = 10,sortBy: String?=null,sortDirection : String?=null, managerId : Int? = null,currentUserTasks: Boolean?=null, taskType: String? = null): ApiResponse<Pair<List<Task>, Int>>
 }

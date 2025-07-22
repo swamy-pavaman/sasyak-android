@@ -6,15 +6,16 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -24,15 +25,10 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
-import com.kapilagro.sasyak.presentation.common.components.EmptyStateView
 import com.kapilagro.sasyak.presentation.common.components.ErrorView
 import com.kapilagro.sasyak.presentation.common.components.TaskCard
-import com.kapilagro.sasyak.presentation.common.theme.AgroPrimary
-import com.kapilagro.sasyak.presentation.common.theme.YieldContainer
-import com.kapilagro.sasyak.presentation.common.theme.YieldIcon
+import com.kapilagro.sasyak.presentation.common.filter.FilterViewModel
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.map
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
@@ -41,20 +37,56 @@ fun YieldScreen(
     onTaskCreated: () -> Unit,
     onTaskClick: (Int) -> Unit,
     onBackClick: () -> Unit,
-    viewModel: YieldListViewModel = hiltViewModel()
+    yieldViewModel: YieldListViewModel = hiltViewModel(),
+    filterViewModel: FilterViewModel = hiltViewModel()
 ) {
-    val tasksState by viewModel.tasksState.collectAsState()
-    val isRefreshing by viewModel.refreshing.collectAsState()
-    val listState = rememberLazyListState()
-    var selectedTaskTab by remember { mutableStateOf(0) }
-
-    LaunchedEffect(Unit) {
-        viewModel.loadYieldTasks()
+    val approvedListState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
+    val rejectedListState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
+    val allListState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
+    var selectedTab by rememberSaveable { mutableStateOf("All") }
+    val currentListState = when (selectedTab) {
+        "Approved" -> approvedListState
+        "Rejected" -> rejectedListState
+        "All" -> allListState
+        else -> allListState
     }
 
-    LaunchedEffect(listState) {
+    // Collect states from both ViewModels
+    val yieldTasksState by yieldViewModel.tasksState.collectAsState()
+    val tasksStateOfApproved by filterViewModel.tasksStateOfApproved.collectAsState()
+    val tasksStateOfRejected by filterViewModel.tasksStateOfRejected.collectAsState()
+    val isRefreshing by yieldViewModel.refreshing.collectAsState()
+    val approvedTaskCount by filterViewModel.ApprovedTaskCount.collectAsState()
+    val rejectedTaskCount by filterViewModel.RejectedTaskCount.collectAsState()
+    val allTaskCount by yieldViewModel.taskCount.collectAsState()
+
+    // Load tasks based on selected tab
+    LaunchedEffect(selectedTab) {
+        when (selectedTab) {
+            "Approved" -> {
+                if (tasksStateOfApproved !is FilterViewModel.TasksState.Success) {
+                    filterViewModel.pagesToZero("approved")
+                    filterViewModel.loadTasksByFilter(status = "approved", taskType = "YIELD", refresh = true)
+                }
+            }
+            "Rejected" -> {
+                if (tasksStateOfRejected !is FilterViewModel.TasksState.Success) {
+                    filterViewModel.pagesToZero("rejected")
+                    filterViewModel.loadTasksByFilter(status = "rejected", taskType = "YIELD", refresh = true)
+                }
+            }
+            "All" -> {
+                if (yieldTasksState !is YieldListViewModel.TasksState.Success) {
+                    yieldViewModel.loadYieldTasks(refresh = true)
+                }
+            }
+        }
+    }
+
+    // Handle pagination for both ViewModels
+    LaunchedEffect(currentListState) {
         snapshotFlow {
-            val layoutInfo = listState.layoutInfo
+            val layoutInfo = currentListState.layoutInfo
             val visibleItemsInfo = layoutInfo.visibleItemsInfo
             if (visibleItemsInfo.isEmpty()) false else {
                 val lastVisibleItem = visibleItemsInfo.last()
@@ -63,10 +95,30 @@ fun YieldScreen(
         }
             .distinctUntilChanged()
             .collect { isAtBottom ->
-                if (isAtBottom && tasksState is YieldListViewModel.TasksState.Success &&
-                    !(tasksState as YieldListViewModel.TasksState.Success).isLastPage
-                ) {
-                    viewModel.loadMoreTasks()
+                if (isAtBottom) {
+                    when (selectedTab) {
+                        "Approved" -> {
+                            if (tasksStateOfApproved is FilterViewModel.TasksState.Success &&
+                                !(tasksStateOfApproved as FilterViewModel.TasksState.Success).isLastPage
+                            ) {
+                                filterViewModel.loadMoreTasksOfApproved()
+                            }
+                        }
+                        "Rejected" -> {
+                            if (tasksStateOfRejected is FilterViewModel.TasksState.Success &&
+                                !(tasksStateOfRejected as FilterViewModel.TasksState.Success).isLastPage
+                            ) {
+                                filterViewModel.loadMoreTasksOfRejected()
+                            }
+                        }
+                        "All" -> {
+                            if (yieldTasksState is YieldListViewModel.TasksState.Success &&
+                                !(yieldTasksState as YieldListViewModel.TasksState.Success).isLastPage
+                            ) {
+                                yieldViewModel.loadMoreTasks()
+                            }
+                        }
+                    }
                 }
             }
     }
@@ -77,7 +129,7 @@ fun YieldScreen(
                 title = { Text("Yield") },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
@@ -122,95 +174,244 @@ fun YieldScreen(
                     style = MaterialTheme.typography.titleLarge
                 )
 
-                if (tasksState is YieldListViewModel.TasksState.Success) {
-                    val taskCount = (tasksState as YieldListViewModel.TasksState.Success).tasks.size
-                    Surface(
-                        color = MaterialTheme.colorScheme.secondaryContainer,
-                        shape = RoundedCornerShape(16.dp)
-                    ) {
-                        Text(
-                            text = "$taskCount Reports",
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer
-                        )
+                // Show task count based on selected tab
+                when (selectedTab) {
+                    "Approved" -> {
+                        if (tasksStateOfApproved is FilterViewModel.TasksState.Success) {
+                            val taskCount = approvedTaskCount
+                            Surface(
+                                color = MaterialTheme.colorScheme.secondaryContainer,
+                                shape = RoundedCornerShape(16.dp)
+                            ) {
+                                Text(
+                                    text = "$taskCount Reports",
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                            }
+                        }
+                    }
+                    "Rejected" -> {
+                        if (tasksStateOfRejected is FilterViewModel.TasksState.Success) {
+                            val taskCount = rejectedTaskCount
+                            Surface(
+                                color = MaterialTheme.colorScheme.secondaryContainer,
+                                shape = RoundedCornerShape(16.dp)
+                            ) {
+                                Text(
+                                    text = "$taskCount Reports",
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                            }
+                        }
+                    }
+                    "All" -> {
+                        if (yieldTasksState is YieldListViewModel.TasksState.Success) {
+                            val taskCount = allTaskCount
+                            Surface(
+                                color = MaterialTheme.colorScheme.secondaryContainer,
+                                shape = RoundedCornerShape(16.dp)
+                            ) {
+                                Text(
+                                    text = "$taskCount Reports",
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                            }
+                        }
                     }
                 }
             }
 
             SegmentedTaskControl(
-                selectedIndex = selectedTaskTab,
-                onSegmentSelected = { selectedTaskTab = it }
+                selectedTab = selectedTab,
+                onTabSelected = { tab ->
+                    selectedTab = tab
+                }
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
             SwipeRefresh(
                 state = rememberSwipeRefreshState(isRefreshing),
-                onRefresh = { viewModel.refreshTasks() },
+                onRefresh = {
+                    when (selectedTab) {
+                        "Approved" -> filterViewModel.refreshTasks(status ="approved", taskType = "YIELD")
+                        "Rejected" -> filterViewModel.refreshTasks(status="rejected", taskType = "YIELD")
+                        "All" -> yieldViewModel.refreshTasks()
+                    }
+                },
                 modifier = Modifier.fillMaxSize()
             ) {
-                when (tasksState) {
-                    is YieldListViewModel.TasksState.Loading -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                        }
-                    }
-
-                    is YieldListViewModel.TasksState.Success -> {
-                        val allTasks = (tasksState as YieldListViewModel.TasksState.Success).tasks
-                        val isLastPage = (tasksState as YieldListViewModel.TasksState.Success).isLastPage
-
-                        val filteredTasks = when (selectedTaskTab) {
-                            0 -> allTasks.filter { it.status.equals("approved", ignoreCase = true) }
-                            1 -> allTasks.filter { it.status.equals("rejected", ignoreCase = true) }
-                            2 -> allTasks
-                            else -> allTasks
-                        }
-
-                        if (filteredTasks.isEmpty()) {
-                            EmptyStateForTasks(selectedTaskTab)
-                        } else {
-                            LazyColumn(
-                                state = listState,
-                                modifier = Modifier.fillMaxSize(),
-                                contentPadding = PaddingValues(bottom = 80.dp)
-                            ) {
-                                items(filteredTasks) { task ->
-                                    TaskCard(
-                                        task = task,
-                                        onClick = { onTaskClick(task.id) }
-                                    )
+                when (selectedTab) {
+                    "Approved" -> {
+                        when (tasksStateOfApproved) {
+                            is FilterViewModel.TasksState.Loading -> {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                                 }
+                            }
+                            is FilterViewModel.TasksState.Success -> {
+                                val tasks = (tasksStateOfApproved as FilterViewModel.TasksState.Success).tasks
+                                val isLastPage = (tasksStateOfApproved as FilterViewModel.TasksState.Success).isLastPage
 
-                                if (!isLastPage) {
-                                    item {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(16.dp),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            CircularProgressIndicator(
-                                                modifier = Modifier.size(36.dp),
-                                                color = MaterialTheme.colorScheme.primary
+                                if (tasks.isEmpty()) {
+                                    EmptyStateForTasks(selectedTab)
+                                } else {
+                                    LazyColumn(
+                                        state = approvedListState,
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentPadding = PaddingValues(bottom = 80.dp)
+                                    ) {
+                                        items(tasks) { task ->
+                                            TaskCard(
+                                                task = task,
+                                                onClick = { onTaskClick(task.id) }
                                             )
+                                        }
+                                        if (!isLastPage) {
+                                            item {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(16.dp),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    CircularProgressIndicator(
+                                                        modifier = Modifier.size(36.dp),
+                                                        color = MaterialTheme.colorScheme.primary
+                                                    )
+                                                }
+                                            }
                                         }
                                     }
                                 }
                             }
+                            is FilterViewModel.TasksState.Error -> {
+                                ErrorView(
+                                    message = (tasksStateOfApproved as FilterViewModel.TasksState.Error).message,
+                                    onRetry = { filterViewModel.refreshTasks("approved",taskType = "YIELD") },
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
                         }
                     }
+                    "Rejected" -> {
+                        when (tasksStateOfRejected) {
+                            is FilterViewModel.TasksState.Loading -> {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                                }
+                            }
+                            is FilterViewModel.TasksState.Success -> {
+                                val tasks = (tasksStateOfRejected as FilterViewModel.TasksState.Success).tasks
+                                val isLastPage = (tasksStateOfRejected as FilterViewModel.TasksState.Success).isLastPage
 
-                    is YieldListViewModel.TasksState.Error -> {
-                        ErrorView(
-                            message = (tasksState as YieldListViewModel.TasksState.Error).message,
-                            onRetry = { viewModel.loadYieldTasks(true) },
-                            modifier = Modifier.fillMaxSize()
-                        )
+                                if (tasks.isEmpty()) {
+                                    EmptyStateForTasks(selectedTab)
+                                } else {
+                                    LazyColumn(
+                                        state = rejectedListState,
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentPadding = PaddingValues(bottom = 80.dp)
+                                    ) {
+                                        items(tasks) { task ->
+                                            TaskCard(
+                                                task = task,
+                                                onClick = { onTaskClick(task.id) }
+                                            )
+                                        }
+                                        if (!isLastPage) {
+                                            item {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(16.dp),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    CircularProgressIndicator(
+                                                        modifier = Modifier.size(36.dp),
+                                                        color = MaterialTheme.colorScheme.primary
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            is FilterViewModel.TasksState.Error -> {
+                                ErrorView(
+                                    message = (tasksStateOfRejected as FilterViewModel.TasksState.Error).message,
+                                    onRetry = { filterViewModel.refreshTasks("rejected",taskType = "YIELD") },
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                        }
+                    }
+                    "All" -> {
+                        when (yieldTasksState) {
+                            is YieldListViewModel.TasksState.Loading -> {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                                }
+                            }
+                            is YieldListViewModel.TasksState.Success -> {
+                                val tasks = (yieldTasksState as YieldListViewModel.TasksState.Success).tasks
+                                val isLastPage = (yieldTasksState as YieldListViewModel.TasksState.Success).isLastPage
+
+                                if (tasks.isEmpty()) {
+                                    EmptyStateForTasks(selectedTab)
+                                } else {
+                                    LazyColumn(
+                                        state = allListState,
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentPadding = PaddingValues(bottom = 80.dp)
+                                    ) {
+                                        items(tasks) { task ->
+                                            TaskCard(
+                                                task = task,
+                                                onClick = { onTaskClick(task.id) }
+                                            )
+                                        }
+                                        if (!isLastPage) {
+                                            item {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(16.dp),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    CircularProgressIndicator(
+                                                        modifier = Modifier.size(36.dp),
+                                                        color = MaterialTheme.colorScheme.primary
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            is YieldListViewModel.TasksState.Error -> {
+                                ErrorView(
+                                    message = (yieldTasksState as YieldListViewModel.TasksState.Error).message,
+                                    onRetry = { yieldViewModel.refreshTasks() },
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -219,7 +420,7 @@ fun YieldScreen(
 }
 
 @Composable
-fun EmptyStateForTasks(selectedTab: Int) {
+fun EmptyStateForTasks(selectedTab: String) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -240,8 +441,8 @@ fun EmptyStateForTasks(selectedTab: Int) {
             Spacer(modifier = Modifier.height(16.dp))
 
             val message = when (selectedTab) {
-                0 -> "No approved yield reports"
-                1 -> "No rejected yield reports"
+                "Approved" -> "No approved yield reports"
+                "Rejected" -> "No rejected yield reports"
                 else -> "No yield reports found"
             }
 
@@ -265,8 +466,8 @@ fun EmptyStateForTasks(selectedTab: Int) {
 
 @Composable
 fun SegmentedTaskControl(
-    selectedIndex: Int,
-    onSegmentSelected: (Int) -> Unit
+    selectedTab: String,
+    onTabSelected: (String) -> Unit
 ) {
     val segments = listOf("Approved", "Rejected", "All")
 
@@ -280,23 +481,22 @@ fun SegmentedTaskControl(
             .padding(4.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        segments.forEachIndexed { index, label ->
-            val isSelected = index == selectedIndex
+        segments.forEach { tab ->
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .clip(RoundedCornerShape(20.dp))
                     .background(
-                        if (isSelected) MaterialTheme.colorScheme.primary
+                        if (selectedTab == tab) MaterialTheme.colorScheme.primary
                         else Color.Transparent
                     )
-                    .clickable { onSegmentSelected(index) }
+                    .clickable { onTabSelected(tab) }
                     .padding(vertical = 8.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = label,
-                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary
+                    text = tab,
+                    color = if (selectedTab == tab) MaterialTheme.colorScheme.onPrimary
                     else MaterialTheme.colorScheme.onSurface,
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center
