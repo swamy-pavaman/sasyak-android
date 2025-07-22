@@ -179,8 +179,7 @@ fun AppNavGraph(
                 navController = navController,
                 viewModel = fuelListViewModel,
                 homeViewModel = homeViewModel,
-                ioDispatcher = ioDispatcher,
-                imageUploadService = imageUploadService
+                ioDispatcher = ioDispatcher
             )
         }
 
@@ -212,7 +211,6 @@ fun AppNavGraph(
                 viewModel = sowingListViewModel,
                 homeViewModel = homeViewModel,
                 ioDispatcher = ioDispatcher,
-                imageUploadService = imageUploadService
             )
         }
         composable(
@@ -263,7 +261,6 @@ fun AppNavGraph(
                 viewModel = sprayingListViewModel,
                 homeViewModel = homeViewModel,
                 ioDispatcher = ioDispatcher,
-                imageUploadService = imageUploadService
             )
         }
 
@@ -294,8 +291,7 @@ fun AppNavGraph(
                 navController = navController,
                 viewModel = yieldListViewModel,
                 homeViewModel = homeViewModel,
-                ioDispatcher = ioDispatcher,
-                imageUploadService = imageUploadService
+                ioDispatcher = ioDispatcher
             )
         }
 

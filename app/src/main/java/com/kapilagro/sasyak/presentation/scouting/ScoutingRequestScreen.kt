@@ -28,6 +28,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import androidx.work.Constraints
+import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import coil.ImageLoaderFactory
@@ -300,6 +302,11 @@ fun ScoutingRequestScreen(
                     }
                     if (imageFilePaths.isNotEmpty()) {
                         // 1. Create the first work request for uploading files.
+
+                        val constraints = Constraints.Builder()
+                            .setRequiredNetworkType(NetworkType.CONNECTED)
+                            .build()
+
                         val fileUploadRequest = OneTimeWorkRequestBuilder<FileUploadWorker>()
 
                             .setInputData(
@@ -309,12 +316,14 @@ fun ScoutingRequestScreen(
                                     folder = "SCOUTING"
                                 )
                             )
+                            .setConstraints(constraints)
                             .addTag(FileUploadWorker.UPLOAD_TAG)
                             .build()
 
                         // 2. Create the second work request for attaching the URLs.
                         //    It doesn't need input data here because it gets it from the first worker.
                         val attachUrlRequest = OneTimeWorkRequestBuilder<AttachUrlWorker>()
+                            .setConstraints(constraints)
                             .build()
 
                         // 3. Chain the requests and enqueue the sequence.

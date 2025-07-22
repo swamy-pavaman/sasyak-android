@@ -27,6 +27,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import androidx.work.Constraints
+import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import coil.compose.rememberAsyncImagePainter
@@ -65,7 +67,6 @@ fun SowingRequestScreen(
     taskViewModel: TaskViewModel = hiltViewModel(),
     categoryViewModel: CategoryViewModel = hiltViewModel(),
     @IoDispatcher ioDispatcher: CoroutineDispatcher,
-    imageUploadService: ImageUploadService
 ) {
     val context = LocalContext.current
     val createSowingState by viewModel.createSowingState.collectAsState()
@@ -247,6 +248,10 @@ fun SowingRequestScreen(
                         ImageCaptureViewModel.copyUriToCachedFile(context, uri)?.absolutePath
                     }
 
+                    val constraints = Constraints.Builder()
+                        .setRequiredNetworkType(NetworkType.CONNECTED)
+                        .build()
+
                     // Create the work request to upload files
                     val fileUploadRequest = OneTimeWorkRequestBuilder<FileUploadWorker>()
                         .setInputData(
@@ -256,11 +261,13 @@ fun SowingRequestScreen(
                                 folder = "SOWING"
                             )
                         )
+                        .setConstraints(constraints)
                         .addTag(FileUploadWorker.UPLOAD_TAG)
                         .build()
 
                     // Create the work request to attach the URLs to the task
                     val attachUrlRequest = OneTimeWorkRequestBuilder<AttachUrlWorker>()
+                        .setConstraints(constraints)
                         .build()
 
                     // Chain the requests: upload first, then attach URLs
@@ -1009,7 +1016,7 @@ fun SowingRequestScreen(
                         .height(56.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
-                    Text("Select Images")
+                    Text("Select Media")
                 }
 
                 if (imageUris.isNotEmpty()) {
