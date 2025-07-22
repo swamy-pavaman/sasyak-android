@@ -6,16 +6,16 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -25,15 +25,10 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
-import com.kapilagro.sasyak.presentation.common.components.EmptyStateView
 import com.kapilagro.sasyak.presentation.common.components.ErrorView
 import com.kapilagro.sasyak.presentation.common.components.TaskCard
-import com.kapilagro.sasyak.presentation.common.theme.AgroPrimary
-import com.kapilagro.sasyak.presentation.common.theme.ScoutingContainer
-import com.kapilagro.sasyak.presentation.common.theme.ScoutingIcon
+import com.kapilagro.sasyak.presentation.common.filter.FilterViewModel
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.map
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
@@ -42,20 +37,57 @@ fun ScoutingScreen(
     onTaskCreated: () -> Unit,
     onTaskClick: (Int) -> Unit,
     onBackClick: () -> Unit,
-    viewModel: ScoutingListViewModel = hiltViewModel()
+    scoutingViewModel: ScoutingListViewModel = hiltViewModel(),
+    filterViewModel: FilterViewModel = hiltViewModel()
 ) {
-    val tasksState by viewModel.tasksState.collectAsState()
-    val isRefreshing by viewModel.refreshing.collectAsState()
-    val listState = rememberLazyListState()
-    var selectedTaskTab by remember { mutableStateOf(0) }
+    var selectedTab by rememberSaveable { mutableStateOf("All") }
+    val approvedListState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
+    val rejectedListState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
+    val allListState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
 
-    LaunchedEffect(Unit) {
-        viewModel.loadScoutingTasks()
+    val currentListState = when (selectedTab) {
+        "Approved" -> approvedListState
+        "Rejected" -> rejectedListState
+        "All" -> allListState
+        else -> allListState
     }
 
-    LaunchedEffect(listState) {
+    // Collect states from both ViewModels
+    val scoutingTasksState by scoutingViewModel.tasksState.collectAsState()
+    val tasksStateOfApproved by filterViewModel.tasksStateOfApproved.collectAsState()
+    val tasksStateOfRejected by filterViewModel.tasksStateOfRejected.collectAsState()
+    val isRefreshing by scoutingViewModel.refreshing.collectAsState()
+    val approvedTaskCount by filterViewModel.ApprovedTaskCount.collectAsState()
+    val rejectedTaskCount by filterViewModel.RejectedTaskCount.collectAsState()
+    val allTaskCount by scoutingViewModel.taskCount.collectAsState()
+
+    // Load tasks based on selected tab only if data is not already loaded
+    LaunchedEffect(selectedTab) {
+        when (selectedTab) {
+            "Approved" -> {
+                if (tasksStateOfApproved !is FilterViewModel.TasksState.Success) {
+                    filterViewModel.pagesToZero(status = "approved")
+                    filterViewModel.loadTasksByFilter(status = "approved", taskType = "SCOUTING", refresh = true)
+                }
+            }
+            "Rejected" -> {
+                if (tasksStateOfRejected !is FilterViewModel.TasksState.Success) {
+                    filterViewModel.pagesToZero(status = "rejected")
+                    filterViewModel.loadTasksByFilter(status = "rejected", taskType = "SCOUTING", refresh = true)
+                }
+            }
+            "All" -> {
+                if (scoutingTasksState !is ScoutingListViewModel.TasksState.Success) {
+                    scoutingViewModel.loadScoutingTasks(refresh = true)
+                }
+            }
+        }
+    }
+
+    // Handle pagination for the current tab
+    LaunchedEffect(currentListState) {
         snapshotFlow {
-            val layoutInfo = listState.layoutInfo
+            val layoutInfo = currentListState.layoutInfo
             val visibleItemsInfo = layoutInfo.visibleItemsInfo
             if (visibleItemsInfo.isEmpty()) false else {
                 val lastVisibleItem = visibleItemsInfo.last()
@@ -64,10 +96,30 @@ fun ScoutingScreen(
         }
             .distinctUntilChanged()
             .collect { isAtBottom ->
-                if (isAtBottom && tasksState is ScoutingListViewModel.TasksState.Success &&
-                    !(tasksState as ScoutingListViewModel.TasksState.Success).isLastPage
-                ) {
-                    viewModel.loadMoreTasks()
+                if (isAtBottom) {
+                    when (selectedTab) {
+                        "Approved" -> {
+                            if (tasksStateOfApproved is FilterViewModel.TasksState.Success &&
+                                !(tasksStateOfApproved as FilterViewModel.TasksState.Success).isLastPage
+                            ) {
+                                filterViewModel.loadMoreTasksOfApproved()
+                            }
+                        }
+                        "Rejected" -> {
+                            if (tasksStateOfRejected is FilterViewModel.TasksState.Success &&
+                                !(tasksStateOfRejected as FilterViewModel.TasksState.Success).isLastPage
+                            ) {
+                                filterViewModel.loadMoreTasksOfRejected()
+                            }
+                        }
+                        "All" -> {
+                            if (scoutingTasksState is ScoutingListViewModel.TasksState.Success &&
+                                !(scoutingTasksState as ScoutingListViewModel.TasksState.Success).isLastPage
+                            ) {
+                                scoutingViewModel.loadMoreTasks()
+                            }
+                        }
+                    }
                 }
             }
     }
@@ -123,95 +175,245 @@ fun ScoutingScreen(
                     style = MaterialTheme.typography.titleLarge
                 )
 
-                if (tasksState is ScoutingListViewModel.TasksState.Success) {
-                    val taskCount = (tasksState as ScoutingListViewModel.TasksState.Success).tasks.size
-                    Surface(
-                        color = MaterialTheme.colorScheme.secondaryContainer,
-                        shape = RoundedCornerShape(16.dp)
-                    ) {
-                        Text(
-                            text = "$taskCount Tasks",
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer
-                        )
+                // Show task count based on selected tab
+                when (selectedTab) {
+                    "Approved" -> {
+                        if (tasksStateOfApproved is FilterViewModel.TasksState.Success) {
+                            val taskCount = approvedTaskCount
+                            Surface(
+                                color = MaterialTheme.colorScheme.secondaryContainer,
+                                shape = RoundedCornerShape(16.dp)
+                            ) {
+                                Text(
+                                    text = "$taskCount Tasks",
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                            }
+                        }
+                    }
+                    "Rejected" -> {
+                        if (tasksStateOfRejected is FilterViewModel.TasksState.Success) {
+                            val taskCount = rejectedTaskCount
+                            Surface(
+                                color = MaterialTheme.colorScheme.secondaryContainer,
+                                shape = RoundedCornerShape(16.dp)
+                            ) {
+                                Text(
+                                    text = "$taskCount Tasks",
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                            }
+                        }
+                    }
+                    "All" -> {
+                        if (scoutingTasksState is ScoutingListViewModel.TasksState.Success) {
+                            val taskCount = allTaskCount
+                            Surface(
+                                color = MaterialTheme.colorScheme.secondaryContainer,
+                                shape = RoundedCornerShape(16.dp)
+                            ) {
+                                Text(
+                                    text = "$taskCount Tasks",
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                            }
+                        }
                     }
                 }
             }
 
+            // Use SegmentedTaskControl with tab labels
             SegmentedTaskControl(
-                selectedIndex = selectedTaskTab,
-                onSegmentSelected = { selectedTaskTab = it }
+                selectedTab = selectedTab,
+                onTabSelected = { tab ->
+                    selectedTab = tab
+                }
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
             SwipeRefresh(
                 state = rememberSwipeRefreshState(isRefreshing),
-                onRefresh = { viewModel.refreshTasks() },
+                onRefresh = {
+                    when (selectedTab) {
+                        "Approved" -> filterViewModel.refreshTasks(status = "approved", taskType = "SCOUTING")
+                        "Rejected" -> filterViewModel.refreshTasks(status = "rejected", taskType = "SCOUTING")
+                        "All" -> scoutingViewModel.refreshTasks()
+                    }
+                },
                 modifier = Modifier.fillMaxSize()
             ) {
-                when (tasksState) {
-                    is ScoutingListViewModel.TasksState.Loading -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                        }
-                    }
-
-                    is ScoutingListViewModel.TasksState.Success -> {
-                        val allTasks = (tasksState as ScoutingListViewModel.TasksState.Success).tasks
-                        val isLastPage = (tasksState as ScoutingListViewModel.TasksState.Success).isLastPage
-
-                        val filteredTasks = when (selectedTaskTab) {
-                            0 -> allTasks.filter { it.status.equals("approved", ignoreCase = true) }
-                            1 -> allTasks.filter { it.status.equals("rejected", ignoreCase = true) }
-                            2 -> allTasks
-                            else -> allTasks
-                        }
-
-                        if (filteredTasks.isEmpty()) {
-                            EmptyStateForTasks(selectedTaskTab)
-                        } else {
-                            LazyColumn(
-                                state = listState,
-                                modifier = Modifier.fillMaxSize(),
-                                contentPadding = PaddingValues(bottom = 80.dp)
-                            ) {
-                                items(filteredTasks) { task ->
-                                    TaskCard(
-                                        task = task,
-                                        onClick = { onTaskClick(task.id) }
-                                    )
+                when (selectedTab) {
+                    "Approved" -> {
+                        when (tasksStateOfApproved) {
+                            is FilterViewModel.TasksState.Loading -> {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                                 }
+                            }
+                            is FilterViewModel.TasksState.Success -> {
+                                val tasks = (tasksStateOfApproved as FilterViewModel.TasksState.Success).tasks
+                                val isLastPage = (tasksStateOfApproved as FilterViewModel.TasksState.Success).isLastPage
 
-                                if (!isLastPage) {
-                                    item {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(16.dp),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            CircularProgressIndicator(
-                                                modifier = Modifier.size(36.dp),
-                                                color = MaterialTheme.colorScheme.primary
+                                if (tasks.isEmpty()) {
+                                    EmptyStateForTasks(selectedTab)
+                                } else {
+                                    LazyColumn(
+                                        state = approvedListState,
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentPadding = PaddingValues(bottom = 80.dp)
+                                    ) {
+                                        items(tasks) { task ->
+                                            TaskCard(
+                                                task = task,
+                                                onClick = { onTaskClick(task.id) }
                                             )
+                                        }
+                                        if (!isLastPage) {
+                                            item {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(16.dp),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    CircularProgressIndicator(
+                                                        modifier = Modifier.size(36.dp),
+                                                        color = MaterialTheme.colorScheme.primary
+                                                    )
+                                                }
+                                            }
                                         }
                                     }
                                 }
                             }
+                            is FilterViewModel.TasksState.Error -> {
+                                ErrorView(
+                                    message = (tasksStateOfApproved as FilterViewModel.TasksState.Error).message,
+                                    onRetry = { filterViewModel.refreshTasks(status = "approved", taskType = "SCOUTING") },
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
                         }
                     }
+                    "Rejected" -> {
+                        when (tasksStateOfRejected) {
+                            is FilterViewModel.TasksState.Loading -> {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                                }
+                            }
+                            is FilterViewModel.TasksState.Success -> {
+                                val tasks = (tasksStateOfRejected as FilterViewModel.TasksState.Success).tasks
+                                val isLastPage = (tasksStateOfRejected as FilterViewModel.TasksState.Success).isLastPage
 
-                    is ScoutingListViewModel.TasksState.Error -> {
-                        ErrorView(
-                            message = (tasksState as ScoutingListViewModel.TasksState.Error).message,
-                            onRetry = { viewModel.loadScoutingTasks(true) },
-                            modifier = Modifier.fillMaxSize()
-                        )
+                                if (tasks.isEmpty()) {
+                                    EmptyStateForTasks(selectedTab)
+                                } else {
+                                    LazyColumn(
+                                        state = rejectedListState,
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentPadding = PaddingValues(bottom = 80.dp)
+                                    ) {
+                                        items(tasks) { task ->
+                                            TaskCard(
+                                                task = task,
+                                                onClick = { onTaskClick(task.id) }
+                                            )
+                                        }
+                                        if (!isLastPage) {
+                                            item {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(16.dp),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    CircularProgressIndicator(
+                                                        modifier = Modifier.size(36.dp),
+                                                        color = MaterialTheme.colorScheme.primary
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            is FilterViewModel.TasksState.Error -> {
+                                ErrorView(
+                                    message = (tasksStateOfRejected as FilterViewModel.TasksState.Error).message,
+                                    onRetry = { filterViewModel.refreshTasks(status = "rejected", taskType = "SCOUTING") },
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                        }
+                    }
+                    "All" -> {
+                        when (scoutingTasksState) {
+                            is ScoutingListViewModel.TasksState.Loading -> {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                                }
+                            }
+                            is ScoutingListViewModel.TasksState.Success -> {
+                                val tasks = (scoutingTasksState as ScoutingListViewModel.TasksState.Success).tasks
+                                val isLastPage = (scoutingTasksState as ScoutingListViewModel.TasksState.Success).isLastPage
+
+                                if (tasks.isEmpty()) {
+                                    EmptyStateForTasks(selectedTab)
+                                } else {
+                                    LazyColumn(
+                                        state = allListState,
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentPadding = PaddingValues(bottom = 80.dp)
+                                    ) {
+                                        items(tasks) { task ->
+                                            TaskCard(
+                                                task = task,
+                                                onClick = { onTaskClick(task.id) }
+                                            )
+                                        }
+                                        if (!isLastPage) {
+                                            item {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(16.dp),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    CircularProgressIndicator(
+                                                        modifier = Modifier.size(36.dp),
+                                                        color = MaterialTheme.colorScheme.primary
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            is ScoutingListViewModel.TasksState.Error -> {
+                                ErrorView(
+                                    message = (scoutingTasksState as ScoutingListViewModel.TasksState.Error).message,
+                                    onRetry = { scoutingViewModel.refreshTasks() },
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -220,7 +422,7 @@ fun ScoutingScreen(
 }
 
 @Composable
-fun EmptyStateForTasks(selectedTab: Int) {
+fun EmptyStateForTasks(selectedTab: String) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -241,8 +443,8 @@ fun EmptyStateForTasks(selectedTab: Int) {
             Spacer(modifier = Modifier.height(16.dp))
 
             val message = when (selectedTab) {
-                0 -> "No approved scouting tasks"
-                1 -> "No rejected scouting tasks"
+                "Approved" -> "No approved scouting tasks"
+                "Rejected" -> "No rejected scouting tasks"
                 else -> "No scouting tasks found"
             }
 
@@ -266,8 +468,8 @@ fun EmptyStateForTasks(selectedTab: Int) {
 
 @Composable
 fun SegmentedTaskControl(
-    selectedIndex: Int,
-    onSegmentSelected: (Int) -> Unit
+    selectedTab: String,
+    onTabSelected: (String) -> Unit
 ) {
     val segments = listOf("Approved", "Rejected", "All")
 
@@ -281,23 +483,22 @@ fun SegmentedTaskControl(
             .padding(4.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        segments.forEachIndexed { index, label ->
-            val isSelected = index == selectedIndex
+        segments.forEach { tab ->
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .clip(RoundedCornerShape(20.dp))
                     .background(
-                        if (isSelected) MaterialTheme.colorScheme.primary
+                        if (selectedTab == tab) MaterialTheme.colorScheme.primary
                         else Color.Transparent
                     )
-                    .clickable { onSegmentSelected(index) }
+                    .clickable { onTabSelected(tab) }
                     .padding(vertical = 8.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = label,
-                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary
+                    text = tab,
+                    color = if (selectedTab == tab) MaterialTheme.colorScheme.onPrimary
                     else MaterialTheme.colorScheme.onSurface,
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center
@@ -306,5 +507,3 @@ fun SegmentedTaskControl(
         }
     }
 }
-
-
