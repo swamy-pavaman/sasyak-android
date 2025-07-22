@@ -246,7 +246,7 @@ class TaskRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun getTasksByFilter(status: String, page: Int, size: Int, sortBy: String, sortDirection: String, managerId: Int?): ApiResponse<Pair<List<Task>, Int>> {
+    override suspend fun getTasksByFilter(status: String, page: Int, size: Int, sortBy: String?, sortDirection: String?, managerId: Int?, currentUserTasks: Boolean?, taskType: String?): ApiResponse<Pair<List<Task>, Int>> {
         return try {
             val response = apiService.getTasksByFilter(
                 FilterRequest(
@@ -255,7 +255,9 @@ class TaskRepositoryImpl @Inject constructor(
                     size = size,
                     sortBy = sortBy,
                     sortDirection = sortDirection,
-                    managerId = managerId
+                    managerId = managerId,
+                    currentUserTasks = currentUserTasks,
+                    taskType = taskType
                 )
             )
             if (response.isSuccessful) {

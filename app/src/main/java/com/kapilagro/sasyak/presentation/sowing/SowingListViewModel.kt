@@ -30,6 +30,9 @@ class SowingListViewModel @Inject constructor(
     private val _refreshing = MutableStateFlow(false)
     val refreshing: StateFlow<Boolean> = _refreshing.asStateFlow()
 
+    private val _taskCount = MutableStateFlow(0)
+    val taskCount: StateFlow<Int> = _taskCount.asStateFlow()
+
     private var currentPage = 0
     private var totalItems = 0
     private var isLastPage = false
@@ -53,6 +56,7 @@ class SowingListViewModel @Inject constructor(
                     is ApiResponse.Success -> {
                         val (tasks, total) = response.data
                         totalItems = total
+                        _taskCount.value = total
 
                         if (refresh || currentPage == 0) {
                             _tasksState.value = TasksState.Success(tasks, isLastPage = (currentPage + 1) * 10 >= totalItems)
