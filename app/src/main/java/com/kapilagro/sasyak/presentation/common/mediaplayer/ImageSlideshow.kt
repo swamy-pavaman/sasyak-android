@@ -1,5 +1,5 @@
-
-package com.kapilagro.sasyak.presentation.common.components
+package com.kapilagro.sasyak.presentation.common.mediaplayer
+import android.net.Uri
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -26,10 +26,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
-import com.kapilagro.sasyak.presentation.common.components.VideoPlayer
 import com.kapilagro.sasyak.presentation.common.components.ZoomableImage
 import kotlinx.coroutines.delay
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 
 @Composable
@@ -182,6 +182,10 @@ fun ImageSlideshow(imageUrls: List<String>) {
 
     // Full-screen preview dialog
     if (showPreview) {
+
+        val playerViewModel: PlayerViewModel = viewModel()
+
+
         Dialog(
             onDismissRequest = { showPreview = false },
             properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -197,7 +201,8 @@ fun ImageSlideshow(imageUrls: List<String>) {
 
                 if (isVideo) {
                     VideoPlayer(
-                        videoUri = android.net.Uri.parse(selectedUrl),
+                        videoUri = Uri.parse(selectedUrl),
+                        playerViewModel = playerViewModel,
                         modifier = Modifier.fillMaxSize()
                     )
                 } else {
