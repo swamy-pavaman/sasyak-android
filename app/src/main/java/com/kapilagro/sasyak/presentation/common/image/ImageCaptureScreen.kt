@@ -44,7 +44,7 @@ import java.util.concurrent.Executors
 @Composable
 fun ImageCaptureScreen(
     folder: String,
-    maxMedia: Int = 5,
+    maxMedia: Int = 10,
     onMediaSelected: (List<String>) -> Unit,
     onBackClick: () -> Unit,
     viewModel: ImageCaptureViewModel = hiltViewModel()
