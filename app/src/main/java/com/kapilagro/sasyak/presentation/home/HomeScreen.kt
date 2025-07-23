@@ -156,7 +156,8 @@ fun HomeScreen(
                                     ) {
                                         Text(
                                             text = if (unreadCount > 99) "99+" else unreadCount.toString(),
-                                            fontSize = 11.sp, // Slightly larger text
+                                            fontSize = 10.sp, // Slightly larger text
+                                            maxLines = 1,
                                             color = Color.White,
                                             textAlign = TextAlign.Center // Use TextAlign.Center instead of Alignment.Center
                                         )

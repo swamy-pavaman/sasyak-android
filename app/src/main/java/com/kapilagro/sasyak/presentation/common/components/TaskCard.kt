@@ -1,6 +1,7 @@
 package com.kapilagro.sasyak.presentation.common.components
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
@@ -57,6 +59,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import com.kapilagro.sasyak.R
 
 /**
  * Formats a date-time string into a compact format
@@ -138,14 +141,10 @@ fun TaskCard(
 ) {
     var firstImageUrl = getFirstImageUrl(task.imagesJson)
 
-    if (firstImageUrl == null){
-        firstImageUrl = "https://minio.kapilagro.com:9000/sasyak/placeholder.png"
-    }
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(100.dp)
             .padding(vertical = 4.dp, horizontal = 8.dp),
         shape = RoundedCornerShape(8.dp),
         elevation = CardDefaults.cardElevation(
@@ -165,6 +164,14 @@ fun TaskCard(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // Image (if available)
+            if (firstImageUrl == null) {
+                Image(
+                    painter = painterResource(R.drawable.placeholder),
+                    contentDescription = "Task image",
+                    modifier = Modifier.size(80.dp).clip(RoundedCornerShape(6.dp)),
+                    contentScale = ContentScale.Crop
+                )
+            }else{
             firstImageUrl?.let { imageUrl ->
                 AsyncImage(
                     model = imageUrl,
@@ -174,6 +181,7 @@ fun TaskCard(
                         .clip(RoundedCornerShape(6.dp)),
                     contentScale = ContentScale.Crop
                 )
+                }
             } ?: Box(
                 modifier = Modifier
                     .size(80.dp)
@@ -195,7 +203,6 @@ fun TaskCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
 
-                    // kk
                     TaskTypeChip(taskType = task.taskType)
 //                    Text(
 //                        text = task.title,
@@ -266,8 +273,6 @@ fun TaskCard(
                             color = AgroMutedForeground
                         )
                     }
-//                        kk
-//                    TaskTypeChip(taskType = task.taskType)
                 }
             }
         }
