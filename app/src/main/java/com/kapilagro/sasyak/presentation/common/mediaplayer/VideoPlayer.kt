@@ -12,34 +12,33 @@ import androidx.media3.ui.PlayerView
 fun VideoPlayer(
     videoUri: Uri,
     modifier: Modifier = Modifier,
-    playerViewModel: PlayerViewModel // We will now use this
+    playerViewModel: PlayerViewModel
 ) {
     val context = LocalContext.current
 
-    // --- 1. REMOVED the local ExoPlayer creation ---
-    // val exoPlayer = remember { ... } has been deleted.
-
-    // --- 2. ADDED DisposableEffect to manage the ViewModel's player ---
-    // This effect will correctly set up and tear down the player from the ViewModel.
+    // This effect is still correct. It prepares the player without starting it.
     DisposableEffect(videoUri) {
         playerViewModel.initializePlayer(context)
         playerViewModel.setVideoUri(videoUri)
-        playerViewModel.player?.playWhenReady = true
+        playerViewModel.player?.playWhenReady = false // KEEP THIS
 
         onDispose {
-            // Stop playback, but do NOT release the player.
-            // The ViewModel owns the player and will release it in onCleared().
             playerViewModel.player?.stop()
         }
     }
 
-    // --- 3. CHANGED AndroidView to use the player from the ViewModel ---
+    // --- KEY CHANGE IN AndroidView ---
     AndroidView(
         factory = { ctx ->
+            // 1. In factory, just CREATE the view.
             PlayerView(ctx).apply {
-                player = playerViewModel.player // Use the ViewModel's player
                 useController = true
             }
+        },
+        update = { playerView ->
+            // 2. In update, assign the player. This is safer because it runs
+            // after the view is inflated and ready.
+            playerView.player = playerViewModel.player
         },
         modifier = modifier
     )

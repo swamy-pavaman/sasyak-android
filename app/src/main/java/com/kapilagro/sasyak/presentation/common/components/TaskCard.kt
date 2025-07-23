@@ -113,18 +113,25 @@ fun formatDateTime(dateTimeString: String): String {
  * Extracts the first image URL from the imagesJson string
  */
 fun getFirstImageUrl(imagesJson: String?): String? {
+    // Return null immediately if the input is null or empty.
+    if (imagesJson.isNullOrBlank()) return null
+
     return try {
-        if (imagesJson.isNullOrBlank()) return null
+        // Define the list of valid image file extensions.
+        val validImageExtensions = listOf(".png", ".jpg", ".jpeg", ".webp", ".gif")
 
         val gson = Gson()
         val listType = object : TypeToken<List<String>>() {}.type
         val imagesList: List<String> = gson.fromJson(imagesJson, listType)
 
-        if (imagesList.isEmpty()) return null
-
-        val nonMp4Url = imagesList.firstOrNull { !it.trim().endsWith(".mp4", ignoreCase = true) }
-        return nonMp4Url
+        // Find the first URL in the list that ends with one of the valid extensions.
+        imagesList.firstOrNull { url ->
+            validImageExtensions.any { extension ->
+                url.trim().endsWith(extension, ignoreCase = true)
+            }
+        }
     } catch (e: Exception) {
+        // If JSON parsing fails or any other error occurs, return null.
         null
     }
 }

@@ -34,7 +34,7 @@ class AttachUrlWorker @AssistedInject constructor(
             val attachResponse = taskRepository.attachMediaToTask(taskId, uploadedUrls.toList())
 
             if (attachResponse.isSuccessful) {
-                Log.d("AttachUrlWorker", "Step 2 SUCCEEDED. Work complete.")
+                Log.d("AttachUrlWorker", "Stepx 2 SUCCEEDED. Work complete.")
                 Result.success()
             } else {
                 val errorMsg = attachResponse.errorBody()?.string() ?: "Failed to attach media"
