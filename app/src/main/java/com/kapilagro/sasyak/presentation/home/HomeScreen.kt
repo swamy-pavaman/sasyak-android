@@ -146,14 +146,18 @@ fun HomeScreen(
                                     Box(
                                         modifier = Modifier
                                             .size(22.dp) // Slightly larger for visibility
-                                            .background(MaterialTheme.colorScheme.error, shape = CircleShape)
+                                            .background(
+                                                MaterialTheme.colorScheme.error,
+                                                shape = CircleShape
+                                            )
                                             .align(Alignment.TopEnd)
-                                        .offset(x = (-1.2).dp, y = 0.dp),
+                                            .offset(x = (-1.2).dp, y = 0.dp),
                                         contentAlignment = Alignment.Center// Adjusted y to 0.dp for centering                                        contentAlignment = Alignment.Center
                                     ) {
                                         Text(
                                             text = if (unreadCount > 99) "99+" else unreadCount.toString(),
-                                            fontSize = 11.sp, // Slightly larger text
+                                            fontSize = 10.sp, // Slightly larger text
+                                            maxLines = 1,
                                             color = Color.White,
                                             textAlign = TextAlign.Center // Use TextAlign.Center instead of Alignment.Center
                                         )
@@ -178,7 +182,10 @@ fun HomeScreen(
                                 Box(
                                     modifier = Modifier
                                         .size(18.dp)
-                                        .background(MaterialTheme.colorScheme.error, shape = CircleShape)
+                                        .background(
+                                            MaterialTheme.colorScheme.error,
+                                            shape = CircleShape
+                                        )
                                         .align(Alignment.TopEnd)
                                         .offset(x = (-2).dp, y = 2.dp),
                                     contentAlignment = Alignment.Center
@@ -310,7 +317,8 @@ fun HomeScreen(
                         loadHotNewTasks = { viewModel.loadHotNewTasks() }, // For "New" tasks
                         onTeamClick = onTeamClick,
                         onReportsClick = onReportsClick,
-                        onAdviceClick = onAdviceClick
+                        onAdviceClick = onAdviceClick,
+                        onSyncClick= onSyncClick
                     )
                 }
                 "SUPERVISOR" -> {
@@ -336,6 +344,7 @@ fun HomeScreen(
                         loadHotNewTasks = { viewModel.loadHotNewTasks() }, // For "New" tasks
                         onTeamClick = onTeamClick,
                         onReportsClick = onReportsClick,
+                        onSyncClick= onSyncClick
                     )
                 }
                 else -> {
@@ -367,6 +376,7 @@ fun ManagerHomeContent(
     onTeamClick: () -> Unit,
     onReportsClick: () -> Unit,
     onAdviceClick: () -> Unit,
+    onSyncClick:()->Unit,
 ) {
     // Manager-specific quick actions
     Text(
@@ -375,36 +385,53 @@ fun ManagerHomeContent(
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
     )
 
-    Row(
+    LazyRow(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp)
             .padding(horizontal = 8.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly
+        horizontalArrangement = Arrangement.spacedBy(0.dp),
+        contentPadding = PaddingValues(horizontal = 8.dp)
     ) {
-        QuickActionButton(
-            icon = Icons.Outlined.PeopleAlt,
-            label = "Team",
-            backgroundColor = TeamIcon,
-            containerColor = TeamContainer,
-            onClick = onTeamClick
-        )
+        item{
+            QuickActionButton(
+                icon = Icons.Outlined.PeopleAlt,
+                label = "Team",
+                backgroundColor = TeamIcon,
+                containerColor = TeamContainer,
+                onClick = onTeamClick
+            )
+        }
 
-        QuickActionButton(
-            icon = Icons.Outlined.Assessment,
-            label = "Reports",
-            backgroundColor = ReportsIcon,
-            containerColor = ReportsContainer,
-            onClick = onReportsClick
-        )
+        item{
+            QuickActionButton(
+                icon = Icons.Outlined.Assessment,
+                label = "Reports",
+                backgroundColor = ReportsIcon,
+                containerColor = ReportsContainer,
+                onClick = onReportsClick
+            )
+        }
 
-        QuickActionButton(
-            icon = Icons.Outlined.Healing,
-            label = "Advice",
-            backgroundColor = AdviceIcon,
-            containerColor = AdviceContainer,
-            onClick = onAdviceClick
-        )
+        item{
+            QuickActionButton(
+                icon = Icons.Outlined.Healing,
+                label = "Advice",
+                backgroundColor = AdviceIcon,
+                containerColor = AdviceContainer,
+                onClick = onAdviceClick
+            )
+        }
+
+        item{
+            QuickActionButton(
+                icon = Icons.Outlined.Sync,
+                label = "Sync",
+                backgroundColor = SyncIcon,
+                containerColor = SyncContainer,
+                onClick = onSyncClick
+            )
+        }
     }
 
     Spacer(modifier = Modifier.height(16.dp))
@@ -796,6 +823,7 @@ fun AdminHomeContent(
     onTeamClick: () -> Unit,
     onReportsClick: () -> Unit,
     onMyTasksClick: () -> Unit,
+    onSyncClick:()->Unit,
 ){
     // Admin-specific quick actions
     Text(
@@ -804,35 +832,51 @@ fun AdminHomeContent(
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
     )
 
-    Row(
+    LazyRow(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp)
             .padding(horizontal = 8.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly
+        horizontalArrangement = Arrangement.spacedBy(0.dp),
+        contentPadding = PaddingValues(horizontal = 8.dp)
     ) {
-        QuickActionButton(
-            icon = Icons.Outlined.PeopleAlt,
-            label = "Team",
-            backgroundColor = TeamIcon,
-            containerColor = TeamContainer,
-            onClick = onTeamClick
-        )
+        item{
+            QuickActionButton(
+                icon = Icons.Outlined.PeopleAlt,
+                label = "Team",
+                backgroundColor = TeamIcon,
+                containerColor = TeamContainer,
+                onClick = onTeamClick
+            )
+        }
 
-        QuickActionButton(
-            icon = Icons.Outlined.Assessment,
-            label = "Reports",
-            backgroundColor = ReportsIcon,
-            containerColor = ReportsContainer,
-            onClick = onReportsClick
-        )
-        QuickActionButton(
-            icon = Icons.Outlined.Task,
-            label = "My Tasks",
-            backgroundColor = FuelIcon,
-            containerColor = FuelContainer,
-            onClick = onMyTasksClick
-        )
+        item{
+            QuickActionButton(
+                icon = Icons.Outlined.Assessment,
+                label = "Reports",
+                backgroundColor = ReportsIcon,
+                containerColor = ReportsContainer,
+                onClick = onReportsClick
+            )
+        }
+        item{
+            QuickActionButton(
+                icon = Icons.Outlined.Task,
+                label = "My Tasks",
+                backgroundColor = FuelIcon,
+                containerColor = FuelContainer,
+                onClick = onMyTasksClick
+            )
+        }
+        item{
+            QuickActionButton(
+                icon = Icons.Outlined.Sync,
+                label = "Sync",
+                backgroundColor = SyncIcon,
+                containerColor = SyncContainer,
+                onClick = onSyncClick
+            )
+        }
     }
 
     Spacer(modifier = Modifier.height(16.dp))

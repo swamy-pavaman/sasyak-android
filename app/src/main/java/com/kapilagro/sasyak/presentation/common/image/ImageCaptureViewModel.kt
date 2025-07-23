@@ -19,7 +19,7 @@ class ImageCaptureViewModel @Inject constructor() : ViewModel() {
     val selectedMediaUris: StateFlow<List<String>> = _selectedMediaUris.asStateFlow()
 
     fun addMediaUri(uri: String) {
-        if (_selectedMediaUris.value.size < 5) {
+        if (_selectedMediaUris.value.size < 10) {
             _selectedMediaUris.value = _selectedMediaUris.value + uri
         }
     }

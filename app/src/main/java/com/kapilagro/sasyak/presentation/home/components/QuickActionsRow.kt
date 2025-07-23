@@ -29,7 +29,7 @@ fun QuickActionButton(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .padding(horizontal = 4.dp)
-            .width(86.dp)
+            .widthIn(min = 86.dp, max = 120.dp)
             .clip(RoundedCornerShape(16.dp))
             .background(containerColor)
             .clickable(onClick = onClick)
@@ -56,7 +56,8 @@ fun QuickActionButton(
         Text(
             text = label,
             style = MaterialTheme.typography.bodyMedium,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
+            maxLines = 1
         )
     }
 }

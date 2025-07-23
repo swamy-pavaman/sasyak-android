@@ -1143,7 +1143,7 @@ fun ScoutingRequestScreen(
                             viewModel.createScoutingTask(
                                 scoutingDetails = scoutingDetails,
                                 description = description,
-                                assignedToId = if (userRole == "MANAGER") assignedTo else null
+                                assignedToId = if (userRole == "MANAGER" || userRole == "ADMIN") assignedTo else null
                             )
                         }
                     }

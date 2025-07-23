@@ -56,7 +56,9 @@ fun WeatherCard(
                         verticalAlignment = Alignment.Top
                     ) {
                         // Location and current weather
-                        Column {
+                        Column(
+                            modifier = Modifier.weight(1f)
+                        ) {
                             Text(
                                 text = weatherInfo.location,
                                 style = MaterialTheme.typography.titleMedium,
@@ -78,6 +80,7 @@ fun WeatherCard(
 
                         // Temperature
                         Column(
+                            modifier = Modifier.weight(0.4f),
                             horizontalAlignment = Alignment.End
                         ) {
                             Text(
@@ -87,7 +90,12 @@ fun WeatherCard(
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "Min: ${weatherInfo.tempMin.toInt()}° / Max: ${weatherInfo.tempMax.toInt()}°",
+                                text = "Min: ${weatherInfo.tempMin.toInt()}°",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.White.copy(alpha = 0.9f)
+                            )
+                            Text(
+                                text = "Max: ${weatherInfo.tempMax.toInt()}°",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = Color.White.copy(alpha = 0.9f)
                             )
@@ -211,7 +219,7 @@ fun ForecastDayCard(
 ) {
     Card(
         modifier = Modifier
-            .width(90.dp)
+            .widthIn(min = 90.dp, max = 100.dp)
             .height(140.dp),
         shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),

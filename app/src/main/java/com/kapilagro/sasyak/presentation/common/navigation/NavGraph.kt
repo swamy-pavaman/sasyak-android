@@ -222,7 +222,7 @@ fun AppNavGraph(
             val folder = backStackEntry.arguments?.getString("folder") ?: "SOWING"
             ImageCaptureScreen(
                 folder = folder,
-                maxMedia = 5,
+                maxMedia = 10,
                 onMediaSelected = { images -> // ✅ Changed from onImagesSelected to onMediaSelected
                     navController.previousBackStackEntry?.savedStateHandle?.set("selectedImages", images)
                     navController.popBackStack()

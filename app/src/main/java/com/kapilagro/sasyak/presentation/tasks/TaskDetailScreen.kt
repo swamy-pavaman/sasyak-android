@@ -30,8 +30,10 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -42,6 +44,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
+import com.kapilagro.sasyak.R
 import com.kapilagro.sasyak.di.IoDispatcher
 import com.kapilagro.sasyak.data.api.ImageUploadService
 import com.kapilagro.sasyak.domain.models.ApiResponse
@@ -165,14 +168,20 @@ fun TaskDetailScreen(
                             }catch (e:Exception){
                                 emptyList()
                             }
-                            if (imageUrls.isNullOrEmpty()) {
-                                imageUrls =
-                                    listOf("https://minio.kapilagro.com:9000/sasyak/placeholder.png")
+                            if (imageUrls.isEmpty()) {
+                                Image(
+                                    painter = painterResource(R.drawable.placeholder),
+                                    contentDescription = "Task image",
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(250.dp),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                ImageSlideshow(
+                                    imageUrls = imageUrls
+                                )
                             }
-
-                            ImageSlideshow(
-                                imageUrls = imageUrls
-                            )
 
                             // Image slideshow with dots
 //                            ImageSlideshow(
@@ -521,7 +530,8 @@ fun TaskDetailScreen(
                                                             modifier = Modifier
                                                                 .fillMaxSize()
                                                                 .clickable {
-                                                                    imagesToPreview = listOf(url) // Preview single image
+                                                                    imagesToPreview =
+                                                                        listOf(url) // Preview single image
                                                                     showPreviewDialog = true
                                                                 },
                                                             shape = RoundedCornerShape(8.dp)
@@ -605,7 +615,8 @@ fun TaskDetailScreen(
                                                         modifier = Modifier
                                                             .fillMaxSize()
                                                             .clickable {
-                                                                imagesToPreview = listOf(url) // Preview single image
+                                                                imagesToPreview =
+                                                                    listOf(url) // Preview single image
                                                                 showPreviewDialog = true
                                                             },
                                                         shape = RoundedCornerShape(8.dp)
