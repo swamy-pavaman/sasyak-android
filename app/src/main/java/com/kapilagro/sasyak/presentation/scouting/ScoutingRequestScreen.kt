@@ -362,7 +362,7 @@ fun ScoutingRequestScreen(
 
         SuccessDialog(
             title = "Scouting Report Sent!",
-            message = if (userRole=="MANAGER") "This report has been sent to the supervisor." else "This report has been sent to the manager.",
+            message = if (userRole=="SUPERVISOR") "This report has been sent to the manager." else "This report has been sent to the $selectedUser.",
             details = details,
             description = description,
             primaryButtonText = "OK",
@@ -824,6 +824,7 @@ fun ScoutingRequestScreen(
                                 text = { Text(supervisor.supervisorName) },
                                 onClick = {
                                     assignedTo = supervisor.supervisorId
+                                    selectedUser = supervisor.supervisorName
                                     assignedToExpanded = false
                                 }
                             )

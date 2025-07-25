@@ -89,17 +89,13 @@ fun ImageSlideshow(imageUrls: List<String>) {
             label = "slideshowCrossfade"
         ) { index ->
             val url = imageUrls[index]
-            val isVideo = url.endsWith(".mp4", ignoreCase = true)
+            val videoExtensions = listOf(".mp4", ".mov", ".avi", ".mkv", ".webm", ".flv", ".3gp", ".mpeg", ".mpg", ".m4v")
+            val isVideo = videoExtensions.any { ext -> url.endsWith(ext, ignoreCase = true) }
+
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                AsyncImage(
-                    model = url,
-                    contentDescription = "Slideshow item ${index + 1}",
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
                 if (isVideo) {
                     Box(
                         modifier = Modifier
@@ -118,6 +114,13 @@ fun ImageSlideshow(imageUrls: List<String>) {
                                 .padding(8.dp)
                         )
                     }
+                }else{
+                    AsyncImage(
+                        model = url,
+                        contentDescription = "Slideshow item ${index + 1}",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
                 }
             }
         }
