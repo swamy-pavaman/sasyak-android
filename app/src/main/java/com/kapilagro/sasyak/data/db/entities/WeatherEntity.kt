@@ -2,6 +2,7 @@ package com.kapilagro.sasyak.data.db.entities
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.kapilagro.sasyak.data.api.models.responses.openweather.ForecastItem
 
 @Entity(tableName = "weather")
 data class WeatherEntity (
@@ -20,5 +21,6 @@ data class WeatherEntity (
     val uvIndex: Int,
     val pressureHPa: Int,
     val cloudCoverPercentage: Int,
-    val updatedAt: Long // add this for staleness check
+    val updatedAt: Long, // add this for staleness check
+    val forecast: List<ForecastItem>
 )

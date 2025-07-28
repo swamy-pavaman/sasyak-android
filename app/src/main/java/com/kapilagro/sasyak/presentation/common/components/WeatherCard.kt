@@ -11,19 +11,24 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.kapilagro.sasyak.domain.models.DailyForecast
+import coil.compose.AsyncImage
+import com.kapilagro.sasyak.data.api.models.responses.openweather.ForecastItem
 import com.kapilagro.sasyak.domain.models.WeatherInfo
 import com.kapilagro.sasyak.presentation.common.theme.AgroPrimary
 import com.kapilagro.sasyak.presentation.common.theme.AgroLight
-import com.kapilagro.sasyak.presentation.common.theme.AgroSecondary
+import java.text.SimpleDateFormat
+import java.util.*
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -215,7 +220,7 @@ fun WeatherMetricItem(
 
 @Composable
 fun ForecastDayCard(
-    forecast: DailyForecast
+    forecast : ForecastItem
 ) {
     Card(
         modifier = Modifier
@@ -233,54 +238,83 @@ fun ForecastDayCard(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceEvenly
         ) {
-            Text(
-                text = forecast.dayOfWeek,
-                style = MaterialTheme.typography.bodySmall,
-                fontWeight = FontWeight.Medium
-            )
+
+            ForecastDayLabel(dateString = forecast.date)
+
+            Box {
+                AsyncImage(
+                    model = "https:${forecast.iconUrl}",
+                    contentDescription = "forecast icon",
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(6.dp)),
+                    contentScale = ContentScale.Crop
+                )
+            }
 
             Text(
-                text = getWeatherEmoji(forecast.description),
-                fontSize = 24.sp
-            )
-
-            Text(
-                text = "${forecast.tempMax.toInt()}°/${forecast.tempMin.toInt()}°",
+                text = "${forecast.maxTempC.toInt()}°/${forecast.minTempC.toInt()}°",
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.SemiBold
             )
 
-            // Rain probability if significant
-            if (forecast.precipitationProbability > 20) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.WaterDrop,
-                        contentDescription = "Rain probability",
-                        tint = Color.Blue,
-                        modifier = Modifier.size(12.dp)
-                    )
-                    Text(
-                        text = "${forecast.precipitationProbability}%",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color.Blue,
-                        modifier = Modifier.padding(start = 2.dp)
-                    )
-                }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.WaterDrop,
+                    contentDescription = "Rain probability",
+                    tint = Color.Blue,
+                    modifier = Modifier.size(12.dp)
+                )
+                Text(
+                    text = "${forecast.chanceOfRain}%",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.Blue,
+                    modifier = Modifier.padding(start = 2.dp)
+                )
             }
+
         }
     }
 }
 
-private fun getWeatherEmoji(description: String): String {
+@Composable
+fun ForecastDayLabel(dateString: String) {
+    val label = remember(dateString) { getDayLabelFromDateString(dateString) }
+
+    Text(
+        text = label,
+        style = MaterialTheme.typography.bodySmall,
+        fontWeight = FontWeight.Medium
+    )
+}
+
+fun getDayLabelFromDateString(dateString: String): String {
+    val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+    val inputDate: Date? = try {
+        sdf.parse(dateString)
+    } catch (e: Exception) {
+        null
+    }
+
+    if (inputDate == null) return ""
+
+    val todayCal = Calendar.getInstance()
+    val inputCal = Calendar.getInstance().apply { time = inputDate }
+
+    val todayYear = todayCal.get(Calendar.YEAR)
+    val inputYear = inputCal.get(Calendar.YEAR)
+    val todayDay = todayCal.get(Calendar.DAY_OF_YEAR)
+    val inputDay = inputCal.get(Calendar.DAY_OF_YEAR)
+
     return when {
-        description.contains("rain", ignoreCase = true) -> "🌧️"
-        description.contains("cloud", ignoreCase = true) -> "☁️"
-        description.contains("sun", ignoreCase = true) || description.contains("clear", ignoreCase = true) -> "☀️"
-        description.contains("storm", ignoreCase = true) -> "⛈️"
-        description.contains("thunder", ignoreCase = true) -> "⚡"
-        else -> "🌤️"
+        todayYear == inputYear && todayDay == inputDay -> "Today"
+        todayYear == inputYear && inputDay == todayDay + 1 -> "Tomorrow"
+        else -> {
+            val dayFormat = SimpleDateFormat("EEE", Locale.getDefault()) // e.g., "Fri"
+            dayFormat.format(inputDate)
+        }
     }
 }

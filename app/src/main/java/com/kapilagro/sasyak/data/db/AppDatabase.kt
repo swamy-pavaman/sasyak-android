@@ -5,6 +5,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.kapilagro.sasyak.data.db.converters.DateConverters
+import com.kapilagro.sasyak.data.db.converters.ForecastConverters
 import com.kapilagro.sasyak.data.db.dao.TaskDao
 import com.kapilagro.sasyak.data.db.dao.NotificationDao
 import com.kapilagro.sasyak.data.db.dao.UserDao
@@ -21,10 +22,10 @@ import com.kapilagro.sasyak.data.db.entities.WeatherEntity
         UserEntity::class,
         WeatherEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
-@TypeConverters(DateConverters::class)
+@TypeConverters(DateConverters::class, ForecastConverters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun taskDao(): TaskDao
     abstract fun notificationDao(): NotificationDao

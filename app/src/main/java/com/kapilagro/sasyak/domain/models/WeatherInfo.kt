@@ -1,6 +1,6 @@
 package com.kapilagro.sasyak.domain.models
 
-import com.kapilagro.sasyak.domain.models.DailyForecast
+import com.kapilagro.sasyak.data.api.models.responses.openweather.ForecastItem
 
 data class WeatherInfo(
     val location: String,
@@ -17,5 +17,5 @@ data class WeatherInfo(
     val uvIndex: Int,
     val pressureHPa: Int,
     val cloudCoverPercentage: Int,
-    val forecast: List<DailyForecast>
+    val forecast: List<ForecastItem>
 )

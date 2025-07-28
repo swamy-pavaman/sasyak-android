@@ -10,19 +10,25 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.kapilagro.sasyak.domain.models.DailyForecast
+import coil.compose.AsyncImage
+import com.kapilagro.sasyak.data.api.models.responses.openweather.ForecastItem
 import com.kapilagro.sasyak.domain.models.WeatherInfo
 import com.kapilagro.sasyak.presentation.common.theme.AgroLight
 import com.kapilagro.sasyak.presentation.common.theme.AgroPrimary
-import com.kapilagro.sasyak.presentation.common.theme.AgroPrimary
-import com.kapilagro.sasyak.presentation.common.theme.AgroLight
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @RequiresApi(Build.VERSION_CODES.O)
@@ -172,7 +178,7 @@ fun DetailMetricItem(
 
 @Composable
 fun ExtendedForecastItem(
-    forecast: DailyForecast
+    forecast: ForecastItem
 ) {
     Row(
         modifier = Modifier
@@ -182,13 +188,9 @@ fun ExtendedForecastItem(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column {
+            ForecastDayLabel(forecast.date)
             Text(
-                text = forecast.dayOfWeek,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium
-            )
-            Text(
-                text = forecast.date,
+                text = formatReadableDate(forecast.date),
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.Gray
             )
@@ -198,47 +200,94 @@ fun ExtendedForecastItem(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text(
-                text = getWeatherEmoji(forecast.description),
-                fontSize = 24.sp
-            )
+            Box {
+                AsyncImage(
+                    model = "https:${forecast.iconUrl}",
+                    contentDescription = "forecast icon",
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(6.dp)),
+                    contentScale = ContentScale.Crop
+                )
+            }
 
             Column(
                 horizontalAlignment = Alignment.End
             ) {
                 Text(
-                    text = "${forecast.tempMax.toInt()}°/${forecast.tempMin.toInt()}°",
+                    text = "${forecast.maxTempC.toInt()}°/${forecast.minTempC.toInt()}°",
                     style = MaterialTheme.typography.bodyLarge
                 )
-                if (forecast.precipitationProbability > 0) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.WaterDrop,
-                            contentDescription = "Rain",
-                            tint = Color.Blue,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Text(
-                            text = "${forecast.precipitationProbability}%",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.Blue
-                        )
-                    }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.WaterDrop,
+                        contentDescription = "Rain",
+                        tint = Color.Blue,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = "${forecast.chanceOfRain}%",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Blue
+                    )
                 }
+
             }
         }
     }
 }
 
-private fun getWeatherEmoji(description: String): String {
+@Composable
+fun ForecastDayLabel(dateString: String) {
+    val label = remember(dateString) { getDayLabelFromDateString(dateString) }
+
+    Text(
+        text = label,
+        style = MaterialTheme.typography.bodyLarge,
+        fontWeight = FontWeight.Medium
+    )
+}
+
+fun getDayLabelFromDateString(dateString: String): String {
+    val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+    val inputDate: Date? = try {
+        sdf.parse(dateString)
+    } catch (e: Exception) {
+        null
+    }
+
+    if (inputDate == null) return ""
+
+    val todayCal = Calendar.getInstance()
+    val inputCal = Calendar.getInstance().apply { time = inputDate }
+
+    val todayYear = todayCal.get(Calendar.YEAR)
+    val inputYear = inputCal.get(Calendar.YEAR)
+    val todayDay = todayCal.get(Calendar.DAY_OF_YEAR)
+    val inputDay = inputCal.get(Calendar.DAY_OF_YEAR)
+
     return when {
-        description.contains("rain", ignoreCase = true) -> "🌧️"
-        description.contains("cloud", ignoreCase = true) -> "☁️"
-        description.contains("sun", ignoreCase = true) || description.contains("clear", ignoreCase = true) -> "☀️"
-        description.contains("storm", ignoreCase = true) -> "⛈️"
-        description.contains("thunder", ignoreCase = true) -> "⚡"
-        else -> "🌤️"
+        todayYear == inputYear && todayDay == inputDay -> "Today"
+        todayYear == inputYear && inputDay == todayDay + 1 -> "Tomorrow"
+        else -> {
+            val dayFormat = SimpleDateFormat("EEE", Locale.getDefault()) // e.g., "Fri"
+            dayFormat.format(inputDate)
+        }
     }
 }
+
+fun formatReadableDate(dateString: String): String {
+    return try {
+        val inputFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        val date = inputFormat.parse(dateString)
+
+        val outputFormat = SimpleDateFormat("MMM d", Locale.getDefault())
+        outputFormat.format(date ?: return dateString)
+    } catch (e: Exception) {
+        dateString // fallback to raw string on error
+    }
+}
+

@@ -1,10 +1,11 @@
 package com.kapilagro.sasyak.data.repositories
 
+import android.R.attr.description
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
 import com.kapilagro.sasyak.data.api.WeatherApiService
-import com.kapilagro.sasyak.data.api.models.responses.openweather.CurrentWeatherResponse
+import com.kapilagro.sasyak.data.api.models.responses.openweather.ForecastItem
 import com.kapilagro.sasyak.data.db.dao.WeatherDao
 import com.kapilagro.sasyak.data.db.entities.WeatherEntity
 import com.kapilagro.sasyak.di.NetworkModule
@@ -50,9 +51,9 @@ class WeatherRepositoryImpl @Inject constructor(
 
             Log.d(TAG, "Fetching from API (app launch or no cached data)...")
 
-            // Default coordinates (Pithapuram)
-            var latitude = 17.264690446951853
-            var longitude = 78.27062508184291
+            // Default coordinates 17.264495783553038, 78.27057143815432
+            var latitude = 17.4213574
+            var longitude = 78.3477303
 
             // Try to get actual location
             val result = locationService.getLocation()
@@ -74,50 +75,44 @@ class WeatherRepositoryImpl @Inject constructor(
             // Get current weather data from OpenWeather API
             Log.d(TAG, "Calling Weather API for current weather...")
             val weatherResponse = weatherApiService.getCurrentWeather(
-                latitude = latitude,
-                longitude = longitude,
+                location = "$latitude,$longitude",
                 apiKey = NetworkModule.OPENWEATHER_API_KEY
             )
             Log.d(TAG, "Current weather data received successfully")
 
-            // Get location name from reverse geocoding
-            val geocodeResponse = try {
-                weatherApiService.getReverseGeocode(
-                    latitude = latitude,
-                    longitude = longitude,
-                    apiKey = NetworkModule.OPENWEATHER_API_KEY
-                )
-            } catch (e: Exception) {
-                Log.e(TAG, "Geocoding error: ${e.message}")
-                emptyList()
-            }
-
-            val locationName = if (geocodeResponse.isNotEmpty()) {
-                val loc = geocodeResponse[0]
-                "${loc.name}, ${loc.state ?: loc.country}"
-            } else {
-                "Lat: $latitude, Lon: $longitude"
-            }
+            val current = weatherResponse.current
+            val location = weatherResponse.location
+            val forecastDays = weatherResponse.forecast?.forecastDay.orEmpty()
 
             // Create WeatherInfo object
             val weatherInfo = WeatherInfo(
-                location = locationName,
-                temperature = weatherResponse.main?.temp ?: 0.0,
-                feelsLike = weatherResponse.main?.feelsLike ?: 0.0,
-                humidity = weatherResponse.main?.humidity ?: 0,
-                windSpeed = weatherResponse.wind?.speed ?: 0.0,
-                description = weatherResponse.weather?.firstOrNull()?.description?.replaceFirstChar {
+                location = "${location?.name}, ${location?.region}" ?: "Unknown",
+                temperature = current?.tempC ?: 0.0,
+                feelsLike = current?.feelsLikeC ?: 0.0,
+                humidity = current?.humidity ?: 0,
+                windSpeed = current?.windKph ?: 0.0,
+                description = current?.condition?.text?.replaceFirstChar {
                     if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString()
                 } ?: "Unknown",
-                icon = weatherResponse.weather?.firstOrNull()?.icon ?: "01d",
+                icon = current?.condition?.icon ?: "",
                 formattedDate = "Today, ${LocalDate.now().format(DateTimeFormatter.ofPattern("MMM d"))}",
-                tempMin = weatherResponse.main?.tempMin ?: 0.0,
-                tempMax = weatherResponse.main?.tempMax ?: 0.0,
-                precipitationProbability = weatherResponse.clouds?.all?.let { if (it > 50) it / 2 else 0 } ?: 0,
-                uvIndex = 0, // Not available in Current Weather API
-                pressureHPa = weatherResponse.main?.pressure ?: 0,
-                cloudCoverPercentage = weatherResponse.clouds?.all ?: 0,
-                forecast = generateApproximateForecast(weatherResponse)
+                tempMin = forecastDays.firstOrNull()?.day?.minTempC ?: 0.0, // Approx for min/max
+                tempMax = forecastDays.firstOrNull()?.day?.maxTempC ?: 0.0,
+                precipitationProbability = forecastDays.firstOrNull()?.day?.chanceOfRain ?: 0,
+                uvIndex = current?.uv?.toInt() ?: 0,
+                pressureHPa = current?.pressureMb?.toInt() ?: 0,
+                cloudCoverPercentage = current?.cloud ?: 0,
+                forecast = forecastDays.map {
+                    ForecastItem(
+                        date = it.date ?: "",
+                        maxTempC = it.day?.maxTempC ?: 0.0,
+                        minTempC = it.day?.minTempC ?: 0.0,
+                        avgTempC = it.day?.avgTempC ?: 0.0,
+                        chanceOfRain = it.day?.chanceOfRain ?: 0,
+                        conditionText = it.day?.condition?.text ?: "N/A",
+                        iconUrl = it.day?.condition?.icon ?: ""
+                    )
+                }
             )
 
             // Cache the weather data and mark API as called
@@ -165,13 +160,13 @@ class WeatherRepositoryImpl @Inject constructor(
             uvIndex = weatherInfo.uvIndex,
             pressureHPa = weatherInfo.pressureHPa,
             cloudCoverPercentage = weatherInfo.cloudCoverPercentage,
-            updatedAt = System.currentTimeMillis()
+            updatedAt = System.currentTimeMillis(),
+            forecast = weatherInfo.forecast
         )
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
     private fun mapEntityToWeatherInfo(entity: WeatherEntity): WeatherInfo {
-        val forecast = generateApproximateForecastFromEntity(entity)
 
         return WeatherInfo(
             location = entity.location,
@@ -188,85 +183,7 @@ class WeatherRepositoryImpl @Inject constructor(
             uvIndex = entity.uvIndex,
             pressureHPa = entity.pressureHPa,
             cloudCoverPercentage = entity.cloudCoverPercentage,
-            forecast = forecast
+            forecast = entity.forecast
         )
-    }
-
-    @RequiresApi(Build.VERSION_CODES.O)
-    private fun generateApproximateForecast(current: CurrentWeatherResponse): List<DailyForecast> {
-        val forecast = mutableListOf<DailyForecast>()
-        val today = LocalDate.now()
-        val currentTemp = current.main?.temp ?: 0.0
-        val currentDescription = current.weather?.firstOrNull()?.description ?: "Unknown"
-        val currentIcon = current.weather?.firstOrNull()?.icon ?: "01d"
-        val currentTempMin = current.main?.tempMin ?: 0.0
-        val currentTempMax = current.main?.tempMax ?: 0.0
-        val currentHumidity = current.main?.humidity ?: 0
-        val currentWindSpeed = current.wind?.speed ?: 0.0
-        val currentClouds = current.clouds?.all ?: 0
-
-        for (i in 0 until 7) {
-            val date = today.plusDays(i.toLong())
-            val dayOfWeek = when (i) {
-                0 -> "Today"
-                1 -> "Tomorrow"
-                else -> date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())
-            }
-
-            // Approximate forecast by slightly varying current conditions
-            val tempVariation = Random.nextDouble(-2.0, 2.0)
-            val precipVariation = Random.nextInt(0, 20)
-            forecast.add(
-                DailyForecast(
-                    date = date.format(DateTimeFormatter.ofPattern("MMM d")),
-                    dayOfWeek = dayOfWeek,
-                    tempMin = currentTempMin + tempVariation - 1,
-                    tempMax = currentTempMax + tempVariation + 1,
-                    precipitationProbability = currentClouds.let { prob ->
-                        (prob / 2 + precipVariation).coerceIn(0, 100)
-                    },
-                    description = currentDescription,
-                    icon = currentIcon,
-                    windSpeed = currentWindSpeed + Random.nextDouble(-1.0, 1.0),
-                    humidity = (currentHumidity + Random.nextInt(-5, 5)).coerceIn(0, 100)
-                )
-            )
-        }
-        return forecast
-    }
-
-    @RequiresApi(Build.VERSION_CODES.O)
-    private fun generateApproximateForecastFromEntity(entity: WeatherEntity): List<DailyForecast> {
-        val forecast = mutableListOf<DailyForecast>()
-        val today = LocalDate.now()
-
-        for (i in 0 until 7) {
-            val date = today.plusDays(i.toLong())
-            val dayOfWeek = when (i) {
-                0 -> "Today"
-                1 -> "Tomorrow"
-                else -> date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())
-            }
-
-            // Approximate forecast by slightly varying cached conditions
-            val tempVariation = Random.nextDouble(-2.0, 2.0)
-            val precipVariation = Random.nextInt(0, 20)
-            forecast.add(
-                DailyForecast(
-                    date = date.format(DateTimeFormatter.ofPattern("MMM d")),
-                    dayOfWeek = dayOfWeek,
-                    tempMin = entity.tempMin + tempVariation - 1,
-                    tempMax = entity.tempMax + tempVariation + 1,
-                    precipitationProbability = entity.cloudCoverPercentage.let { prob ->
-                        (prob / 2 + precipVariation).coerceIn(0, 100)
-                    },
-                    description = entity.description,
-                    icon = entity.icon,
-                    windSpeed = entity.windSpeed + Random.nextDouble(-1.0, 1.0),
-                    humidity = (entity.humidity + Random.nextInt(-5, 5)).coerceIn(0, 100)
-                )
-            )
-        }
-        return forecast
     }
 }
