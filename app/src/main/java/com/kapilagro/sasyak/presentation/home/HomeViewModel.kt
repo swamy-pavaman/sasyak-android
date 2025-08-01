@@ -140,22 +140,9 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-//    fun loadTeamMembers() {
-//        _teamMembersState.value = TeamMembersState.Loading
-//        viewModelScope.launch(ioDispatcher) {
-//            when (val response = userRepository.getTeamMembers()) {
-//                is ApiResponse.Success -> {
-//                    _teamMembersState.value = TeamMembersState.Success(response.data)
-//                }
-//                is ApiResponse.Error -> {
-//                    _teamMembersState.value = TeamMembersState.Error(response.errorMessage)
-//                }
-//                is ApiResponse.Loading -> {
-//                    _teamMembersState.value = TeamMembersState.Loading
-//                }
-//            }
-//        }
-//    }
+    fun isSubscribed(): Boolean {
+        return false  // Todo add logic to check subscription status
+    }
 
     sealed class TeamMembersState {
         object Loading : TeamMembersState()

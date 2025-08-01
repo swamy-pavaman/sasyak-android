@@ -39,6 +39,7 @@ import com.airbnb.lottie.compose.rememberLottieComposition
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.kapilagro.sasyak.R
+import com.kapilagro.sasyak.presentation.common.components.SubscriptionExpiredPopup
 
 import com.kapilagro.sasyak.presentation.common.components.TaskCard
 import com.kapilagro.sasyak.presentation.common.components.WeatherCard
@@ -64,12 +65,10 @@ fun HomeScreen(
     onYieldTaskClick: () -> Unit,
     onMyTasksClick: () -> Unit,
     onSyncClick:()->Unit,
-
-
-
     onTeamClick:()->Unit,
     onReportsClick: () -> Unit,    // Added for Reports navigation
     onAdviceClick: () -> Unit,
+    onLogoutClick: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
     notificationViewModel: NotificationViewModel = hiltViewModel() // Inject NotificationViewModel
 ) {
@@ -305,6 +304,12 @@ fun HomeScreen(
             }
 
             Spacer(modifier = Modifier.height(16.dp))
+
+            if (viewModel.isSubscribed()) {
+                SubscriptionExpiredPopup(
+                    onLogoutClick = { onLogoutClick() }
+                )
+            }
 
             // Role-specific sections
             when (userRole) {

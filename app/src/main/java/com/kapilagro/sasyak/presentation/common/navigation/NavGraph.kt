@@ -395,6 +395,12 @@ fun AppNavGraph(
                 },
                 onSyncClick = {
                     navController.navigate(Screen.Sync.route)
+                },
+                onLogoutClick = {
+                    authViewModel.logout()
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(Screen.Home.route) { inclusive = true }
+                    }
                 }
             )
         }
