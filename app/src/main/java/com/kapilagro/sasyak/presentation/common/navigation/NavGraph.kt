@@ -138,8 +138,7 @@ fun AppNavGraph(
                 navController = navController,
                 viewModel = scoutingListViewModel,
                 homeViewModel = homeViewModel,
-                ioDispatcher = ioDispatcher,
-                imageUploadService = imageUploadService
+                ioDispatcher = ioDispatcher
             )
         }
 
