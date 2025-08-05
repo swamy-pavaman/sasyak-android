@@ -27,6 +27,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Autorenew
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.Button
@@ -193,6 +194,7 @@ fun ScoutingRequestScreen(
     } catch (e: Exception) {
         false
     }
+    val previewData by viewModel.previewData.collectAsState()
 
     // Save form state before navigating to ImageCaptureScreen
     LaunchedEffect(Unit) {
@@ -428,6 +430,19 @@ fun ScoutingRequestScreen(
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Default.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = {
+                        if (previewData != null) {
+                            cropName = previewData?.cropName ?: cropName
+                            row = previewData?.row ?: row
+                            valveName = previewData?.valueName ?: valveName
+                            treeNo = previewData?.treeNo ?: treeNo
+                        }
+                    })
+                    {
+                        Icon(Icons.Default.Autorenew, contentDescription = "Preview")
                     }
                 }
             )

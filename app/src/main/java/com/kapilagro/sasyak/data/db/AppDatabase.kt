@@ -8,10 +8,12 @@ import com.kapilagro.sasyak.data.db.converters.DateConverters
 import com.kapilagro.sasyak.data.db.converters.ForecastConverters
 import com.kapilagro.sasyak.data.db.dao.TaskDao
 import com.kapilagro.sasyak.data.db.dao.NotificationDao
+import com.kapilagro.sasyak.data.db.dao.PreviewDao
 import com.kapilagro.sasyak.data.db.dao.UserDao
 import com.kapilagro.sasyak.data.db.dao.WeatherDao
 import com.kapilagro.sasyak.data.db.entities.TaskEntity
 import com.kapilagro.sasyak.data.db.entities.NotificationEntity
+import com.kapilagro.sasyak.data.db.entities.PreviewEntity
 import com.kapilagro.sasyak.data.db.entities.UserEntity
 import com.kapilagro.sasyak.data.db.entities.WeatherEntity
 
@@ -20,7 +22,8 @@ import com.kapilagro.sasyak.data.db.entities.WeatherEntity
         TaskEntity::class,
         NotificationEntity::class,
         UserEntity::class,
-        WeatherEntity::class
+        WeatherEntity::class,
+        PreviewEntity::class
     ],
     version = 2,
     exportSchema = false
@@ -31,6 +34,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun notificationDao(): NotificationDao
     abstract fun userDao(): UserDao
     abstract fun weatherDao(): WeatherDao
+    abstract fun previewDao(): PreviewDao
 
 
     companion object {

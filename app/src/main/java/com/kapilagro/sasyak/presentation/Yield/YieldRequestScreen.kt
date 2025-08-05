@@ -26,6 +26,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Autorenew
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.Button
@@ -234,6 +235,7 @@ fun YieldRequestScreen(
     val harvestMethods = listOf(
         "Manual", "Combine Harvester", "Mechanical", "Semi-mechanical"
     )
+    val previewData by viewModel.previewData.collectAsState()
 
     // Load supervisors list for MANAGER role
     LaunchedEffect(Unit) {
@@ -363,6 +365,18 @@ fun YieldRequestScreen(
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Default.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = {
+                        if (previewData != null) {
+                            cropName = previewData?.cropName ?: cropName
+                            row = previewData?.row ?: row
+                            valveName = previewData?.valueName ?: valveName
+                        }
+                    })
+                    {
+                        Icon(Icons.Default.Autorenew, contentDescription = "Preview")
                     }
                 }
             )

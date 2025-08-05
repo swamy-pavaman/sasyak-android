@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.kapilagro.sasyak.data.db.AppDatabase
 import com.kapilagro.sasyak.data.db.dao.NotificationDao
+import com.kapilagro.sasyak.data.db.dao.PreviewDao
 import com.kapilagro.sasyak.data.db.dao.TaskDao
 import com.kapilagro.sasyak.data.db.dao.UserDao
 import com.kapilagro.sasyak.data.db.dao.WeatherDao
@@ -48,5 +49,10 @@ object DatabaseModule {
     @Provides
     fun provideWeatherDao(appDatabase: AppDatabase): WeatherDao {
         return appDatabase.weatherDao()
+    }
+
+    @Provides
+    fun provideProfileDao(appDatabase: AppDatabase): PreviewDao {
+        return appDatabase.previewDao()
     }
 }
