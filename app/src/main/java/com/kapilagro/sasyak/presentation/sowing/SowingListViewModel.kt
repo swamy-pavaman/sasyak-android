@@ -3,10 +3,13 @@ package com.kapilagro.sasyak.presentation.sowing
 import android.R.string
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.kapilagro.sasyak.data.db.dao.PreviewDao
+import com.kapilagro.sasyak.data.db.entities.PreviewEntity
 import com.kapilagro.sasyak.di.IoDispatcher
 import com.kapilagro.sasyak.domain.models.ApiResponse
 import com.kapilagro.sasyak.domain.models.SowingDetails
 import com.kapilagro.sasyak.domain.models.Task
+import com.kapilagro.sasyak.domain.models.TaskResponce
 import com.kapilagro.sasyak.domain.repositories.TaskRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
@@ -21,7 +24,8 @@ import kotlinx.serialization.encodeToString
 @HiltViewModel
 class SowingListViewModel @Inject constructor(
     private val taskRepository: TaskRepository,
-    @IoDispatcher private val ioDispatcher: CoroutineDispatcher
+    @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
+    private val previewDao: PreviewDao
 ) : ViewModel() {
 
     private val _tasksState = MutableStateFlow<TasksState>(TasksState.Loading)
@@ -33,9 +37,16 @@ class SowingListViewModel @Inject constructor(
     private val _taskCount = MutableStateFlow(0)
     val taskCount: StateFlow<Int> = _taskCount.asStateFlow()
 
+    private val _previewData = MutableStateFlow<PreviewEntity?>(null)
+    val previewData: StateFlow<PreviewEntity?> = _previewData.asStateFlow()
+
     private var currentPage = 0
     private var totalItems = 0
     private var isLastPage = false
+
+    init {
+        loadLastPreview()
+    }
 
     fun loadSowingTasks(refresh: Boolean = false) {
         if (refresh) {
@@ -146,6 +157,15 @@ class SowingListViewModel @Inject constructor(
         imagesJson:List<String>,
         assignedToId: Int? = null
     ) {
+        val previewEntity = PreviewEntity(
+            taskType = "SOWING",
+            valueName = sowingDetails.valveName,
+            cropName = sowingDetails.cropName,
+            row = sowingDetails.row
+        )
+        viewModelScope.launch(ioDispatcher) {
+            previewDao.insertPreview(previewEntity)
+        }
         _createSowingState.value = CreateSowingState.Loading
         viewModelScope.launch(ioDispatcher) {
             try {
@@ -183,7 +203,14 @@ class SowingListViewModel @Inject constructor(
     sealed class CreateSowingState {
         object Idle : CreateSowingState()
         object Loading : CreateSowingState()
-        data class Success(val task: Task) : CreateSowingState()
+        data class Success(val task: TaskResponce) : CreateSowingState()
         data class Error(val message: String) : CreateSowingState()
+    }
+
+    fun loadLastPreview() {
+        viewModelScope.launch {
+            val lastTask = previewDao.getLastPreviewByType("SOWING")
+            _previewData.value = lastTask
+        }
     }
 }

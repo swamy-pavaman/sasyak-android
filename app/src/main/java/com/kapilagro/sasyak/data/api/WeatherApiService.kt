@@ -1,21 +1,11 @@
 package com.kapilagro.sasyak.data.api
 
-import com.kapilagro.sasyak.data.api.models.responses.openweather.CurrentWeatherResponse
 import com.kapilagro.sasyak.data.api.models.responses.openweather.GeocodeResponse
-import com.kapilagro.sasyak.data.api.models.responses.openweather.WeatherResponse
+import com.kapilagro.sasyak.data.api.models.responses.openweather.WeatherForecastResponse
 import retrofit2.http.GET
 import retrofit2.http.Query
 
 interface WeatherApiService {
-
-    @GET("data/3.0/onecall")
-    suspend fun getWeatherOneCall(
-        @Query("lat") latitude: Double,
-        @Query("lon") longitude: Double,
-        @Query("exclude") exclude: String = "minutely,hourly,alerts",
-        @Query("appid") apiKey: String,
-        @Query("units") units: String = "metric"
-    ): WeatherResponse
 
     @GET("geo/1.0/reverse")
     suspend fun getReverseGeocode(
@@ -25,11 +15,10 @@ interface WeatherApiService {
         @Query("appid") apiKey: String
     ): List<GeocodeResponse>
 
-    @GET("data/2.5/weather")
+    @GET("forecast.json")
     suspend fun getCurrentWeather(
-        @Query("lat") latitude: Double,
-        @Query("lon") longitude: Double,
-        @Query("appid") apiKey: String,
-        @Query("units") units: String = "metric"
-    ): CurrentWeatherResponse
+        @Query("key") apiKey: String,
+        @Query("q") location: String, // e.g., "17.4213,78.3478"
+        @Query("days") days: Int = 7
+    ): WeatherForecastResponse
 }

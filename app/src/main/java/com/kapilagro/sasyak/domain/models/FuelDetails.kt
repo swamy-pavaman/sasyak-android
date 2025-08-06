@@ -19,4 +19,6 @@ data class FuelDetails(
     val notes: String? = null,
     val dueDate: String? = null,
    // val uploadedFiles: List<String>? = null
+    val latitude : Double? = null ,
+    val longitude : Double? = null
 )

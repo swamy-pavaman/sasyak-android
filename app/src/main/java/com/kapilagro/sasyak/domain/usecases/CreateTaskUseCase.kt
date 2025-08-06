@@ -2,6 +2,7 @@ package com.kapilagro.sasyak.domain.usecases
 import com.kapilagro.sasyak.domain.models.ApiResponse
 import com.kapilagro.sasyak.domain.models.Task
 import com.kapilagro.sasyak.domain.models.TaskAdvice
+import com.kapilagro.sasyak.domain.models.TaskResponce
 import com.kapilagro.sasyak.domain.repositories.TaskAdviceRepository
 import com.kapilagro.sasyak.domain.repositories.TaskRepository
 import javax.inject.Inject
@@ -14,7 +15,7 @@ class CreateTaskUseCase @Inject constructor(
         detailsJson: String? = null,
         imagesJson: String? = null,
         assignedToId: Int? = null
-    ): ApiResponse<Task> {
+    ): ApiResponse<TaskResponce> {
         return taskRepository.createTask(
             taskType = taskType,
             description = description,

@@ -16,5 +16,7 @@ data class YieldDetails(
     val harvestMethod: String? = null,
     val notes: String? = null,
     val dueDate: String? = null,
+    val latitude : Double? = null,
+    val longitude : Double? = null
    // val uploadedFiles: List<String>? = null
 )

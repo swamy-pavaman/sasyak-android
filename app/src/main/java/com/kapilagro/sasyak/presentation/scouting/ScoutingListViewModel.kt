@@ -2,10 +2,13 @@ package com.kapilagro.sasyak.presentation.scouting
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.kapilagro.sasyak.data.db.dao.PreviewDao
+import com.kapilagro.sasyak.data.db.entities.PreviewEntity
 import com.kapilagro.sasyak.di.IoDispatcher
 import com.kapilagro.sasyak.domain.models.ApiResponse
 import com.kapilagro.sasyak.domain.models.ScoutingDetails
 import com.kapilagro.sasyak.domain.models.Task
+import com.kapilagro.sasyak.domain.models.TaskResponce
 import com.kapilagro.sasyak.domain.repositories.TaskRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
@@ -21,7 +24,8 @@ import kotlinx.serialization.encodeToString
 @HiltViewModel
 class ScoutingListViewModel @Inject constructor(
     private val taskRepository: TaskRepository,
-    @IoDispatcher private val ioDispatcher: CoroutineDispatcher
+    @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
+    private val previewDao: PreviewDao
 ) : ViewModel() {
 
     private val _tasksState = MutableStateFlow<TasksState>(TasksState.Loading)
@@ -33,9 +37,16 @@ class ScoutingListViewModel @Inject constructor(
     private val _taskCount = MutableStateFlow(0)
     val taskCount: StateFlow<Int> = _taskCount.asStateFlow()
 
+    private val _previewData = MutableStateFlow<PreviewEntity?>(null)
+    val previewData: StateFlow<PreviewEntity?> = _previewData.asStateFlow()
+
     private var currentPage = 0
     private var totalItems = 0
     private var isLastPage = false
+
+    init {
+        loadLastPreview()
+    }
 
     fun loadScoutingTasks(refresh: Boolean = false) {
         if (refresh) {
@@ -110,10 +121,19 @@ class ScoutingListViewModel @Inject constructor(
         imagesJson:List<String>?=null,
         assignedToId:Int?=null
     ) {
+        val previewEntity = PreviewEntity(
+            taskType = "SCOUTING",
+            valueName = scoutingDetails.valveName,
+            cropName = scoutingDetails.cropName,
+            row = scoutingDetails.row,
+            treeNo = scoutingDetails.treeNo
+        )
+        viewModelScope.launch(ioDispatcher) {
+            previewDao.insertPreview(previewEntity)
+        }
         _createScoutingState.value = CreateScoutingState.Loading
         viewModelScope.launch(ioDispatcher) {
             try {
-//                val detailsJson = Json.encodeToString(scoutingDetails)
                 val detailsJson = Json.encodeToString(scoutingDetails)
                 val imagesJson = Json.encodeToString(imagesJson)
 
@@ -150,7 +170,13 @@ class ScoutingListViewModel @Inject constructor(
     sealed class CreateScoutingState {
         object Idle : CreateScoutingState()
         object Loading : CreateScoutingState()
-        data class Success(val task: Task) : CreateScoutingState()
+        data class Success(val task: TaskResponce) : CreateScoutingState()
         data class Error(val message: String) : CreateScoutingState()
+    }
+    fun loadLastPreview() {
+        viewModelScope.launch {
+            val lastTask = previewDao.getLastPreviewByType("SCOUTING")
+            _previewData.value = lastTask
+        }
     }
 }

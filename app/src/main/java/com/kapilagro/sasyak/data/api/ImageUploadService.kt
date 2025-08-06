@@ -7,9 +7,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.asRequestBody
-import retrofit2.Response
-import retrofit2.http.Body
-import retrofit2.http.POST
 import java.io.File
 import javax.inject.Inject
 import okhttp3.OkHttpClient

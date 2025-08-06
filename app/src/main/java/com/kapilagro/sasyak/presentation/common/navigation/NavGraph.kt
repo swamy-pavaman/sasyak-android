@@ -2,7 +2,6 @@
 package com.kapilagro.sasyak.presentation.common.navigation
 
 import android.os.Build
-import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -68,7 +67,6 @@ import com.kapilagro.sasyak.presentation.yield.YieldScreen
 import com.kapilagro.sasyak.presentation.yield.YieldTaskDetailScreen
 import com.kapilagro.sasyak.presentation.tasks.MyTaskScreen
 import kotlinx.coroutines.CoroutineDispatcher
-import javax.inject.Inject
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -138,8 +136,7 @@ fun AppNavGraph(
                 navController = navController,
                 viewModel = scoutingListViewModel,
                 homeViewModel = homeViewModel,
-                ioDispatcher = ioDispatcher,
-                imageUploadService = imageUploadService
+                ioDispatcher = ioDispatcher
             )
         }
 
@@ -395,6 +392,12 @@ fun AppNavGraph(
                 },
                 onSyncClick = {
                     navController.navigate(Screen.Sync.route)
+                },
+                onLogoutClick = {
+                    authViewModel.logout()
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(Screen.Home.route) { inclusive = true }
+                    }
                 }
             )
         }

@@ -6,6 +6,7 @@ import com.kapilagro.sasyak.di.IoDispatcher
 import com.kapilagro.sasyak.domain.models.ApiResponse
 import com.kapilagro.sasyak.domain.models.FuelDetails
 import com.kapilagro.sasyak.domain.models.Task
+import com.kapilagro.sasyak.domain.models.TaskResponce
 import com.kapilagro.sasyak.domain.repositories.TaskRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
@@ -146,7 +147,7 @@ class FuelListViewModel @Inject constructor(
     sealed class CreateFuelState {
         object Idle : CreateFuelState()
         object Loading : CreateFuelState()
-        data class Success(val task: Task) : CreateFuelState()
+        data class Success(val task: TaskResponce) : CreateFuelState()
         data class Error(val message: String) : CreateFuelState()
     }
 }

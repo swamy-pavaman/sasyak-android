@@ -62,6 +62,14 @@ fun TaskResponse.toDomainModel(): Task {
     )
 }
 
+fun TaskCreatedResponce.toDomainModel(): TaskResponce {
+    return TaskResponce(
+        id = taskId,
+        status = status,
+        message = message
+    )
+}
+
 fun TaskAdviceResponse.toDomainModel(): TaskAdvice {
     return TaskAdvice(
         id = id,

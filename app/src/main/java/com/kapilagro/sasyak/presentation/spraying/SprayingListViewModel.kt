@@ -2,10 +2,13 @@ package com.kapilagro.sasyak.presentation.spraying
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.kapilagro.sasyak.data.db.dao.PreviewDao
+import com.kapilagro.sasyak.data.db.entities.PreviewEntity
 import com.kapilagro.sasyak.di.IoDispatcher
 import com.kapilagro.sasyak.domain.models.ApiResponse
 import com.kapilagro.sasyak.domain.models.SprayingDetails
 import com.kapilagro.sasyak.domain.models.Task
+import com.kapilagro.sasyak.domain.models.TaskResponce
 import com.kapilagro.sasyak.domain.repositories.TaskRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
@@ -20,7 +23,8 @@ import kotlinx.serialization.encodeToString
 @HiltViewModel
 class SprayingListViewModel @Inject constructor(
     private val taskRepository: TaskRepository,
-    @IoDispatcher private val ioDispatcher: CoroutineDispatcher
+    @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
+    private val previewDao: PreviewDao
 ) : ViewModel() {
 
     private val _tasksState = MutableStateFlow<TasksState>(TasksState.Loading)
@@ -32,9 +36,16 @@ class SprayingListViewModel @Inject constructor(
     private val _taskCount = MutableStateFlow(0)
     val taskCount: StateFlow<Int> = _taskCount.asStateFlow()
 
+    private val _previewData = MutableStateFlow<PreviewEntity?>(null)
+    val previewData: StateFlow<PreviewEntity?> = _previewData.asStateFlow()
+
     private var currentPage = 0
     private var totalItems = 0
     private var isLastPage = false
+
+    init {
+        loadLastPreview()
+    }
 
     fun loadSprayingTasks(refresh: Boolean = false) {
         if (refresh) {
@@ -108,6 +119,15 @@ class SprayingListViewModel @Inject constructor(
         imagesJson:List<String>,
         assignedToId: Int? = null
     ) {
+        val previewEntity = PreviewEntity(
+            taskType = "SPRAYING",
+            valueName = sprayingDetails.valveName ?: "",
+            cropName = sprayingDetails.cropName,
+            row = sprayingDetails.row
+        )
+        viewModelScope.launch(ioDispatcher) {
+            previewDao.insertPreview(previewEntity)
+        }
         _createSprayingState.value = CreateSprayingState.Loading
         viewModelScope.launch(ioDispatcher) {
             try {
@@ -145,7 +165,14 @@ class SprayingListViewModel @Inject constructor(
     sealed class CreateSprayingState {
         object Idle : CreateSprayingState()
         object Loading : CreateSprayingState()
-        data class Success(val task: Task) : CreateSprayingState()
+        data class Success(val task: TaskResponce) : CreateSprayingState()
         data class Error(val message: String) : CreateSprayingState()
+    }
+
+    fun loadLastPreview() {
+        viewModelScope.launch {
+            val lastTask = previewDao.getLastPreviewByType("SPRAYING")
+            _previewData.value = lastTask
+        }
     }
 }
