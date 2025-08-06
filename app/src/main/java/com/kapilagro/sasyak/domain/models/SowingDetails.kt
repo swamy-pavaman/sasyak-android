@@ -38,5 +38,7 @@ data class SowingDetails(
     val soilCondition: String? = null,
     val weatherCondition: String? = null,
     val dueDate: String? = null,
+    val latitude : Double? = null,
+    val longitude : Double? = null,
     //    // val imageUrls: List<String>? = null
 )

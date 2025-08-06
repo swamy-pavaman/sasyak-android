@@ -8,6 +8,7 @@ import com.kapilagro.sasyak.di.IoDispatcher
 import com.kapilagro.sasyak.domain.models.ApiResponse
 import com.kapilagro.sasyak.domain.models.YieldDetails
 import com.kapilagro.sasyak.domain.models.Task
+import com.kapilagro.sasyak.domain.models.TaskResponce
 import com.kapilagro.sasyak.domain.repositories.TaskRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
@@ -166,7 +167,7 @@ class YieldListViewModel @Inject constructor(
     sealed class CreateYieldState {
         object Idle : CreateYieldState()
         object Loading : CreateYieldState()
-        data class Success(val task: Task) : CreateYieldState()
+        data class Success(val task: TaskResponce) : CreateYieldState()
         data class Error(val message: String) : CreateYieldState()
     }
 

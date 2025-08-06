@@ -63,6 +63,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -105,7 +106,7 @@ fun YieldRequestScreen(
     categoryViewModel: CategoryViewModel = hiltViewModel(),
     @IoDispatcher ioDispatcher: CoroutineDispatcher,
 
-) {
+    ) {
     val createYieldState by viewModel.createYieldState.collectAsState()
     val userRole by homeViewModel.userRole.collectAsState()
     val supervisorsListState by homeViewModel.supervisorsListState.collectAsState()
@@ -236,6 +237,7 @@ fun YieldRequestScreen(
         "Manual", "Combine Harvester", "Mechanical", "Semi-mechanical"
     )
     val previewData by viewModel.previewData.collectAsState()
+    val location by categoryViewModel.location.collectAsState()
 
     // Load supervisors list for MANAGER role
     LaunchedEffect(Unit) {
@@ -991,7 +993,7 @@ fun YieldRequestScreen(
                                         painter = rememberAsyncImagePainter(uri),
                                         contentDescription = "Selected image",
                                         modifier = Modifier.fillMaxSize(),
-                                        contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                                        contentScale = ContentScale.Crop
                                     )
                                 }
                                 IconButton(
@@ -1066,7 +1068,9 @@ fun YieldRequestScreen(
                                 moistureContent = moistureContent.ifBlank { null },
                                 harvestMethod = harvestMethod.ifBlank { null },
                                 notes = notes.ifBlank { null },
-                                dueDate = if (userRole == "MANAGER" || userRole == "ADMIN") dueDateText else null
+                                dueDate = if (userRole == "MANAGER" || userRole == "ADMIN") dueDateText else null,
+                                latitude = location?.latitude,
+                                longitude = location?.longitude
                             )
                             submittedEntry = yieldDetails
 

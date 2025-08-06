@@ -9,6 +9,7 @@ import com.kapilagro.sasyak.di.IoDispatcher
 import com.kapilagro.sasyak.domain.models.ApiResponse
 import com.kapilagro.sasyak.domain.models.SowingDetails
 import com.kapilagro.sasyak.domain.models.Task
+import com.kapilagro.sasyak.domain.models.TaskResponce
 import com.kapilagro.sasyak.domain.repositories.TaskRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
@@ -202,7 +203,7 @@ class SowingListViewModel @Inject constructor(
     sealed class CreateSowingState {
         object Idle : CreateSowingState()
         object Loading : CreateSowingState()
-        data class Success(val task: Task) : CreateSowingState()
+        data class Success(val task: TaskResponce) : CreateSowingState()
         data class Error(val message: String) : CreateSowingState()
     }
 

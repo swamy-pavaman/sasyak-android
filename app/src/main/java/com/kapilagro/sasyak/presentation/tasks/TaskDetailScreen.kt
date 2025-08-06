@@ -30,7 +30,6 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -283,7 +282,8 @@ fun TaskDetailScreen(
                             if (details != null) {
                                 // Collect keys with non-null and non-empty values into a list
                                 val keysList = details.keys().asSequence()
-                                    .filter { key -> details.optString(key, "").isNotEmpty() }
+                                    .filter { key -> key !in listOf("latitude", "longitude") &&
+                                            details.optString(key, "").isNotEmpty() }
                                     .toList()
 
                                 // Show "No details available" if no valid key-value pairs exist
@@ -1223,7 +1223,16 @@ private fun getLocationFromJson(detailsJson: String?): String? {
     return try {
         detailsJson?.let {
             val json = JSONObject(it)
-            json.optString("location").takeIf { it.isNotBlank() }
+
+            // Try getting lat/lon as Double (or String if they might be stored as string)
+            val latitude = json.optDouble("latitude", Double.NaN)
+            val longitude = json.optDouble("longitude", Double.NaN)
+
+            if (!latitude.isNaN() && !longitude.isNaN()) {
+                "Location: $latitude, $longitude"
+            } else {
+                null // Lat/lon not found or invalid
+            }
         }
     } catch (e: Exception) {
         null

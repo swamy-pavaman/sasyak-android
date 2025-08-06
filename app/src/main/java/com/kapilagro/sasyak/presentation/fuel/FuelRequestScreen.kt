@@ -230,6 +230,7 @@ fun FuelRequestScreen(
         else -> emptyMap()
     }
     val vehicleNumbers:List<String> = vehicleNameToNumbers[vehicleName] ?: emptyList()
+    val location by categoryViewModel.location.collectAsState()
 
     val drivers = when (val state = categoriesStates["Driver"]) {
         is CategoriesState.Success -> state.categories.map { it.value }
@@ -1075,7 +1076,9 @@ fun FuelRequestScreen(
                                 purposeOfFuel = purposeOfFuel.ifBlank { null },
                                 refillLocation = refillLocation.ifBlank { null },
                                 notes = notes.ifBlank { null },
-                                dueDate = if (userRole == "MANAGER" || userRole == "ADMIN") dueDateText else null
+                                dueDate = if (userRole == "MANAGER" || userRole == "ADMIN") dueDateText else null,
+                                latitude = location?.latitude,
+                                longitude = location?.longitude
                             )
                             submittedEntry = fuelDetails
 

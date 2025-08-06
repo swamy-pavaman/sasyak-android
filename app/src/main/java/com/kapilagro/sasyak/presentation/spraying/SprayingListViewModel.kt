@@ -8,6 +8,7 @@ import com.kapilagro.sasyak.di.IoDispatcher
 import com.kapilagro.sasyak.domain.models.ApiResponse
 import com.kapilagro.sasyak.domain.models.SprayingDetails
 import com.kapilagro.sasyak.domain.models.Task
+import com.kapilagro.sasyak.domain.models.TaskResponce
 import com.kapilagro.sasyak.domain.repositories.TaskRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
@@ -164,7 +165,7 @@ class SprayingListViewModel @Inject constructor(
     sealed class CreateSprayingState {
         object Idle : CreateSprayingState()
         object Loading : CreateSprayingState()
-        data class Success(val task: Task) : CreateSprayingState()
+        data class Success(val task: TaskResponce) : CreateSprayingState()
         data class Error(val message: String) : CreateSprayingState()
     }
 

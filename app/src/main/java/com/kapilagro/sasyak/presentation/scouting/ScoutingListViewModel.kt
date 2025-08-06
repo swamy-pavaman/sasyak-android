@@ -8,6 +8,7 @@ import com.kapilagro.sasyak.di.IoDispatcher
 import com.kapilagro.sasyak.domain.models.ApiResponse
 import com.kapilagro.sasyak.domain.models.ScoutingDetails
 import com.kapilagro.sasyak.domain.models.Task
+import com.kapilagro.sasyak.domain.models.TaskResponce
 import com.kapilagro.sasyak.domain.repositories.TaskRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
@@ -133,7 +134,6 @@ class ScoutingListViewModel @Inject constructor(
         _createScoutingState.value = CreateScoutingState.Loading
         viewModelScope.launch(ioDispatcher) {
             try {
-//                val detailsJson = Json.encodeToString(scoutingDetails)
                 val detailsJson = Json.encodeToString(scoutingDetails)
                 val imagesJson = Json.encodeToString(imagesJson)
 
@@ -170,7 +170,7 @@ class ScoutingListViewModel @Inject constructor(
     sealed class CreateScoutingState {
         object Idle : CreateScoutingState()
         object Loading : CreateScoutingState()
-        data class Success(val task: Task) : CreateScoutingState()
+        data class Success(val task: TaskResponce) : CreateScoutingState()
         data class Error(val message: String) : CreateScoutingState()
     }
     fun loadLastPreview() {

@@ -268,6 +268,7 @@ fun SprayingRequestScreen(
         "Fogger", "Mist Blower", "Hand Sprayer", "Tractor Mounted Sprayer"
     )
     val previewData by viewModel.previewData.collectAsState()
+    val location by categoryViewModel.location.collectAsState()
 
     // Load supervisors list for MANAGER role
     LaunchedEffect(Unit) {
@@ -1241,7 +1242,9 @@ fun SprayingRequestScreen(
                                 target = if (targetPest.isNotBlank()) "$category : $targetPest" else null,
                                 weatherCondition = weatherCondition.ifBlank { null },
                                 valveName = valveName,
-                                dueDate = if (userRole == "MANAGER" || userRole == "ADMIN") dueDateText else null
+                                dueDate = if (userRole == "MANAGER" || userRole == "ADMIN") dueDateText else null,
+                                latitude = location?.latitude,
+                                longitude = location?.longitude
                             )
                             submittedEntry = sprayingDetails
 

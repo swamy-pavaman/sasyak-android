@@ -15,4 +15,6 @@ data class ScoutingDetails(
     val valveName: String,
     val dueDate:String?,
     //val uploadedFiles: List<String>? = null
+    val latitude: Double?,
+    val longitude: Double?
 )

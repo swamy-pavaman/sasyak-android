@@ -1,16 +1,13 @@
 package com.kapilagro.sasyak.domain.repositories
 
-import com.kapilagro.sasyak.data.api.models.requests.MediaAttachRequest
 import com.kapilagro.sasyak.data.api.models.responses.ApiResponseDTO
-import com.kapilagro.sasyak.data.api.models.responses.TaskImagesUpdateResponse
-import com.kapilagro.sasyak.data.api.models.responses.TaskListResponse
 import com.kapilagro.sasyak.data.api.models.responses.TeamMemberListResponse
 import com.kapilagro.sasyak.data.api.models.responses.TrendReportResponse
 import com.kapilagro.sasyak.domain.models.ApiResponse
-import com.kapilagro.sasyak.domain.models.DailyTaskCount
 import com.kapilagro.sasyak.domain.models.Task
 import com.kapilagro.sasyak.domain.models.TaskAdvice
 import com.kapilagro.sasyak.domain.models.TaskReport
+import com.kapilagro.sasyak.domain.models.TaskResponce
 import retrofit2.Response
 
 interface TaskRepository {
@@ -23,7 +20,7 @@ interface TaskRepository {
         detailsJson: String?,
         imagesJson: String?,
         assignedToId: Int?
-    ): ApiResponse<Task>
+    ): ApiResponse<TaskResponce>
     suspend fun getTaskReport(): ApiResponse<TaskReport>
     suspend fun getTrendReport(): ApiResponse<TrendReportResponse>
     suspend fun updateTaskStatus(taskId: Int, status: String, comment: String?): ApiResponse<Task>

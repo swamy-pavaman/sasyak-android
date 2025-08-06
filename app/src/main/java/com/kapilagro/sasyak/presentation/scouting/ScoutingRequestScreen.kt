@@ -195,6 +195,7 @@ fun ScoutingRequestScreen(
         false
     }
     val previewData by viewModel.previewData.collectAsState()
+    val location by categoryViewModel.location.collectAsState()
 
     // Save form state before navigating to ImageCaptureScreen
     LaunchedEffect(Unit) {
@@ -1185,7 +1186,9 @@ fun ScoutingRequestScreen(
                                 noOfFruitsDropped = noOfFruitsDropped.ifBlank { null },
                                 targetPest = if (targetPest.isNotBlank()) "$category : $targetPest" else null,
                                 valveName = valveName,
-                                dueDate = if (userRole == "MANAGER" || userRole == "ADMIN") dueDateText else null
+                                dueDate = if (userRole == "MANAGER" || userRole == "ADMIN") dueDateText else null,
+                                latitude = location?.latitude,
+                                longitude = location?.longitude
                             )
                             submittedEntry = scoutingDetails
 

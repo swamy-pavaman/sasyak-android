@@ -15,5 +15,7 @@ data class SprayingDetails(
     val weatherCondition: String? = null,
     val valveName: String? = null,
     val dueDate: String? = null,
+    val latitude : Double? = null,
+    val longitude : Double? = null
    // val uploadedFiles: List<String>? = null
 )

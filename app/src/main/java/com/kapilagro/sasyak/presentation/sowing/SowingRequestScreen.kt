@@ -258,6 +258,7 @@ fun SowingRequestScreen(
         "Seed Drill", "Zero Tillage", "Raised Bed"
     )
     val previewData by viewModel.previewData.collectAsState()
+    val location by categoryViewModel.location.collectAsState()
 
 
 
@@ -1190,7 +1191,9 @@ fun SowingRequestScreen(
                                 spacingBetweenPlants = spacingBetweenPlants.ifBlank { null },
                                 soilCondition = soilCondition.ifBlank { null },
                                 weatherCondition = weatherCondition.ifBlank { null },
-                                dueDate = if (userRole == "MANAGER" || userRole == "ADMIN") dueDateText else null
+                                dueDate = if (userRole == "MANAGER" || userRole == "ADMIN") dueDateText else null,
+                                latitude = location?.latitude,
+                                longitude = location?.longitude
                             )
                             submittedEntry = sowingDetails
 

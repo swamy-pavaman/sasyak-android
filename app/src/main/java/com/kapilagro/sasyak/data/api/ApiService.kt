@@ -69,7 +69,7 @@ interface ApiService {
     suspend fun getTaskById(@Path("taskId") taskId: Int): Response<TaskDetailResponse>
 
     @POST("api/tasks")
-    suspend fun createTask(@Body createTaskRequest: CreateTaskRequest): Response<TaskResponse>
+    suspend fun createTask(@Body createTaskRequest: CreateTaskRequest): Response<TaskCreatedResponce>
 
     @PUT("api/tasks/{taskId}/status")
     suspend fun updateTaskStatus(

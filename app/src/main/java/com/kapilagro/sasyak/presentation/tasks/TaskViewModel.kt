@@ -12,6 +12,7 @@ import com.kapilagro.sasyak.di.IoDispatcher
 import com.kapilagro.sasyak.domain.models.ApiResponse
 import com.kapilagro.sasyak.domain.models.Task
 import com.kapilagro.sasyak.domain.models.TaskAdvice
+import com.kapilagro.sasyak.domain.models.TaskResponce
 import com.kapilagro.sasyak.domain.repositories.TaskAdviceRepository
 import com.kapilagro.sasyak.domain.repositories.TaskRepository
 import com.kapilagro.sasyak.domain.repositories.AuthRepository
@@ -483,7 +484,7 @@ class TaskViewModel @Inject constructor(
     sealed class CreateTaskState {
         object Idle : CreateTaskState()
         object Loading : CreateTaskState()
-        data class Success(val task: Task) : CreateTaskState()
+        data class Success(val task: TaskResponce) : CreateTaskState()
         data class Error(val message: String) : CreateTaskState()
     }
 
