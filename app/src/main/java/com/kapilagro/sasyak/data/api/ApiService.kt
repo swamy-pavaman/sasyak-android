@@ -3,9 +3,7 @@ package com.kapilagro.sasyak.data.api
 
 import com.kapilagro.sasyak.data.api.models.requests.*
 import com.kapilagro.sasyak.data.api.models.responses.*
-import com.kapilagro.sasyak.domain.models.ApiResponse
 import com.kapilagro.sasyak.domain.models.LoginRequest
-import com.kapilagro.sasyak.domain.models.User
 import retrofit2.Response
 import retrofit2.http.*
 
@@ -14,6 +12,23 @@ interface ApiService {
 
     // File: app/src/main/java/com/kapilagro/sasyak/data/api/ApiService.kt
 // Add to existing interface
+    @POST("api/minio/multipart/initiate")
+    suspend fun startMultipartUpload(@Body request: MultipartUploadInitRequest): Response<MultipartUploadInitResponse>
+
+    @GET("api/minio/multipart/presigned-url-part")
+    suspend fun getPresignedUrl(
+        @Query("uploadId") uploadId: String,
+        @Query("fileName") fileName: String,
+        @Query("folder") folder: String,
+        @Query("partNumber") partNumber: Int,
+    ): Response<PresignedUrlResponseMultipart>
+
+    @POST("api/minio/presigned-url/upload") // TODO() need to change this
+    suspend fun abortMultipartUpload(@Body request: MultipartAbortRequest): Response<ApiResponseDTO>
+
+    @POST("api/minio/multipart/complete")
+    suspend fun completeMultipartUpload(@Body request: MultipartCompleteRequest): Response<MultipartCompleteResponse>
+
     @POST("api/minio/presigned-url/upload")
     suspend fun getPresignedUrls(@Body request: PresignedUrlRequest): Response<PresignedUrlResponse>
 
