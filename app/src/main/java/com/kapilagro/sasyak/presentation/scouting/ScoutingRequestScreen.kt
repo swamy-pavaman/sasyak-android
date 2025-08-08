@@ -1,6 +1,8 @@
 package com.kapilagro.sasyak.presentation.scouting
 
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.net.Uri
 import android.os.Build
 import android.util.Log
@@ -79,6 +81,7 @@ import com.kapilagro.sasyak.domain.models.ScoutingDetails
 import com.kapilagro.sasyak.presentation.common.catalog.CategoriesState
 import com.kapilagro.sasyak.presentation.common.catalog.CategoryViewModel
 import com.kapilagro.sasyak.presentation.common.components.SuccessDialog
+import com.kapilagro.sasyak.presentation.common.components.TaskSubmittedDialog
 import com.kapilagro.sasyak.presentation.common.image.ImageCaptureViewModel
 import com.kapilagro.sasyak.presentation.common.navigation.Screen
 import com.kapilagro.sasyak.presentation.common.theme.AgroPrimary
@@ -98,6 +101,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import com.kapilagro.sasyak.utils.NetworkUtils
 
 // Data classes for JSON parsing
 @Serializable
@@ -150,6 +154,7 @@ fun ScoutingRequestScreen(
     var showSuccessDialog by remember { mutableStateOf(false) }
     var submittedEntry by remember { mutableStateOf<ScoutingDetails?>(null) }
     var uploadState by remember { mutableStateOf<UploadState>(UploadState.Idle) }
+    var showWorkerDialog by remember { mutableStateOf(false) }
 
     // Form fields with saved state
     val savedStateHandle = navController.currentBackStackEntry?.savedStateHandle
@@ -381,8 +386,25 @@ fun ScoutingRequestScreen(
                 showSuccessDialog = true
             }
 
+            is ScoutingListViewModel.CreateScoutingState.Error -> {
+                if (submittedEntry != null && !NetworkUtils.isNetworkAvailable(context)) {
+                    val imageFilePaths = imageUris.mapNotNull { uri ->
+                        // Use the new static method from the ViewModel's companion object.
+                        ImageCaptureViewModel.copyUriToCachedFile(context, uri)?.absolutePath
+                    }
+                    Log.d("WORKER", "WorkerRequest started")
+                    viewModel.workerScoutingTask(
+                        context = context,
+                        scoutingDetails = submittedEntry!!,
+                        description = description,
+                        imagesJson = imageFilePaths,
+                        assignedToId = if (userRole == "MANAGER" || userRole == "ADMIN") assignedTo else null
+                    )
+                    showWorkerDialog = true
+                }
+            }
             else -> {
-                // Handle other states if needed
+                // Handle other states as needed
             }
         }
     }
@@ -424,6 +446,13 @@ fun ScoutingRequestScreen(
                 savedStateHandle?.remove<String>("dueDate")
                 savedStateHandle?.remove<List<String>>("selectedImages")
             }
+        )
+    }
+
+    if (showWorkerDialog) {
+        TaskSubmittedDialog(
+            navController = navController,
+            onDismiss = { showWorkerDialog = false }
         )
     }
 

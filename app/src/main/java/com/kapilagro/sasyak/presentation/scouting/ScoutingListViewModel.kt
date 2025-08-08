@@ -1,7 +1,14 @@
 package com.kapilagro.sasyak.presentation.scouting
 
+import android.content.Context
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.work.Constraints
+import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.workDataOf
 import com.kapilagro.sasyak.data.db.dao.PreviewDao
 import com.kapilagro.sasyak.data.db.entities.PreviewEntity
 import com.kapilagro.sasyak.di.IoDispatcher
@@ -10,6 +17,9 @@ import com.kapilagro.sasyak.domain.models.ScoutingDetails
 import com.kapilagro.sasyak.domain.models.Task
 import com.kapilagro.sasyak.domain.models.TaskResponce
 import com.kapilagro.sasyak.domain.repositories.TaskRepository
+import com.kapilagro.sasyak.worker.AttachUrlWorker
+import com.kapilagro.sasyak.worker.FileUploadWorker
+import com.kapilagro.sasyak.worker.TaskUploadWorker
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -146,8 +156,6 @@ class ScoutingListViewModel @Inject constructor(
                 )) {
                     is ApiResponse.Success -> {
                         _createScoutingState.value = CreateScoutingState.Success(response.data)
-                        // Refresh the task list after successful creation
-                        //refreshTasks()
                     }
                     is ApiResponse.Error -> {
                         _createScoutingState.value = CreateScoutingState.Error(response.errorMessage)
@@ -161,6 +169,87 @@ class ScoutingListViewModel @Inject constructor(
             }
         }
     }
+
+    fun workerScoutingTask(
+        context: Context,
+        scoutingDetails: ScoutingDetails,
+        description: String,
+        imagesJson: List<String>? = null,
+        assignedToId: Int? = null
+    ) {
+        Log.d("WORKER", "WorkerScoutingTask called")
+        val previewEntity = PreviewEntity(
+            taskType = "SCOUTING",
+            valueName = scoutingDetails.valveName,
+            cropName = scoutingDetails.cropName,
+            row = scoutingDetails.row,
+            treeNo = scoutingDetails.treeNo
+        )
+
+        // Save for preview (non-blocking)
+        viewModelScope.launch(ioDispatcher) {
+            previewDao.insertPreview(previewEntity)
+        }
+
+        // UI feedback //  TODO()
+        _createScoutingState.value = CreateScoutingState.Loading
+
+        // ------------------ Step 1: TaskUploadWorker ------------------
+        val taskUploadData = workDataOf(
+            "taskType" to "SCOUTING",
+            "description" to description,
+            "imagesJson" to Json.encodeToString(imagesJson),
+            "detailsJson" to Json.encodeToString(scoutingDetails),
+            "assignedToId" to assignedToId
+        )
+        Log.d("WORKER", "TaskUploadData: $taskUploadData")
+
+        val taskUploadRequest = OneTimeWorkRequestBuilder<TaskUploadWorker>()
+            .setInputData(taskUploadData)
+            .setConstraints(
+                Constraints.Builder()
+                    .setRequiredNetworkType(NetworkType.CONNECTED)
+                    .build()
+            )
+            .build()
+
+        // ------------------ Step 2: FileUploadWorker ------------------
+        val fileUploadData = workDataOf(
+            "image_paths_input" to imagesJson?.toTypedArray(),
+            "folder_input" to "SCOUTING",
+            "enqueued_at" to System.currentTimeMillis()
+        )
+
+        val fileUploadRequest = OneTimeWorkRequestBuilder<FileUploadWorker>()
+            .setInputData(fileUploadData)
+            .setConstraints(
+                Constraints.Builder()
+                    .setRequiredNetworkType(NetworkType.CONNECTED)
+                    .build()
+            )
+            .build()
+
+        // ------------------ Step 3: AttachUrlWorker ------------------
+        val attachUrlRequest = OneTimeWorkRequestBuilder<AttachUrlWorker>()
+            .setConstraints(
+                Constraints.Builder()
+                    .setRequiredNetworkType(NetworkType.CONNECTED)
+                    .build()
+            )
+            .build()
+
+        // ------------------ Chain them ------------------
+        WorkManager.getInstance(context)
+            .beginWith(taskUploadRequest)
+            .then(fileUploadRequest)
+            .then(attachUrlRequest)
+            .enqueue()
+
+        // Optional: show pending state to UI immediately
+        //_createScoutingState.value = CreateScoutingState.Success(TaskResponce(0, "Pending", "Task is queued for upload"))
+    }
+
+
 
     fun clearCreateScoutingState() {
         _createScoutingState.value = CreateScoutingState.Idle

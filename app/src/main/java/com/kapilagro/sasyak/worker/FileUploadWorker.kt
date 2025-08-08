@@ -45,7 +45,6 @@ class FileUploadWorker @AssistedInject constructor(
         const val KEY_UPLOADED_URLS_OUTPUT = "uploaded_urls_output"
 
         fun createInputData(taskId: Int, imagePaths: List<String>, folder: String): Data {
-            print("shiva , $taskId , $imagePaths , $folder")
             return workDataOf(
                 KEY_TASK_ID_INPUT to taskId,
                 KEY_IMAGE_PATHS_INPUT to imagePaths.toTypedArray(),
@@ -60,6 +59,7 @@ class FileUploadWorker @AssistedInject constructor(
         val imagePaths = inputData.getStringArray(KEY_IMAGE_PATHS_INPUT) ?: emptyArray()
         val folder = inputData.getString(KEY_FOLDER_INPUT) ?: "Tasks"
         val enqueuedAt = inputData.getLong(KEY_ENQUEUED_AT, 0L)
+        Log.d("WORKER", "doWork2: $taskId, ${imagePaths.joinToString()}, $folder, $enqueuedAt")
 
         if (taskId == -1 || imagePaths.isEmpty()) {
             return@withContext Result.failure()
