@@ -8,6 +8,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -139,7 +140,7 @@ fun SprayingTaskDetailScreen(
                 title = { Text("Spraying Details") },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Default.ArrowBack, contentDescription = "Back")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -290,13 +291,6 @@ fun SprayingTaskDetailScreen(
                                     value = sprayingDetails.sprayingMethod
                                 )
 
-                                if (!sprayingDetails.target.isNullOrEmpty()) {
-                                    DetailRow(
-                                        icon = Icons.Outlined.BugReport,
-                                        label = "Target",
-                                        value = sprayingDetails.target
-                                    )
-                                }
 
                                 if (!sprayingDetails.weatherCondition.isNullOrEmpty()) {
                                     Divider(modifier = Modifier.padding(vertical = 8.dp))

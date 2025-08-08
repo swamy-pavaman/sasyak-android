@@ -21,6 +21,7 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.kapilagro.sasyak.data.api.ImageUploadService
+import com.kapilagro.sasyak.data.api.MultipartVideoUploadService
 import com.kapilagro.sasyak.di.IoDispatcher
 import com.kapilagro.sasyak.domain.repositories.WeatherRepository
 import com.kapilagro.sasyak.presentation.common.navigation.AppNavGraph

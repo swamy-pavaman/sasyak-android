@@ -1,5 +1,7 @@
 package com.kapilagro.sasyak.data.api
 
+import android.content.Context
+import android.net.Uri
 import android.util.Log
 import android.webkit.MimeTypeMap
 import com.kapilagro.sasyak.domain.models.ApiResponse
@@ -39,8 +41,8 @@ class ImageUploadService @Inject constructor(
         return MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension) ?: "application/octet-stream"
     }
 
-    suspend fun uploadFilek( files: List<File>, folder: String): ApiResponse<List<String>> = withContext(Dispatchers.IO) {
-        // this is dummy method just to show how it can be done
+    suspend fun uploadFilek(context: Context,uris: List<Uri>, folder: String): ApiResponse<List<String>> = withContext(Dispatchers.IO) {
+        val files = uris.mapNotNull { uriToFile(context, it) }
         return@withContext uploadFiles(files, folder)
     }
     suspend fun uploadFiles(files: List<File>, folder: String): ApiResponse<List<String>> = withContext(Dispatchers.IO) {
@@ -100,4 +102,18 @@ class ImageUploadService @Inject constructor(
     private fun extractCleanUrl(presignedUrl: String): String {
         return presignedUrl.substringBefore("?")
     }
+    private fun uriToFile(context: Context, uri: Uri): File? {
+        return try {
+            val inputStream = context.contentResolver.openInputStream(uri) ?: return null
+            val tempFile = File.createTempFile("upload_", null, context.cacheDir)
+            tempFile.outputStream().use { output ->
+                inputStream.copyTo(output)
+            }
+            tempFile
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
 }

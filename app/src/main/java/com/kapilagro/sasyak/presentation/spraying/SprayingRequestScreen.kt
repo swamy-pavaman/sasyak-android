@@ -141,13 +141,16 @@ fun SprayingRequestScreen(
     var dosageType by remember { mutableStateOf(savedStateHandle?.get<String>("dosageType") ?: "ml") }
     var sprayingMethod by remember { mutableStateOf(savedStateHandle?.get<String>("sprayingMethod") ?: "") }
     var sprayingMethodExpanded by remember { mutableStateOf(false) }
-    var target by remember { mutableStateOf(savedStateHandle?.get<String>("target") ?: "") }
+    var pest by remember { mutableStateOf(savedStateHandle?.get<String>("pest") ?: "") }
+    var pestExpanded by remember { mutableStateOf(false) }
+    var disease by remember { mutableStateOf(savedStateHandle?.get<String>("disease") ?: "") }
+    var diseaseExpanded by remember { mutableStateOf(false) }
     var weatherCondition by remember { mutableStateOf(savedStateHandle?.get<String>("weatherCondition") ?: "") }
+    var nutrients by remember { mutableStateOf(savedStateHandle?.get<String>("nutrients") ?: "") }
     var description by remember { mutableStateOf(savedStateHandle?.get<String>("description") ?: "") }
     var assignedTo by remember { mutableStateOf<Int?>(savedStateHandle?.get<Int>("assignedTo")) }
     var assignedToExpanded by remember { mutableStateOf(false) }
     var category by remember { mutableStateOf(savedStateHandle?.get<String>("category") ?: "Pest") }
-    var targetPest by remember { mutableStateOf(savedStateHandle?.get<String>("targetPest") ?: "") }
     var valveName by remember { mutableStateOf(savedStateHandle?.get<String>("valveName") ?: "") }
     var valveNameExpanded by remember { mutableStateOf(false) }
 
@@ -182,9 +185,10 @@ fun SprayingRequestScreen(
                 "dosage" to dosage,
                 "dosageType" to dosageType,
                 "sprayingMethod" to sprayingMethod,
-                "target" to target,
-                "targetPest" to targetPest,
                 "category" to category,
+                "pest" to pest,
+                "disease" to disease,
+                "nutrients" to nutrients,
                 "weatherCondition" to weatherCondition,
                 "description" to description,
                 "assignedTo" to assignedTo,
@@ -245,13 +249,6 @@ fun SprayingRequestScreen(
         }
     }
 
-    val treeNumbers by remember(valveName, cropName, row) {
-        derivedStateOf {
-            val treeList = valveDetails[valveName]?.get(cropName)?.rows?.get(row) ?: emptyList()
-            treeList
-        }
-    }
-
     val chemicals = when (val state = categoriesStates["Fertilizer"]) {
         is CategoriesState.Success -> state.categories.map { it.value }
         else -> listOf(
@@ -260,8 +257,6 @@ fun SprayingRequestScreen(
             "Mancozeb", "Copper Oxychloride", "Carbendazim", "Metalaxyl", "Thiram"
         )
     }
-
-    val targetItems = if (category == "Pest") pestList else diseaseList
 
     val sprayingMethods = listOf(
         "Backpack Sprayer", "Boom Sprayer", "Aerial Spraying", "Drip Application",
@@ -368,7 +363,6 @@ fun SprayingRequestScreen(
             "Chemical" to submittedEntry!!.chemicalName,
             "Dosage" to (submittedEntry!!.dosage ?: "Not specified"),
             "Method" to submittedEntry!!.sprayingMethod,
-            "Target Pest" to (submittedEntry!!.target ?: "Not specified"),
             "Weather" to (submittedEntry!!.weatherCondition ?: "Not specified")
         )
 
@@ -796,108 +790,129 @@ fun SprayingRequestScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Target Pest/disease
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            // Pest
+            ExposedDropdownMenuBox(
+                expanded = pestExpanded,
+                onExpandedChange = { pestExpanded = it },
+                modifier = Modifier.fillMaxWidth()
             ) {
-                // First dropdown
-                var categoryExpanded by remember { mutableStateOf(false) }
-                ExposedDropdownMenuBox(
-                    expanded = categoryExpanded,
-                    onExpandedChange = { categoryExpanded = it },
-                    modifier = Modifier
-                        .weight(0.4f)
-                        .fillMaxWidth()
-                ) {
-                    OutlinedTextField(
-                        value = category,
-                        onValueChange = { category = it },
-                        readOnly = true,
-                        label = { Text("Category") },
-                        trailingIcon = {
-                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded)
-                        },
-                        modifier = Modifier
-                            .menuAnchor()
-                            .fillMaxWidth(),
-                        shape = RoundedCornerShape(8.dp)
-                    )
-
-                    ExposedDropdownMenu(
-                        expanded = categoryExpanded,
-                        onDismissRequest = { categoryExpanded = false }
-                    ) {
-                        listOf("Pest", "Disease").forEach { item ->
-                            DropdownMenuItem(
-                                text = { Text(item) },
-                                onClick = {
-                                    category = item
-                                    targetPest = "" // Reset target when category changes
-                                    categoryExpanded = false
+                OutlinedTextField(
+                    value = pest,
+                    readOnly = false,
+                    onValueChange = { newValue ->
+                        pest = newValue
+                        pestExpanded = true
+                    },
+                    label = { Text("Pest") },
+                    trailingIcon = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ){
+                            if (pest.isNotEmpty()) {
+                                IconButton(onClick = { pest = "" }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Clear Pest ",
+                                        tint = MaterialTheme.colorScheme.onSurface
+                                    )
                                 }
-                            )
-                        }
-                    }
-                }
-
-                // Second dropdown
-                var targetExpanded by remember { mutableStateOf(false) }
-                ExposedDropdownMenuBox(
-                    expanded = targetExpanded,
-                    onExpandedChange = { targetExpanded = it },
-                    modifier = Modifier
-                        .weight(0.6f)
-                        .fillMaxWidth()
-                ) {
-                    OutlinedTextField(
-                        value = targetPest,
-                        onValueChange = { targetPest = it },
-                        readOnly = false,
-                        label = { Text("Target ${category.lowercase()}") },
-                        trailingIcon = {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically
-                            ){
-                                if (targetPest.isNotEmpty()) {
-                                    IconButton(onClick = { targetPest = "" }) {
-                                        Icon(
-                                            imageVector = Icons.Default.Close,
-                                            contentDescription = "Clear target pest",
-                                            tint = MaterialTheme.colorScheme.onSurface
-                                        )
-                                    }
-                                }
-                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = targetExpanded)
-                                Spacer(modifier = Modifier.width(8.dp))
                             }
-                        },
-                        modifier = Modifier
-                            .menuAnchor()
-                            .fillMaxWidth(),
-                        shape = RoundedCornerShape(8.dp)
-                    )
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = pestExpanded)
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(),
+                    shape = RoundedCornerShape(8.dp)
+                )
 
-                    ExposedDropdownMenu(
-                        expanded = targetExpanded,
-                        onDismissRequest = { targetExpanded = false }
-                    ) {
-                        targetItems
-                            .filter { it.contains(targetPest, ignoreCase = true) }
-                            .forEach { item ->
+                ExposedDropdownMenu(
+                    expanded = pestExpanded,
+                    onDismissRequest = { pestExpanded = false }
+                ) {
+                    pestList
+                        .filter { it.contains(pest, ignoreCase = true) }
+                        .forEach { method ->
                             DropdownMenuItem(
-                                text = { Text(item) },
+                                text = { Text(method) },
                                 onClick = {
-                                    targetPest = item
-                                    targetExpanded = false
+                                    pest = method
+                                    pestExpanded = false
                                 }
                             )
                         }
-                    }
                 }
             }
-            //target = "$category : $targetPest"
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Disease
+            ExposedDropdownMenuBox(
+                expanded = diseaseExpanded,
+                onExpandedChange = { diseaseExpanded = it },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    value = disease,
+                    readOnly = false,
+                    onValueChange = { newValue ->
+                        disease = newValue
+                        diseaseExpanded = true
+                    },
+                    label = { Text("Disease") },
+                    trailingIcon = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ){
+                            if (disease.isNotEmpty()) {
+                                IconButton(onClick = { disease = "" }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Clear Disease ",
+                                        tint = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = diseaseExpanded)
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(),
+                    shape = RoundedCornerShape(8.dp)
+                )
+
+                ExposedDropdownMenu(
+                    expanded = diseaseExpanded,
+                    onDismissRequest = { diseaseExpanded = false }
+                ) {
+                    diseaseList
+                        .filter { it.contains(disease, ignoreCase = true) }
+                        .forEach { method ->
+                            DropdownMenuItem(
+                                text = { Text(method) },
+                                onClick = {
+                                    disease = method
+                                    diseaseExpanded = false
+                                }
+                            )
+                        }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Nutrients
+            OutlinedTextField(
+                value = nutrients,
+                onValueChange = { nutrients = it },
+                label = { Text("Nutrients") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp)
+            )
+
             Spacer(modifier = Modifier.height(16.dp))
 
             // Weather Condition
@@ -1239,7 +1254,9 @@ fun SprayingRequestScreen(
                                 chemicalName = chemicalName,
                                 dosage = if (dosage.isNotBlank()) "$dosage $dosageType" else null,
                                 sprayingMethod = sprayingMethod,
-                                target = if (targetPest.isNotBlank()) "$category : $targetPest" else null,
+                                nutrients = nutrients.ifBlank { null },
+                                disease = disease.ifBlank { null },
+                                pest = pest.ifBlank { null },
                                 weatherCondition = weatherCondition.ifBlank { null },
                                 valveName = valveName,
                                 dueDate = if (userRole == "MANAGER" || userRole == "ADMIN") dueDateText else null,

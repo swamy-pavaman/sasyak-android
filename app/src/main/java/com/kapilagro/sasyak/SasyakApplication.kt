@@ -1,6 +1,7 @@
 package com.kapilagro.sasyak
 
 import android.app.Application
+import android.util.Log
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import androidx.work.WorkManager
@@ -24,6 +25,7 @@ class SasyakApplication : Application(), Configuration.Provider,ImageLoaderFacto
     // This is the correct implementation for modern versions of the WorkManager library.
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
+            .setMinimumLoggingLevel(Log.DEBUG)
             .setWorkerFactory(workerFactory)
             .build()
 

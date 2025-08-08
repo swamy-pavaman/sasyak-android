@@ -8,6 +8,7 @@ import androidx.work.Data
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.kapilagro.sasyak.data.api.ImageUploadService
+import com.kapilagro.sasyak.data.api.MultipartVideoUploadService
 import com.kapilagro.sasyak.domain.models.ApiResponse
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -19,7 +20,8 @@ import java.io.File
 class FileUploadWorker @AssistedInject constructor(
     @Assisted appContext: Context,
     @Assisted workerParams: WorkerParameters,
-    private val imageUploader: ImageUploadService // Assumes this service is provided via Hilt
+    private val imageUploader: ImageUploadService, // Assumes this service is provided via Hilt
+    private val videoUploader: MultipartVideoUploadService // Assumes this service is provided via Hilt
 ) : CoroutineWorker(appContext, workerParams) {
 
     companion object {
@@ -43,7 +45,6 @@ class FileUploadWorker @AssistedInject constructor(
         const val KEY_UPLOADED_URLS_OUTPUT = "uploaded_urls_output"
 
         fun createInputData(taskId: Int, imagePaths: List<String>, folder: String): Data {
-            print("shiva , $taskId , $imagePaths , $folder")
             return workDataOf(
                 KEY_TASK_ID_INPUT to taskId,
                 KEY_IMAGE_PATHS_INPUT to imagePaths.toTypedArray(),
@@ -58,6 +59,7 @@ class FileUploadWorker @AssistedInject constructor(
         val imagePaths = inputData.getStringArray(KEY_IMAGE_PATHS_INPUT) ?: emptyArray()
         val folder = inputData.getString(KEY_FOLDER_INPUT) ?: "Tasks"
         val enqueuedAt = inputData.getLong(KEY_ENQUEUED_AT, 0L)
+        Log.d("WORKER", "doWork2: $taskId, ${imagePaths.joinToString()}, $folder, $enqueuedAt")
 
         if (taskId == -1 || imagePaths.isEmpty()) {
             return@withContext Result.failure()
@@ -83,10 +85,21 @@ class FileUploadWorker @AssistedInject constructor(
 
         imageFiles.forEachIndexed { index, file ->
             try {
-                // Assuming `uploadFiles` can take a single file in a list
-                when (val result = imageUploader.uploadFiles(listOf(file), folder)) {
+                val result = if (file.extension.equals("mp4", ignoreCase = true)) {
+                    // Handle .mp4 files with video upload service
+                    videoUploader.uploadFileInChunks(file, folder)
+                } else {
+                    // Handle other files (images) with image uploader
+                    imageUploader.uploadFiles(listOf(file), folder)
+                }
+
+                when (result) {
                     is ApiResponse.Success -> {
-                        uploadedUrls.addAll(result.data)
+                        uploadedUrls.addAll(if (file.extension.equals("mp4", ignoreCase = true)) {
+                            listOf(result.data as String) // Video upload returns a single URL
+                        } else {
+                            result.data as List<String> // Image upload returns a list of URLs
+                        })
                         val progressData = workDataOf(
                             KEY_PROGRESS_TASK_ID to taskId,
                             KEY_PROGRESS_FOLDER to folder,
@@ -97,13 +110,13 @@ class FileUploadWorker @AssistedInject constructor(
                         setProgress(progressData)
                     }
                     is ApiResponse.Error -> {
-                        Log.e("FileUploadWorker", "Upload failed: ${result.errorMessage}. Retrying.")
+                        Log.e("FileUploadWorker", "Upload failed for ${file.name}: ${result.errorMessage}. Retrying.")
                         return@withContext Result.retry()
                     }
                     is ApiResponse.Loading -> {} // Not applicable in a background worker
                 }
             } catch (e: Exception) {
-                Log.e("FileUploadWorker", "Exception during upload: ${e.message}. Retrying.")
+                Log.e("FileUploadWorker", "Exception during upload of ${file.name}: ${e.message}. Retrying.")
                 return@withContext Result.retry()
             }
         }
