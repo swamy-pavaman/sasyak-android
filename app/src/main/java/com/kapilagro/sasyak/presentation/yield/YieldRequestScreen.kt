@@ -372,9 +372,9 @@ fun YieldRequestScreen(
                 actions = {
                     IconButton(onClick = {
                         if (previewData != null) {
+                            valveName = previewData?.valueName ?: valveName
                             cropName = previewData?.cropName ?: cropName
                             row = previewData?.row ?: row
-                            valveName = previewData?.valueName ?: valveName
                         }
                     })
                     {
