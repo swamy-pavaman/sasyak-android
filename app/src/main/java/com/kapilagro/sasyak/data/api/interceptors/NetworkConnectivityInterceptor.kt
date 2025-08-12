@@ -13,11 +13,26 @@ import javax.inject.Inject
 class NetworkConnectivityInterceptor @Inject constructor(
     @ApplicationContext private val context: Context
 ) : Interceptor {
+    private val cacheAllowedEndpoints = listOf(
+        "api/catalog/Valve",
+        "api/manager/users/supervisor-list",
+        "api/admin/users/by-role/MANAGER",
+        "api/admin/users/by-role/SUPERVISOR"
+    )
 
     override fun intercept(chain: Interceptor.Chain): Response {
+        val requestUrl = chain.request().url.toString()
+
+        // If request matches any of the allowed endpoints, skip network check
+        if (cacheAllowedEndpoints.any { requestUrl.contains(it, ignoreCase = true) }) {
+            return chain.proceed(chain.request())
+        }
+
+        // Otherwise check network
         if (!isNetworkAvailable()) {
             throw NoConnectivityException()
         }
+
         return chain.proceed(chain.request())
     }
 
