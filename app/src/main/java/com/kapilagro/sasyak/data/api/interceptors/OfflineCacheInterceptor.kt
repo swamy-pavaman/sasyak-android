@@ -14,7 +14,9 @@ class OfflineCacheInterceptor @Inject constructor(
         "api/catalog/Valve",
         "api/manager/users/supervisor-list",
         "api/admin/users/by-role/MANAGER",
-        "api/admin/users/by-role/SUPERVISOR"
+        "api/admin/users/by-role/SUPERVISOR",
+        "api/catalog/Driver",
+        "api/catalog/Vehicle"
     )
 
     override fun intercept(chain: Interceptor.Chain): Response {

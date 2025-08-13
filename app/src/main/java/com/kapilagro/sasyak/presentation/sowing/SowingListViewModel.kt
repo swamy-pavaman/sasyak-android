@@ -1,6 +1,15 @@
 package com.kapilagro.sasyak.presentation.sowing
 
-import android.R.string
+import android.content.Context
+import android.util.Log
+import androidx.work.Constraints
+import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.workDataOf
+import com.kapilagro.sasyak.worker.AttachUrlWorker
+import com.kapilagro.sasyak.worker.FileUploadWorker
+import com.kapilagro.sasyak.worker.TaskUploadWorker
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kapilagro.sasyak.data.db.dao.PreviewDao
@@ -194,6 +203,81 @@ class SowingListViewModel @Inject constructor(
                 _createSowingState.value = CreateSowingState.Error(e.message ?: "Unknown error")
             }
         }
+    }
+
+    fun workerSowingTask(
+        context: Context,
+        sowingDetails: SowingDetails,
+        description: String,
+        imagesJson: List<String>? = null,
+        assignedToId: Int? = null
+    ) {
+        val previewEntity = PreviewEntity(
+            taskType = "SOWING",
+            valueName = sowingDetails.valveName,
+            cropName = sowingDetails.cropName,
+            row = sowingDetails.row
+        )
+
+        // Save for preview (non-blocking)
+        viewModelScope.launch(ioDispatcher) {
+            previewDao.insertPreview(previewEntity)
+        }
+
+        // UI feedback //  TODO()
+        _createSowingState.value = CreateSowingState.Loading
+
+        // ------------------ Step 1: TaskUploadWorker ------------------
+        val taskUploadData = workDataOf(
+            "taskType" to "SOWING",
+            "description" to description,
+            "imagesJson" to Json.encodeToString(imagesJson),
+            "detailsJson" to Json.encodeToString(sowingDetails),
+            "assignedToId" to assignedToId
+        )
+        Log.d("WORKER", "TaskUploadData: $taskUploadData")
+
+        val taskUploadRequest = OneTimeWorkRequestBuilder<TaskUploadWorker>()
+            .setInputData(taskUploadData)
+            .setConstraints(
+                Constraints.Builder()
+                    .setRequiredNetworkType(NetworkType.CONNECTED)
+                    .build()
+            )
+            .build()
+
+        // ------------------ Step 2: FileUploadWorker ------------------
+        val fileUploadData = workDataOf(
+            "image_paths_input" to imagesJson?.toTypedArray(),
+            "folder_input" to "SOWING",
+            "enqueued_at" to System.currentTimeMillis()
+        )
+
+        val fileUploadRequest = OneTimeWorkRequestBuilder<FileUploadWorker>()
+            .setInputData(fileUploadData)
+            .setConstraints(
+                Constraints.Builder()
+                    .setRequiredNetworkType(NetworkType.CONNECTED)
+                    .build()
+            )
+            .build()
+
+        // ------------------ Step 3: AttachUrlWorker ------------------
+        val attachUrlRequest = OneTimeWorkRequestBuilder<AttachUrlWorker>()
+            .setConstraints(
+                Constraints.Builder()
+                    .setRequiredNetworkType(NetworkType.CONNECTED)
+                    .build()
+            )
+            .build()
+
+        // ------------------ Chain them ------------------
+        WorkManager.getInstance(context)
+            .beginWith(taskUploadRequest)
+            .then(fileUploadRequest)
+            .then(attachUrlRequest)
+            .enqueue()
+
     }
 
     fun clearCreateSowingState() {

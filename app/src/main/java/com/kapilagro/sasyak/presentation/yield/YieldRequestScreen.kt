@@ -92,6 +92,8 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import com.kapilagro.sasyak.presentation.common.components.TaskSubmittedDialog
+import com.kapilagro.sasyak.utils.NetworkUtils
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
@@ -121,6 +123,7 @@ fun YieldRequestScreen(
     // Dialog state
     var showSuccessDialog by remember { mutableStateOf(false) }
     var submittedEntry by remember { mutableStateOf<YieldDetails?>(null) }
+    var showWorkerDialog by remember { mutableStateOf(false) }
 
 
     // Form fields with saved state
@@ -303,9 +306,35 @@ fun YieldRequestScreen(
                 }
                 showSuccessDialog = true
             }
+            is YieldListViewModel.CreateYieldState.Error -> {
+                if (submittedEntry != null && !NetworkUtils.isNetworkAvailable(context)) {
+                    val imageFilePaths = imageUris.mapNotNull { uri ->
+                        // Use the new static method from the ViewModel's companion object.
+                        ImageCaptureViewModel.copyUriToCachedFile(context, uri)?.absolutePath
+                    }
+                    Log.d("WORKER", "WorkerRequest started")
+                    viewModel.workerYieldTask(
+                        context = context,
+                        yieldDetails = submittedEntry!!,
+                        description = description,
+                        imagesJson = imageFilePaths,
+                        assignedToId = if (userRole == "MANAGER" || userRole == "ADMIN") assignedTo else null
+                    )
+                    showWorkerDialog = true
+                }
+            }
+
             else -> Unit
         }
     }
+
+    if (showWorkerDialog) {
+        TaskSubmittedDialog(
+            navController = navController,
+            onDismiss = { showWorkerDialog = false }
+        )
+    }
+
     // Resets dependent fields
     LaunchedEffect(valveName) {
         if (valveName.isEmpty()) {

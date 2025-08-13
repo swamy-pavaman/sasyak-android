@@ -91,6 +91,8 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import com.kapilagro.sasyak.presentation.common.components.TaskSubmittedDialog
+import com.kapilagro.sasyak.utils.NetworkUtils
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
@@ -122,6 +124,7 @@ fun SprayingRequestScreen(
     // Dialog state
     var showSuccessDialog by remember { mutableStateOf(false) }
     var submittedEntry by remember { mutableStateOf<SprayingDetails?>(null) }
+    var showWorkerDialog by remember { mutableStateOf(false) }
 
 
     // Form fields with saved state
@@ -291,10 +294,6 @@ fun SprayingRequestScreen(
             }
     }
 
-
-
-
-
     LaunchedEffect(createSprayingState) {
         when (createSprayingState) {
             is SprayingListViewModel.CreateSprayingState.Success -> {
@@ -333,9 +332,33 @@ fun SprayingRequestScreen(
 
                 showSuccessDialog = true
             }
+            is SprayingListViewModel.CreateSprayingState.Error -> {
+                if (submittedEntry != null && !NetworkUtils.isNetworkAvailable(context)) {
+                    val imageFilePaths = imageUris.mapNotNull { uri ->
+                        // Use the new static method from the ViewModel's companion object.
+                        ImageCaptureViewModel.copyUriToCachedFile(context, uri)?.absolutePath
+                    }
+                    Log.d("WORKER", "WorkerRequest started")
+                    viewModel.workerSprayingTask(
+                        context = context,
+                        sprayingDetails = submittedEntry!!,
+                        description = description,
+                        imagesJson = imageFilePaths,
+                        assignedToId = if (userRole == "MANAGER" || userRole == "ADMIN") assignedTo else null
+                    )
+                    showWorkerDialog = true
+                }
+            }
 
             else -> Unit
         }
+    }
+
+    if (showWorkerDialog) {
+        TaskSubmittedDialog(
+            navController = navController,
+            onDismiss = { showWorkerDialog = false }
+        )
     }
 
 

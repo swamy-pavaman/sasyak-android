@@ -37,6 +37,7 @@ import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import com.kapilagro.sasyak.presentation.common.components.TaskSubmittedDialog
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
@@ -91,6 +92,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import com.kapilagro.sasyak.utils.NetworkUtils
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
@@ -121,6 +123,7 @@ fun SowingRequestScreen(
     var showSuccessDialog by remember { mutableStateOf(false) }
     var submittedEntry by remember { mutableStateOf<SowingDetails?>(null) }
 //    var uploadState by remember { mutableStateOf<UploadState>(UploadState.Idle) }
+    var showWorkerDialog by remember { mutableStateOf(false) }
 
     // Form fields with saved state
     val savedStateHandle = navController.currentBackStackEntry?.savedStateHandle
@@ -319,10 +322,35 @@ fun SowingRequestScreen(
                 // Show success dialog immediately, don't wait for upload
                 showSuccessDialog = true
             }
+            is SowingListViewModel.CreateSowingState.Error -> {
+                if (submittedEntry != null && !NetworkUtils.isNetworkAvailable(context)) {
+                    val imageFilePaths = imageUris.mapNotNull { uri ->
+                        // Use the new static method from the ViewModel's companion object.
+                        ImageCaptureViewModel.copyUriToCachedFile(context, uri)?.absolutePath
+                    }
+                    Log.d("WORKER", "WorkerRequest started")
+                    viewModel.workerSowingTask(
+                        context = context,
+                        sowingDetails = submittedEntry!!,
+                        description = description,
+                        imagesJson = imageFilePaths,
+                        assignedToId = if (userRole == "MANAGER" || userRole == "ADMIN") assignedTo else null
+                    )
+                    showWorkerDialog = true
+                }
+            }
+
             else -> {
                 // Handle other states like Error or Loading if needed
             }
         }
+    }
+
+    if (showWorkerDialog) {
+        TaskSubmittedDialog(
+            navController = navController,
+            onDismiss = { showWorkerDialog = false }
+        )
     }
 
 
