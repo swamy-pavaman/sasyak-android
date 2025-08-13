@@ -1,6 +1,8 @@
 package com.kapilagro.sasyak.presentation.scouting
 
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.net.Uri
 import android.os.Build
 import android.util.Log
@@ -79,6 +81,7 @@ import com.kapilagro.sasyak.domain.models.ScoutingDetails
 import com.kapilagro.sasyak.presentation.common.catalog.CategoriesState
 import com.kapilagro.sasyak.presentation.common.catalog.CategoryViewModel
 import com.kapilagro.sasyak.presentation.common.components.SuccessDialog
+import com.kapilagro.sasyak.presentation.common.components.TaskSubmittedDialog
 import com.kapilagro.sasyak.presentation.common.image.ImageCaptureViewModel
 import com.kapilagro.sasyak.presentation.common.navigation.Screen
 import com.kapilagro.sasyak.presentation.common.theme.AgroPrimary
@@ -98,6 +101,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import com.kapilagro.sasyak.utils.NetworkUtils
 
 // Data classes for JSON parsing
 @Serializable
@@ -150,6 +154,7 @@ fun ScoutingRequestScreen(
     var showSuccessDialog by remember { mutableStateOf(false) }
     var submittedEntry by remember { mutableStateOf<ScoutingDetails?>(null) }
     var uploadState by remember { mutableStateOf<UploadState>(UploadState.Idle) }
+    var showWorkerDialog by remember { mutableStateOf(false) }
 
     // Form fields with saved state
     val savedStateHandle = navController.currentBackStackEntry?.savedStateHandle
@@ -168,12 +173,15 @@ fun ScoutingRequestScreen(
     var noOfFruitSeen by remember { mutableStateOf(savedStateHandle?.get<String>("noOfFruitSeen") ?: "") }
     var noOfFlowersSeen by remember { mutableStateOf(savedStateHandle?.get<String>("noOfFlowersSeen") ?: "") }
     var noOfFruitsDropped by remember { mutableStateOf(savedStateHandle?.get<String>("noOfFruitsDropped") ?: "") }
-    var targetPest by remember { mutableStateOf(savedStateHandle?.get<String>("targetPest") ?: "") }
-    var nameOfDiseaseExpanded by remember { mutableStateOf(false) }
     var description by remember { mutableStateOf(savedStateHandle?.get<String>("description") ?: "") }
     var assignedTo by remember { mutableStateOf<Int?>(savedStateHandle?.get<Int>("assignedTo")) }
     var assignedToExpanded by remember { mutableStateOf(false) }
     var imageUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
+    var pest by remember { mutableStateOf(savedStateHandle?.get<String>("pest") ?: "") }
+    var pestExpanded by remember { mutableStateOf(false) }
+    var disease by remember { mutableStateOf(savedStateHandle?.get<String>("disease") ?: "") }
+    var diseaseExpanded by remember { mutableStateOf(false) }
+    var nutrients by remember { mutableStateOf(savedStateHandle?.get<String>("nutrients") ?: "") }
     // State for selected role and user
     var selectedRole by remember { mutableStateOf(savedStateHandle?.get<String>("selectedRole") ?:"Manager") }
     var selectedUser by remember { mutableStateOf(savedStateHandle?.get<String>("selectedUser") ?:"") }
@@ -208,7 +216,9 @@ fun ScoutingRequestScreen(
                 "noOfFruitSeen" to noOfFruitSeen,
                 "noOfFlowersSeen" to noOfFlowersSeen,
                 "noOfFruitsDropped" to noOfFruitsDropped,
-                "targetPest" to targetPest,
+                "pest" to pest,
+                "disease" to disease,
+                "nutrients" to nutrients,
                 "description" to description,
                 "assignedTo" to assignedTo,
                 "valveName" to valveName,
@@ -261,7 +271,6 @@ fun ScoutingRequestScreen(
         "Stem Borer","Nematodes","Thrips","Mealy Bugs","Scales","Hoppers","Caterpillars"
     )
 
-    val targetItems = if (category == "Pest") pestList else diseaseList
 
     val rows by remember(valveName, cropName) {
         derivedStateOf {
@@ -377,8 +386,25 @@ fun ScoutingRequestScreen(
                 showSuccessDialog = true
             }
 
+            is ScoutingListViewModel.CreateScoutingState.Error -> {
+                if (submittedEntry != null && !NetworkUtils.isNetworkAvailable(context)) {
+                    val imageFilePaths = imageUris.mapNotNull { uri ->
+                        // Use the new static method from the ViewModel's companion object.
+                        ImageCaptureViewModel.copyUriToCachedFile(context, uri)?.absolutePath
+                    }
+                    Log.d("WORKER", "WorkerRequest started")
+                    viewModel.workerScoutingTask(
+                        context = context,
+                        scoutingDetails = submittedEntry!!,
+                        description = description,
+                        imagesJson = imageFilePaths,
+                        assignedToId = if (userRole == "MANAGER" || userRole == "ADMIN") assignedTo else null
+                    )
+                    showWorkerDialog = true
+                }
+            }
             else -> {
-                // Handle other states if needed
+                // Handle other states as needed
             }
         }
     }
@@ -394,7 +420,6 @@ fun ScoutingRequestScreen(
             "Fruits Seen" to (submittedEntry!!.noOfFruitSeen ?: "Not specified"),
             "Flowers Seen" to (submittedEntry!!.noOfFlowersSeen ?: "Not specified"),
             "Fruits Dropped" to (submittedEntry!!.noOfFruitsDropped ?: "Not specified"),
-            "Disease" to (submittedEntry!!.targetPest ?: "None detected")
         )
 
         SuccessDialog(
@@ -424,6 +449,13 @@ fun ScoutingRequestScreen(
         )
     }
 
+    if (showWorkerDialog) {
+        TaskSubmittedDialog(
+            navController = navController,
+            onDismiss = { showWorkerDialog = false }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -436,9 +468,9 @@ fun ScoutingRequestScreen(
                 actions = {
                     IconButton(onClick = {
                         if (previewData != null) {
+                            valveName = previewData?.valueName ?: valveName
                             cropName = previewData?.cropName ?: cropName
                             row = previewData?.row ?: row
-                            valveName = previewData?.valueName ?: valveName
                             treeNo = previewData?.treeNo ?: treeNo
                         }
                     })
@@ -732,107 +764,128 @@ fun ScoutingRequestScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Name of the Disease and Pest Dropdown
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            // Pest
+            ExposedDropdownMenuBox(
+                expanded = pestExpanded,
+                onExpandedChange = { pestExpanded = it },
+                modifier = Modifier.fillMaxWidth()
             ) {
-                // First dropdown
-                var categoryExpanded by remember { mutableStateOf(false) }
-                ExposedDropdownMenuBox(
-                    expanded = categoryExpanded,
-                    onExpandedChange = { categoryExpanded = it },
+                OutlinedTextField(
+                    value = pest,
+                    readOnly = false,
+                    onValueChange = { newValue ->
+                        pest = newValue
+                        pestExpanded = true
+                    },
+                    label = { Text("Pest") },
+                    trailingIcon = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ){
+                            if (pest.isNotEmpty()) {
+                                IconButton(onClick = { pest = "" }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Clear Pest ",
+                                        tint = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = pestExpanded)
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                    },
                     modifier = Modifier
-                        .weight(0.4f)
                         .fillMaxWidth()
-                ) {
-                    OutlinedTextField(
-                        value = category,
-                        onValueChange = { category = it },
-                        readOnly = true,
-                        label = { Text("Category") },
-                        trailingIcon = {
-                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded)
-                        },
-                        modifier = Modifier
-                            .menuAnchor()
-                            .fillMaxWidth(),
-                        shape = RoundedCornerShape(8.dp)
-                    )
+                        .menuAnchor(),
+                    shape = RoundedCornerShape(8.dp)
+                )
 
-                    ExposedDropdownMenu(
-                        expanded = categoryExpanded,
-                        onDismissRequest = { categoryExpanded = false }
-                    ) {
-                        listOf("Pest", "Disease").forEach { item ->
+                ExposedDropdownMenu(
+                    expanded = pestExpanded,
+                    onDismissRequest = { pestExpanded = false }
+                ) {
+                    pestList
+                        .filter { it.contains(pest, ignoreCase = true) }
+                        .forEach { method ->
                             DropdownMenuItem(
-                                text = { Text(item) },
+                                text = { Text(method) },
                                 onClick = {
-                                    category = item
-                                    targetPest = "" // Reset target when category changes
-                                    categoryExpanded = false
+                                    pest = method
+                                    pestExpanded = false
                                 }
                             )
                         }
-                    }
-                }
-
-                // Second dropdown
-                var targetExpanded by remember { mutableStateOf(false) }
-                ExposedDropdownMenuBox(
-                    expanded = targetExpanded,
-                    onExpandedChange = { targetExpanded = it },
-                    modifier = Modifier
-                        .weight(0.6f)
-                        .fillMaxWidth()
-                ) {
-                    OutlinedTextField(
-                        value = targetPest,
-                        onValueChange = { targetPest = it },
-                        readOnly = false,
-                        label = { Text("Target ${category.lowercase()}") },
-                        trailingIcon = {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically
-                            ){
-                                if (targetPest.isNotEmpty()) {
-                                    IconButton(onClick = { targetPest = "" }) {
-                                        Icon(
-                                            imageVector = Icons.Default.Close,
-                                            contentDescription = "Clear target pest",
-                                            tint = MaterialTheme.colorScheme.onSurface
-                                        )
-                                    }
-                                }
-                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = targetExpanded)
-                                Spacer(modifier = Modifier.width(8.dp))
-                            }
-                        },
-                        modifier = Modifier
-                            .menuAnchor()
-                            .fillMaxWidth(),
-                        shape = RoundedCornerShape(8.dp)
-                    )
-
-                    ExposedDropdownMenu(
-                        expanded = targetExpanded,
-                        onDismissRequest = { targetExpanded = false }
-                    ) {
-                        targetItems
-                            .filter { it.contains(targetPest, ignoreCase = true) }
-                            .forEach { item ->
-                                DropdownMenuItem(
-                                    text = { Text(item) },
-                                    onClick = {
-                                        targetPest = item
-                                        targetExpanded = false
-                                    }
-                                )
-                            }
-                    }
                 }
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Disease
+            ExposedDropdownMenuBox(
+                expanded = diseaseExpanded,
+                onExpandedChange = { diseaseExpanded = it },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    value = disease,
+                    readOnly = false,
+                    onValueChange = { newValue ->
+                        disease = newValue
+                        diseaseExpanded = true
+                    },
+                    label = { Text("Disease") },
+                    trailingIcon = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ){
+                            if (disease.isNotEmpty()) {
+                                IconButton(onClick = { disease = "" }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Clear Disease ",
+                                        tint = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = diseaseExpanded)
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(),
+                    shape = RoundedCornerShape(8.dp)
+                )
+
+                ExposedDropdownMenu(
+                    expanded = diseaseExpanded,
+                    onDismissRequest = { diseaseExpanded = false }
+                ) {
+                    diseaseList
+                        .filter { it.contains(disease, ignoreCase = true) }
+                        .forEach { method ->
+                            DropdownMenuItem(
+                                text = { Text(method) },
+                                onClick = {
+                                    disease = method
+                                    diseaseExpanded = false
+                                }
+                            )
+                        }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Nutrients
+            OutlinedTextField(
+                value = nutrients,
+                onValueChange = { nutrients = it },
+                label = { Text("Nutrients") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp)
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -1184,7 +1237,9 @@ fun ScoutingRequestScreen(
                                 noOfFruitSeen = noOfFruitSeen.ifBlank { null },
                                 noOfFlowersSeen = noOfFlowersSeen.ifBlank { null },
                                 noOfFruitsDropped = noOfFruitsDropped.ifBlank { null },
-                                targetPest = if (targetPest.isNotBlank()) "$category : $targetPest" else null,
+                                nutrients = nutrients.ifBlank { null },
+                                disease = disease.ifBlank { null },
+                                pest = pest.ifBlank { null },
                                 valveName = valveName,
                                 dueDate = if (userRole == "MANAGER" || userRole == "ADMIN") dueDateText else null,
                                 latitude = location?.latitude,

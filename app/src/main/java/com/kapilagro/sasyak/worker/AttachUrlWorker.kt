@@ -22,6 +22,7 @@ class AttachUrlWorker @AssistedInject constructor(
         // Get the Task ID and URLs from the previous worker's output.
         val taskId = inputData.getInt(FileUploadWorker.KEY_TASK_ID_OUTPUT, -1)
         val uploadedUrls = inputData.getStringArray(FileUploadWorker.KEY_UPLOADED_URLS_OUTPUT)
+        Log.d("WORKER", "doWork3: $taskId, $uploadedUrls")
 
         if (taskId == -1 || uploadedUrls.isNullOrEmpty()) {
             Log.e("AttachUrlWorker", "Invalid input data from FileUploadWorker.")

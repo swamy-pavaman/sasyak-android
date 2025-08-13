@@ -1,6 +1,7 @@
 package com.kapilagro.sasyak.presentation.tasks
 
 
+import android.net.Uri
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
@@ -32,6 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -43,6 +45,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
+import coil.request.ImageRequest
 import com.kapilagro.sasyak.R
 import com.kapilagro.sasyak.di.IoDispatcher
 import com.kapilagro.sasyak.data.api.ImageUploadService
@@ -85,21 +88,22 @@ fun TaskDetailScreen(
     var comment by remember { mutableStateOf("") }
     var implementationInput by rememberSaveable { mutableStateOf("") }
     var shouldRefresh by remember { mutableStateOf(false) }
-    var implementationImages by remember { mutableStateOf<List<File>?>(null) }
+    var implementationImages by remember { mutableStateOf<List<Uri>?>(null) }
     var uploadState by remember { mutableStateOf<UploadState>(UploadState.Idle) }
     val scope = rememberCoroutineScope()
     var imagesToPreview by remember { mutableStateOf<List<String>?>(null) }
     var showPreviewDialog by remember { mutableStateOf(false) }
     var showAllAdvices by remember { mutableStateOf(false) }
     var showAllImplementations by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+
 
     LaunchedEffect(navController) {
-        navController.currentBackStackEntry?.savedStateHandle?.getStateFlow<List<File>>(
-            "selectedImages",
-            emptyList()
-        )
-            ?.collect { files ->
-                implementationImages = files
+        navController.currentBackStackEntry
+            ?.savedStateHandle
+            ?.getStateFlow<List<String>>("selectedImages", emptyList())
+            ?.collect { uriStrings ->
+                implementationImages = uriStrings.map { Uri.parse(it) }
             }
     }
 
@@ -887,6 +891,7 @@ fun TaskDetailScreen(
                                         }
 
                                         if (implementationImages != null && implementationImages!!.isNotEmpty()) {
+                                            Log.d("implementationImages", implementationImages.toString())
                                             Spacer(modifier = Modifier.height(8.dp))
                                             Row(
                                                 modifier = Modifier
@@ -904,8 +909,10 @@ fun TaskDetailScreen(
                                                         ) {
                                                             Image(
                                                                 painter = rememberAsyncImagePainter(
-                                                                    file
-                                                                ),
+                                                                    ImageRequest.Builder(context)
+                                                                        .data(file)
+                                                                        .crossfade(true)
+                                                                        .build()),
                                                                 contentDescription = "Selected image",
                                                                 modifier = Modifier.fillMaxSize(),
                                                                 contentScale = ContentScale.Crop
@@ -970,6 +977,7 @@ fun TaskDetailScreen(
                                                             uploadState = UploadState.Loading
                                                             val uploadResult =
                                                                 imageUploadService.uploadFilek(
+                                                                    context,
                                                                     implementationImages!!,
                                                                     "TASK_$taskId"
                                                                 )
@@ -1147,7 +1155,9 @@ fun FormattedScoutingFields(detailsJson: String?) {
             "Crop" to it.optString("cropName", ""),
             "Row" to it.optString("row", ""),
             "Tree Number" to it.optString("treeNo", ""),
-            "Disease" to it.optString("targetPest", "None detected"),
+            "Disease" to it.optString("disease", ""),
+            "Pest" to it.optString("pest", ""),
+            "Nutrients" to it.optString("nutrients", ""),
             "Fruits Count" to it.optString("noOfFruitSeen", ""),
             "Flowers Count" to it.optString("noOfFlowersSeen", ""),
             "Fruits Dropped" to it.optString("noOfFruitsDropped", ""),

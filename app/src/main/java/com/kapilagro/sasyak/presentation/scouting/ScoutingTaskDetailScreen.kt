@@ -316,28 +316,28 @@ fun ScoutingTaskDetailScreen(
                                     }
                                 }
 
-                                // Disease information (if available)
-                                if (!scoutingDetails.targetPest.isNullOrEmpty()) {
-                                    Spacer(modifier = Modifier.height(16.dp))
-                                    Divider(color = Purple200)
-                                    Spacer(modifier = Modifier.height(16.dp))
-
-                                    Text(
-                                        text = "Disease Information",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color.Red
-                                    )
-
-                                    Spacer(modifier = Modifier.height(8.dp))
-
-                                    DetailRow(
-                                        icon = Icons.Outlined.BugReport,
-                                        label = "Disease",
-                                        value = scoutingDetails.targetPest,
-                                        valueColor = Color.Red
-                                    )
-                                }
+//                                // Disease information (if available)
+//                                if (!scoutingDetails.targetPest.isNullOrEmpty()) {
+//                                    Spacer(modifier = Modifier.height(16.dp))
+//                                    Divider(color = Purple200)
+//                                    Spacer(modifier = Modifier.height(16.dp))
+//
+//                                    Text(
+//                                        text = "Disease Information",
+//                                        style = MaterialTheme.typography.titleMedium,
+//                                        fontWeight = FontWeight.Bold,
+//                                        color = Color.Red
+//                                    )
+//
+//                                    Spacer(modifier = Modifier.height(8.dp))
+//
+//                                    DetailRow(
+//                                        icon = Icons.Outlined.BugReport,
+//                                        label = "Disease",
+//                                        value = scoutingDetails.targetPest,
+//                                        valueColor = Color.Red
+//                                    )
+//                                }
                             }
                         }
                     }

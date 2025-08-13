@@ -1,11 +1,13 @@
 package com.kapilagro.sasyak.di
 
-import android.content.SharedPreferences
+import android.app.Application
 import com.kapilagro.sasyak.BuildConfig
 import com.kapilagro.sasyak.data.api.ApiService
 import com.kapilagro.sasyak.data.api.WeatherApiService
 import com.kapilagro.sasyak.data.api.interceptors.AuthInterceptor
+import com.kapilagro.sasyak.data.api.interceptors.NetworkCacheInterceptor
 import com.kapilagro.sasyak.data.api.interceptors.NetworkConnectivityInterceptor
+import com.kapilagro.sasyak.data.api.interceptors.OfflineCacheInterceptor
 import com.kapilagro.sasyak.data.api.interceptors.ResponseInterceptor
 import com.kapilagro.sasyak.data.api.interceptors.TokenAuthenticator
 import com.kapilagro.sasyak.domain.repositories.AuthRepository
@@ -13,10 +15,12 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import okhttp3.Cache
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.io.File
 import java.util.concurrent.TimeUnit
 import javax.inject.Named
 import javax.inject.Singleton
@@ -52,17 +56,24 @@ object NetworkModule {
     @Provides
     @Named("mainClient")
     fun provideOkHttpClient(
+        app : Application,
         httpLoggingInterceptor: HttpLoggingInterceptor,
         networkConnectivityInterceptor: NetworkConnectivityInterceptor,
         authInterceptor: AuthInterceptor,
         tokenAuthenticator: TokenAuthenticator,
         responseInterceptor: ResponseInterceptor
     ): OkHttpClient {
+        val cacheSize = 10L * 1024 * 1024 // 10 MB
+        val cache = Cache(File(app.cacheDir, "http_cache"), cacheSize)
+
         return OkHttpClient.Builder()
+            .cache(cache)
             .addInterceptor(httpLoggingInterceptor)
             .addInterceptor(networkConnectivityInterceptor)
             .addInterceptor(authInterceptor)
             .addInterceptor(responseInterceptor)
+            .addInterceptor(OfflineCacheInterceptor(app))
+            .addNetworkInterceptor(NetworkCacheInterceptor())
             .authenticator(tokenAuthenticator) // Add the authenticator here
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
