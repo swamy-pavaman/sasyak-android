@@ -24,6 +24,8 @@ class FileUploadWorker @AssistedInject constructor(
     private val videoUploader: MultipartVideoUploadService // Assumes this service is provided via Hilt
 ) : CoroutineWorker(appContext, workerParams) {
 
+    private val prefs = appContext.getSharedPreferences("upload_completed", Context.MODE_PRIVATE)
+
     companion object {
         const val UPLOAD_TAG = "file-upload-tag"
 
@@ -84,6 +86,15 @@ class FileUploadWorker @AssistedInject constructor(
         val uploadedUrls = mutableListOf<String>()
 
         imageFiles.forEachIndexed { index, file ->
+            val alreadyUploaded = prefs.getBoolean(file.absolutePath, false)
+            if (alreadyUploaded) {
+                val savedUrl = prefs.getString(file.absolutePath + "_url", null)
+                if (!savedUrl.isNullOrEmpty()) {
+                    uploadedUrls.add(savedUrl)
+                    Log.d("FileUploadWorker", "Skipping already uploaded file: ${file.name}, using saved URL.")
+                }
+                return@forEachIndexed
+            }
             try {
                 val result = if (file.extension.equals("mp4", ignoreCase = true)) {
                     // Handle .mp4 files with video upload service
@@ -95,11 +106,19 @@ class FileUploadWorker @AssistedInject constructor(
 
                 when (result) {
                     is ApiResponse.Success -> {
-                        uploadedUrls.addAll(if (file.extension.equals("mp4", ignoreCase = true)) {
-                            listOf(result.data as String) // Video upload returns a single URL
+                        val urlList = if (file.extension.equals("mp4", ignoreCase = true)) {
+                            listOf(result.data as String)
                         } else {
-                            result.data as List<String> // Image upload returns a list of URLs
-                        })
+                            result.data as List<String>
+                        }
+
+                        uploadedUrls.addAll(urlList)
+
+                        prefs.edit()
+                            .putBoolean(file.absolutePath, true)
+                            .putString(file.absolutePath + "_url", urlList.firstOrNull() ?: "")
+                            .apply()
+
                         val progressData = workDataOf(
                             KEY_PROGRESS_TASK_ID to taskId,
                             KEY_PROGRESS_FOLDER to folder,
@@ -121,10 +140,18 @@ class FileUploadWorker @AssistedInject constructor(
             }
         }
 
-        val outputData = workDataOf(
-            KEY_TASK_ID_OUTPUT to taskId,
-            KEY_UPLOADED_URLS_OUTPUT to uploadedUrls.toTypedArray()
-        )
-        return@withContext Result.success(outputData)
+        return@withContext Result.success(
+            workDataOf(
+                KEY_TASK_ID_OUTPUT to taskId,
+                KEY_UPLOADED_URLS_OUTPUT to uploadedUrls.toTypedArray()
+            )
+        ).also {
+            imageFiles.forEach { file ->
+                prefs.edit()
+                    .remove(file.absolutePath)
+                    .remove(file.absolutePath + "_url")
+                    .apply()
+            }
+        }
     }
 }
