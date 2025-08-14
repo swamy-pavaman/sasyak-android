@@ -281,6 +281,7 @@ fun YieldRequestScreen(
                     val constraints = Constraints.Builder()
                         .setRequiredNetworkType(NetworkType.CONNECTED)
                         .build()
+                    val folder = "YIELD/${submittedEntry?.cropName}"
 
 
                     val fileUploadRequest = OneTimeWorkRequestBuilder<FileUploadWorker>()
@@ -288,7 +289,7 @@ fun YieldRequestScreen(
                             FileUploadWorker.createInputData(
                                 taskId = createdTask.id,
                                 imagePaths = imageFilePaths,
-                                folder = "YIELD"
+                                folder = folder
                             )
                         )
                         .setConstraints(constraints)

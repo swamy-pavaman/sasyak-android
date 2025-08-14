@@ -168,6 +168,17 @@ class FuelListViewModel @Inject constructor(
             "detailsJson" to Json.encodeToString(fuelDetails),
             "assignedToId" to assignedToId
         )
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+
+        val folder = buildString {
+            append("FUEL")
+            val number = fuelDetails.vehicleNumber
+            if (!number.isNullOrBlank()) {
+                append("/$number")
+            }
+        }
         Log.d("WORKER", "TaskUploadData: $taskUploadData")
 
         val taskUploadRequest = OneTimeWorkRequestBuilder<TaskUploadWorker>()
@@ -182,9 +193,10 @@ class FuelListViewModel @Inject constructor(
         // ------------------ Step 2: FileUploadWorker ------------------
         val fileUploadData = workDataOf(
             "image_paths_input" to imagesJson?.toTypedArray(),
-            "folder_input" to "FUEL",
+            "folder_input" to folder,
             "enqueued_at" to System.currentTimeMillis()
         )
+        Log.d("WORKER", "FileUploadData: $fileUploadData")
 
         val fileUploadRequest = OneTimeWorkRequestBuilder<FileUploadWorker>()
             .setInputData(fileUploadData)

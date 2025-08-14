@@ -183,6 +183,7 @@ class YieldListViewModel @Inject constructor(
             cropName = yieldDetails.cropName,
             row = yieldDetails.row
         )
+        val folder = "YIELD/${yieldDetails.cropName}"
 
         // Save for preview (non-blocking)
         viewModelScope.launch(ioDispatcher) {
@@ -214,7 +215,7 @@ class YieldListViewModel @Inject constructor(
         // ------------------ Step 2: FileUploadWorker ------------------
         val fileUploadData = workDataOf(
             "image_paths_input" to imagesJson?.toTypedArray(),
-            "folder_input" to "YIELD",
+            "folder_input" to folder,
             "enqueued_at" to System.currentTimeMillis()
         )
 

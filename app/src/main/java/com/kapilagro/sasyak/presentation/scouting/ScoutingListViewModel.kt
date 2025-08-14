@@ -185,6 +185,18 @@ class ScoutingListViewModel @Inject constructor(
             row = scoutingDetails.row,
             treeNo = scoutingDetails.treeNo
         )
+        val folder = buildString {
+            append("SCOUTING/")
+            append(scoutingDetails.cropName)
+
+            val category = scoutingDetails.disease
+                ?: scoutingDetails.pest
+                ?: scoutingDetails.nutrients
+
+            if (!category.isNullOrBlank()) {
+                append("/$category")
+            }
+        }
 
         // Save for preview (non-blocking)
         viewModelScope.launch(ioDispatcher) {
@@ -216,7 +228,7 @@ class ScoutingListViewModel @Inject constructor(
         // ------------------ Step 2: FileUploadWorker ------------------
         val fileUploadData = workDataOf(
             "image_paths_input" to imagesJson?.toTypedArray(),
-            "folder_input" to "SCOUTING",
+            "folder_input" to folder,
             "enqueued_at" to System.currentTimeMillis()
         )
 

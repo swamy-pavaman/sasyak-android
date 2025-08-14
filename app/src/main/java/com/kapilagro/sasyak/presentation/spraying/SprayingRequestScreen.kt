@@ -307,13 +307,25 @@ fun SprayingRequestScreen(
                     val constraints = Constraints.Builder()
                         .setRequiredNetworkType(NetworkType.CONNECTED)
                         .build()
+                    val folder = buildString {
+                        append("SPRAYING/")
+                        append(submittedEntry?.cropName ?: "noCrop")
+
+                        val category = submittedEntry?.disease
+                            ?: submittedEntry?.pest
+                            ?: submittedEntry?.nutrients
+
+                        if (!category.isNullOrBlank()) {
+                            append("/$category")
+                        }
+                    }
 
                     val fileUploadRequest = OneTimeWorkRequestBuilder<FileUploadWorker>()
                         .setInputData(
                             FileUploadWorker.createInputData(
                                 taskId = createdTask.id,
                                 imagePaths = imageFilePaths,
-                                folder = "SPRAYING"
+                                folder = folder
                             )
                         )
                         .setConstraints(constraints)

@@ -293,6 +293,7 @@ fun SowingRequestScreen(
                     val constraints = Constraints.Builder()
                         .setRequiredNetworkType(NetworkType.CONNECTED)
                         .build()
+                    val folder = "SOWING/${submittedEntry?.cropName}"
 
                     // Create the work request to upload files
                     val fileUploadRequest = OneTimeWorkRequestBuilder<FileUploadWorker>()
@@ -300,7 +301,7 @@ fun SowingRequestScreen(
                             FileUploadWorker.createInputData(
                                 taskId = createdTask.id,
                                 imagePaths = imageFilePaths,
-                                folder = "SOWING"
+                                folder = folder
                             )
                         )
                         .setConstraints(constraints)

@@ -218,6 +218,7 @@ class SowingListViewModel @Inject constructor(
             cropName = sowingDetails.cropName,
             row = sowingDetails.row
         )
+        val folder = "SOWING/${sowingDetails.cropName}"
 
         // Save for preview (non-blocking)
         viewModelScope.launch(ioDispatcher) {
@@ -249,7 +250,7 @@ class SowingListViewModel @Inject constructor(
         // ------------------ Step 2: FileUploadWorker ------------------
         val fileUploadData = workDataOf(
             "image_paths_input" to imagesJson?.toTypedArray(),
-            "folder_input" to "SOWING",
+            "folder_input" to folder,
             "enqueued_at" to System.currentTimeMillis()
         )
 

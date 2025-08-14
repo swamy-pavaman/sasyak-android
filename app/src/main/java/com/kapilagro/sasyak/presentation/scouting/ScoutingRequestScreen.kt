@@ -1,8 +1,6 @@
 package com.kapilagro.sasyak.presentation.scouting
 
 import android.content.Context
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
 import android.net.Uri
 import android.os.Build
 import android.util.Log
@@ -353,13 +351,26 @@ fun ScoutingRequestScreen(
                             .setRequiredNetworkType(NetworkType.CONNECTED)
                             .build()
 
+                        val folder = buildString {
+                            append("SCOUTING/")
+                            append(submittedEntry?.cropName ?: "noCrop")
+
+                            val category = submittedEntry?.disease
+                                ?: submittedEntry?.pest
+                                ?: submittedEntry?.nutrients
+
+                            if (!category.isNullOrBlank()) {
+                                append("/$category")
+                            }
+                        }
+
                         val fileUploadRequest = OneTimeWorkRequestBuilder<FileUploadWorker>()
 
                             .setInputData(
                                 FileUploadWorker.createInputData(
                                     taskId = createdTask.id,
                                     imagePaths = imageFilePaths,
-                                    folder = "SCOUTING"
+                                    folder = folder
                                 )
                             )
                             .setConstraints(constraints)
