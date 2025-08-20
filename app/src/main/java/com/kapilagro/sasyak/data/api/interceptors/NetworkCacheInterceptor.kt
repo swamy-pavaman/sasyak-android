@@ -20,7 +20,7 @@ class NetworkCacheInterceptor : Interceptor {
         val path = request.url.encodedPath
 
         return if (cacheAllowedEndpoints.any { path.contains(it, ignoreCase = true) }) {
-            val maxAge = 60 * 5 // cache for 5 Min's
+            val maxAge = 60 * 60 * 12 // cache for 12 hours
             originalResponse.newBuilder()
                 .removeHeader("Pragma")
                 .removeHeader("Cache-Control")

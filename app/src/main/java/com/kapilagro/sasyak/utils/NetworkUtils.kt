@@ -5,9 +5,14 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
+import android.util.Log
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.withContext
+import java.net.URL
+import java.net.HttpURLConnection
 
 object NetworkUtils {
     /**
@@ -86,6 +91,52 @@ object NetworkUtils {
 
         awaitClose {
             connectivityManager.unregisterNetworkCallback(callback)
+        }
+    }
+
+    suspend fun checkNetworkSpeed(): Long {
+        return try {
+            val url = URL("https://www.google.com") // lightweight endpoint
+            val startTime = System.currentTimeMillis()
+
+            val connection = withContext(Dispatchers.IO) {
+                url.openConnection() as HttpURLConnection
+            }
+            connection.connectTimeout = 3000
+            connection.readTimeout = 3000
+            val bytesRead = connection.inputStream.use { it.readBytes().size }
+
+            val endTime = System.currentTimeMillis()
+            val duration = endTime - startTime // ms
+            Log.d("NETWORK SPEED", "Duration: $duration, Bytes: $bytesRead")
+
+            if (duration > 0) {
+                ((bytesRead.toDouble() / duration) * 1000 / 1024).toLong() // KB/s
+            } else 0
+        } catch (e: Exception) {
+            0
+        }
+    }
+    suspend fun checkNetworkLatency(): Long {
+        return try {
+            val url = URL("https://clients3.google.com/generate_204")
+            // this returns 204 No Content with almost zero bytes
+
+            val startTime = System.currentTimeMillis()
+
+            val connection = withContext(Dispatchers.IO) {
+                url.openConnection() as HttpURLConnection
+            }
+            connection.connectTimeout = 3000
+            connection.readTimeout = 3000
+            connection.inputStream.use { it.readBytes() } // tiny response
+
+            val endTime = System.currentTimeMillis()
+            val duration = endTime - startTime // ms
+
+            duration // just return latency in ms
+        } catch (e: Exception) {
+            Long.MAX_VALUE // treat as failed
         }
     }
 }
