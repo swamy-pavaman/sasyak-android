@@ -9,7 +9,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -24,6 +23,7 @@ fun SyncScreen(
     viewModel: SyncViewModel = hiltViewModel()
 ) {
     val uploadJobs by viewModel.uploadJobs.collectAsState()
+    val taskJobs by viewModel.taskUploadJobs.collectAsState()
 
     Scaffold(
         topBar = {
@@ -42,21 +42,36 @@ fun SyncScreen(
             )
         }
     ) { paddingValues ->
-        if (uploadJobs.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("No active uploads.", style = MaterialTheme.typography.bodyLarge)
+        LazyColumn(
+            modifier = Modifier.padding(paddingValues),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Section 1 → Task uploads
+            item {
+                Text("Task Uploads", style = MaterialTheme.typography.titleLarge)
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier.padding(paddingValues),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
+            if (taskJobs.isEmpty()) {
+                item {
+                    Text("No active task uploads.", style = MaterialTheme.typography.bodyMedium)
+                }
+            } else {
+                items(taskJobs, key = { it.id }) { job ->
+                    TaskJobCard(job = job)
+                }
+            }
+
+            item { Spacer(modifier = Modifier.height(24.dp)) }
+
+            // Section 2 → File uploads
+            item {
+                Text("File Uploads", style = MaterialTheme.typography.titleLarge)
+            }
+            if (uploadJobs.isEmpty()) {
+                item {
+                    Text("No active file uploads.", style = MaterialTheme.typography.bodyMedium)
+                }
+            } else {
                 items(uploadJobs, key = { it.id }) { job ->
                     UploadJobCard(job = job)
                 }
@@ -66,12 +81,13 @@ fun SyncScreen(
 }
 
 @Composable
-fun UploadJobCard(job: UploadJobUiState) {
+fun UploadJobCard(
+    job: UploadJobUiState,
+    viewModel: SyncViewModel = hiltViewModel()
+) {
     val progress = if (job.totalFiles > 0) {
         job.uploadedFiles.toFloat() / job.totalFiles.toFloat()
-    } else {
-        0f
-    }
+    } else 0f
 
     val statusText = when (job.status) {
         WorkInfo.State.ENQUEUED -> "Pending..."
@@ -112,14 +128,63 @@ fun UploadJobCard(job: UploadJobUiState) {
 
             // Show progress bar for running or successfully completed jobs
             if (job.status == WorkInfo.State.RUNNING || job.status == WorkInfo.State.SUCCEEDED) {
-                LinearProgressIndicator(
-                    progress =  progress,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                LinearProgressIndicator(progress = progress
+                    , modifier = Modifier.fillMaxWidth())
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (job.status == WorkInfo.State.RUNNING || job.status == WorkInfo.State.ENQUEUED) {
+                    OutlinedButton(onClick = { viewModel.cancelJob(job.id) }) {
+                        Text("Cancel")
+                    }
+                }
             }
         }
     }
 }
+
+@Composable
+fun TaskJobCard(
+    job: TaskUploadJobUiState,
+    viewModel: SyncViewModel = hiltViewModel()
+) {
+    val statusText = when (job.status) {
+        WorkInfo.State.ENQUEUED -> "Pending..."
+        WorkInfo.State.RUNNING -> "Uploading task..."
+        WorkInfo.State.SUCCEEDED -> "Task upload complete"
+        WorkInfo.State.FAILED -> "Task upload failed"
+        WorkInfo.State.BLOCKED -> "Waiting..."
+        WorkInfo.State.CANCELLED -> "Cancelled"
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text("Type: ${job.taskType}", style = MaterialTheme.typography.titleMedium)
+            Text("Description: ${job.description}", style = MaterialTheme.typography.bodyMedium)
+            Text("Created: ${formatTimestamp(job.enqueuedAt)}", style = MaterialTheme.typography.bodySmall)
+            Spacer(Modifier.height(8.dp))
+
+            Text(statusText, style = MaterialTheme.typography.bodyMedium)
+
+            Spacer(Modifier.height(12.dp))
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (job.status == WorkInfo.State.RUNNING || job.status == WorkInfo.State.ENQUEUED) {
+                    OutlinedButton(onClick = { viewModel.cancelJob(job.id) }) {
+                        Text("Cancel")
+                    }
+                }
+            }
+        }
+    }
+}
+
+
 
 private fun formatTimestamp(timestamp: Long): String {
     if (timestamp == 0L) return "Unknown time"

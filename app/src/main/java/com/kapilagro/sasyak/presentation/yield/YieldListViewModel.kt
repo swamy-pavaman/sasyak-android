@@ -205,6 +205,7 @@ class YieldListViewModel @Inject constructor(
 
         val taskUploadRequest = OneTimeWorkRequestBuilder<TaskUploadWorker>()
             .setInputData(taskUploadData)
+            .addTag(TaskUploadWorker.UPLOAD_TAG)
             .setConstraints(
                 Constraints.Builder()
                     .setRequiredNetworkType(NetworkType.CONNECTED)
@@ -221,6 +222,7 @@ class YieldListViewModel @Inject constructor(
 
         val fileUploadRequest = OneTimeWorkRequestBuilder<FileUploadWorker>()
             .setInputData(fileUploadData)
+            .addTag(FileUploadWorker.UPLOAD_TAG)
             .setConstraints(
                 Constraints.Builder()
                     .setRequiredNetworkType(NetworkType.CONNECTED)
