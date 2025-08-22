@@ -27,11 +27,14 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import javax.inject.Inject
 import kotlinx.serialization.encodeToString
+import com.kapilagro.sasyak.data.db.dao.WorkerDao
+import com.kapilagro.sasyak.data.db.entities.WorkJobEntity
 
 @HiltViewModel
 class FuelListViewModel @Inject constructor(
     private val taskRepository: TaskRepository,
-    @IoDispatcher private val ioDispatcher: CoroutineDispatcher
+    @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
+    private val workerDao: WorkerDao
 ) : ViewModel() {
 
     private val _tasksState = MutableStateFlow<TasksState>(TasksState.Loading)
@@ -168,10 +171,22 @@ class FuelListViewModel @Inject constructor(
             "detailsJson" to Json.encodeToString(fuelDetails),
             "assignedToId" to assignedToId
         )
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+
+        val folder = buildString {
+            append("FUEL")
+            val number = fuelDetails.vehicleNumber
+            if (!number.isNullOrBlank()) {
+                append("/$number")
+            }
+        }
         Log.d("WORKER", "TaskUploadData: $taskUploadData")
 
         val taskUploadRequest = OneTimeWorkRequestBuilder<TaskUploadWorker>()
             .setInputData(taskUploadData)
+            .addTag(TaskUploadWorker.UPLOAD_TAG)
             .setConstraints(
                 Constraints.Builder()
                     .setRequiredNetworkType(NetworkType.CONNECTED)
@@ -179,15 +194,27 @@ class FuelListViewModel @Inject constructor(
             )
             .build()
 
+        val workRequest = WorkJobEntity(
+            workId = taskUploadRequest.id,
+            taskType = "FUEL",
+            description = description,
+            enqueuedAt = System.currentTimeMillis()
+        )
+        viewModelScope.launch(ioDispatcher) {
+            workerDao.insert(workRequest)
+        }
+
         // ------------------ Step 2: FileUploadWorker ------------------
         val fileUploadData = workDataOf(
             "image_paths_input" to imagesJson?.toTypedArray(),
-            "folder_input" to "FUEL",
+            "folder_input" to folder,
             "enqueued_at" to System.currentTimeMillis()
         )
+        Log.d("WORKER", "FileUploadData: $fileUploadData")
 
         val fileUploadRequest = OneTimeWorkRequestBuilder<FileUploadWorker>()
             .setInputData(fileUploadData)
+            .addTag(FileUploadWorker.UPLOAD_TAG)
             .setConstraints(
                 Constraints.Builder()
                     .setRequiredNetworkType(NetworkType.CONNECTED)
@@ -211,6 +238,12 @@ class FuelListViewModel @Inject constructor(
             .then(attachUrlRequest)
             .enqueue()
 
+    }
+
+    fun updateToWorker(data:WorkJobEntity){
+        viewModelScope.launch(ioDispatcher) {
+            workerDao.insert(data)
+        }
     }
 
     fun clearCreateFuelState() {

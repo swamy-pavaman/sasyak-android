@@ -67,6 +67,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.kapilagro.sasyak.data.db.entities.WorkJobEntity
 import androidx.navigation.NavController
 import androidx.work.Constraints
 import androidx.work.NetworkType
@@ -307,18 +308,40 @@ fun SprayingRequestScreen(
                     val constraints = Constraints.Builder()
                         .setRequiredNetworkType(NetworkType.CONNECTED)
                         .build()
+                    val folder = buildString {
+                        append("SPRAYING/")
+                        append(submittedEntry?.cropName ?: "noCrop")
+
+                        val category = submittedEntry?.disease
+                            ?: submittedEntry?.pest
+                            ?: submittedEntry?.nutrients
+
+                        if (!category.isNullOrBlank()) {
+                            append("/$category")
+                        }
+                    }
 
                     val fileUploadRequest = OneTimeWorkRequestBuilder<FileUploadWorker>()
                         .setInputData(
                             FileUploadWorker.createInputData(
                                 taskId = createdTask.id,
                                 imagePaths = imageFilePaths,
-                                folder = "SPRAYING"
+                                folder = folder
                             )
                         )
                         .setConstraints(constraints)
                         .addTag(FileUploadWorker.UPLOAD_TAG)
                         .build()
+
+                    val workRequest = WorkJobEntity(
+                        workId = fileUploadRequest.id,
+                        taskID = createdTask.id,
+                        taskType = "SPRAYING",
+                        folder = folder,
+                        enqueuedAt = System.currentTimeMillis()
+                    )
+
+                    viewModel.updateToWorker(workRequest)
 
                     val attachUrlRequest = OneTimeWorkRequestBuilder<AttachUrlWorker>()
                         .setConstraints(constraints)

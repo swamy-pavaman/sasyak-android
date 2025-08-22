@@ -9,6 +9,7 @@ import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.kapilagro.sasyak.data.api.ImageUploadService
 import com.kapilagro.sasyak.data.api.MultipartVideoUploadService
+import com.kapilagro.sasyak.data.db.dao.WorkerDao
 import com.kapilagro.sasyak.domain.models.ApiResponse
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -21,7 +22,8 @@ class FileUploadWorker @AssistedInject constructor(
     @Assisted appContext: Context,
     @Assisted workerParams: WorkerParameters,
     private val imageUploader: ImageUploadService, // Assumes this service is provided via Hilt
-    private val videoUploader: MultipartVideoUploadService // Assumes this service is provided via Hilt
+    private val videoUploader: MultipartVideoUploadService, // Assumes this service is provided via Hilt
+    private val workerDao: WorkerDao
 ) : CoroutineWorker(appContext, workerParams) {
 
     private val prefs = appContext.getSharedPreferences("upload_completed", Context.MODE_PRIVATE)
@@ -127,6 +129,7 @@ class FileUploadWorker @AssistedInject constructor(
                             KEY_PROGRESS_UPLOADED to (index + 1)
                         )
                         setProgress(progressData)
+                        workerDao.deleteByWorkId(id)
                     }
                     is ApiResponse.Error -> {
                         Log.e("FileUploadWorker", "Upload failed for ${file.name}: ${result.errorMessage}. Retrying.")

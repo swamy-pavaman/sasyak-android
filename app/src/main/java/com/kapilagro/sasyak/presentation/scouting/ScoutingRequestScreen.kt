@@ -1,8 +1,6 @@
 package com.kapilagro.sasyak.presentation.scouting
 
 import android.content.Context
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
 import android.net.Uri
 import android.os.Build
 import android.util.Log
@@ -76,6 +74,7 @@ import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import coil.compose.rememberAsyncImagePainter
+import com.kapilagro.sasyak.data.db.entities.WorkJobEntity
 import com.kapilagro.sasyak.di.IoDispatcher
 import com.kapilagro.sasyak.domain.models.ScoutingDetails
 import com.kapilagro.sasyak.presentation.common.catalog.CategoriesState
@@ -353,18 +352,41 @@ fun ScoutingRequestScreen(
                             .setRequiredNetworkType(NetworkType.CONNECTED)
                             .build()
 
+                        val folder = buildString {
+                            append("SCOUTING/")
+                            append(submittedEntry?.cropName ?: "noCrop")
+
+                            val category = submittedEntry?.disease
+                                ?: submittedEntry?.pest
+                                ?: submittedEntry?.nutrients
+
+                            if (!category.isNullOrBlank()) {
+                                append("/$category")
+                            }
+                        }
+
                         val fileUploadRequest = OneTimeWorkRequestBuilder<FileUploadWorker>()
 
                             .setInputData(
                                 FileUploadWorker.createInputData(
                                     taskId = createdTask.id,
                                     imagePaths = imageFilePaths,
-                                    folder = "SCOUTING"
+                                    folder = folder
                                 )
                             )
                             .setConstraints(constraints)
                             .addTag(FileUploadWorker.UPLOAD_TAG)
                             .build()
+
+                        val workRequest = WorkJobEntity(
+                            workId = fileUploadRequest.id,
+                            taskID = createdTask.id,
+                            taskType = "SCOUTING",
+                            folder = folder,
+                            enqueuedAt = System.currentTimeMillis()
+                        )
+
+                        viewModel.updateToWorker(workRequest)
 
                         // 2. Create the second work request for attaching the URLs.
                         //    It doesn't need input data here because it gets it from the first worker.

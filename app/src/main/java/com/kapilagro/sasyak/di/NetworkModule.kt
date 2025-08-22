@@ -30,7 +30,7 @@ import javax.inject.Singleton
 object NetworkModule {
     private const val BASE_API_URL = "https://sasyakapi.kapilagro.com/"
     private const val OPENWEATHER_BASE_URL = "https://api.weatherapi.com/v1/"
-    const val OPENWEATHER_API_KEY = "a2d95ded8c1d47d09b163759252507"
+    const val OPENWEATHER_API_KEY = "79483e360e4540e489454358251908"
 
     @Singleton
     @Provides

@@ -92,6 +92,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import com.kapilagro.sasyak.presentation.common.components.TaskSubmittedDialog
+import com.kapilagro.sasyak.data.db.entities.WorkJobEntity
 import com.kapilagro.sasyak.utils.NetworkUtils
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -288,6 +289,13 @@ fun FuelRequestScreen(
                     val constraints = Constraints.Builder()
                         .setRequiredNetworkType(NetworkType.CONNECTED)
                         .build()
+                    val folder = buildString {
+                        append("FUEL")
+                        val number = submittedEntry?.vehicleNumber
+                        if (!number.isNullOrBlank()) {
+                            append("/$number")
+                        }
+                    }
 
 
                     val fileUploadRequest = OneTimeWorkRequestBuilder<FileUploadWorker>()
@@ -295,13 +303,22 @@ fun FuelRequestScreen(
                             FileUploadWorker.createInputData(
                                 taskId = createdTask.id,
                                 imagePaths = imageFilePaths,
-                                folder = "FUEL"
+                                folder = folder
                             )
                         )
                         .setConstraints(constraints)
                         .addTag(FileUploadWorker.UPLOAD_TAG)
                         .build()
 
+                    val workRequest = WorkJobEntity(
+                        workId = fileUploadRequest.id,
+                        taskID = createdTask.id,
+                        taskType = "FUEL",
+                        folder = folder,
+                        enqueuedAt = System.currentTimeMillis()
+                    )
+
+                    viewModel.updateToWorker(workRequest)
 
                     val attachUrlRequest = OneTimeWorkRequestBuilder<AttachUrlWorker>()
                         .setConstraints(constraints)
@@ -495,7 +512,7 @@ fun FuelRequestScreen(
                         vehicleNumber = newValue
                         vehicleNumberExpanded = true
                     },
-                    label = { Text("Vehicle number") },
+                    label = { Text("Vehicle number *") },
                     trailingIcon = {
                         Row(
                             verticalAlignment = Alignment.CenterVertically
@@ -686,7 +703,7 @@ fun FuelRequestScreen(
                         driverName = newValue
                         driverNameExpanded = true
                     },
-                    label = { Text("Driver name") },
+                    label = { Text("Driver name *") },
                     trailingIcon = {
                         Row(
                             verticalAlignment = Alignment.CenterVertically
@@ -1084,9 +1101,9 @@ fun FuelRequestScreen(
             Button(
                 onClick = {
                     if (vehicleName.isNotBlank() && fuelType.isNotBlank()
-                        && isValidDueDate
+                        && isValidDueDate && driverName.isNotBlank()
                         && (userRole != "ADMIN" || assignedTo != null)
-                        && quantity.isNotBlank()
+                        && quantity.isNotBlank() && vehicleNumber.isNotBlank()
                         && (userRole != "MANAGER" || assignedTo != null)) {
 
                         scope.launch(ioDispatcher) {
@@ -1121,7 +1138,8 @@ fun FuelRequestScreen(
                     }
                 },
                 enabled = vehicleName.isNotBlank() && fuelType.isNotBlank() && quantity.isNotBlank() && isValidDueDate
-                        && (userRole != "MANAGER" || assignedTo != null) && (userRole != "ADMIN" || assignedTo != null) &&
+                        && (userRole != "MANAGER" || assignedTo != null) && (userRole != "ADMIN" || assignedTo != null)
+                        && vehicleNumber.isNotBlank() && driverName.isNotBlank() &&
                         createFuelState !is FuelListViewModel.CreateFuelState.Loading,
                 modifier = Modifier
                     .fillMaxWidth()

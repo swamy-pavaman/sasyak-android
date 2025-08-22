@@ -11,11 +11,13 @@ import com.kapilagro.sasyak.data.db.dao.NotificationDao
 import com.kapilagro.sasyak.data.db.dao.PreviewDao
 import com.kapilagro.sasyak.data.db.dao.UserDao
 import com.kapilagro.sasyak.data.db.dao.WeatherDao
+import com.kapilagro.sasyak.data.db.dao.WorkerDao
 import com.kapilagro.sasyak.data.db.entities.TaskEntity
 import com.kapilagro.sasyak.data.db.entities.NotificationEntity
 import com.kapilagro.sasyak.data.db.entities.PreviewEntity
 import com.kapilagro.sasyak.data.db.entities.UserEntity
 import com.kapilagro.sasyak.data.db.entities.WeatherEntity
+import com.kapilagro.sasyak.data.db.entities.WorkJobEntity
 
 @Database(
     entities = [
@@ -23,9 +25,10 @@ import com.kapilagro.sasyak.data.db.entities.WeatherEntity
         NotificationEntity::class,
         UserEntity::class,
         WeatherEntity::class,
-        PreviewEntity::class
+        PreviewEntity::class,
+        WorkJobEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 @TypeConverters(DateConverters::class, ForecastConverters::class)
@@ -35,6 +38,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun userDao(): UserDao
     abstract fun weatherDao(): WeatherDao
     abstract fun previewDao(): PreviewDao
+    abstract fun workerDao(): WorkerDao
 
 
     companion object {

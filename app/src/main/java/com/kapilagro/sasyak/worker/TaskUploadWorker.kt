@@ -6,18 +6,28 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
+import com.kapilagro.sasyak.data.db.dao.WorkerDao
 import com.kapilagro.sasyak.domain.models.ApiResponse
 import com.kapilagro.sasyak.domain.repositories.TaskRepository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
-import kotlin.collections.toTypedArray
 
 @HiltWorker
 class TaskUploadWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
-    private val taskRepository: TaskRepository
+    private val taskRepository: TaskRepository,
+    private val workerDao: WorkerDao
 ) : CoroutineWorker(context, params) {
+
+    companion object {
+        const val UPLOAD_TAG = "task-upload-tag"
+
+        const val KEY_TASK_TYPE = "process_taskType"
+        const val KEY_DESCRIPTION = "process_description"
+        const val KEY_PROGRESS_ENQUEUED_AT = "process_enqueued_at"
+
+    }
 
     override suspend fun doWork(): Result {
         return try {
@@ -29,6 +39,13 @@ class TaskUploadWorker @AssistedInject constructor(
             Log.d("WORKER", "doWork1: $taskType, $description, $detailsJson, $assignedToId")
 
 
+            val initialProgress = workDataOf(
+                KEY_TASK_TYPE to taskType,
+                KEY_DESCRIPTION to description,
+                KEY_PROGRESS_ENQUEUED_AT to System.currentTimeMillis()
+            )
+            setProgress(initialProgress)
+
             val result = taskRepository.createTask(
                 taskType = taskType,
                 description = description,
@@ -38,7 +55,8 @@ class TaskUploadWorker @AssistedInject constructor(
             )
 
             return if (result is ApiResponse.Success) {
-                val taskId = result.data?.id ?: return Result.failure()
+                workerDao.deleteByWorkId(id)
+                val taskId = result.data.id
                 Result.success(workDataOf("task_id_input" to taskId))
             } else {
                 Result.retry()
