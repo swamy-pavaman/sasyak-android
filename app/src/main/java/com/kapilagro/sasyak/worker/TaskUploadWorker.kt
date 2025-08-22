@@ -6,6 +6,7 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
+import com.kapilagro.sasyak.data.db.dao.WorkerDao
 import com.kapilagro.sasyak.domain.models.ApiResponse
 import com.kapilagro.sasyak.domain.repositories.TaskRepository
 import dagger.assisted.Assisted
@@ -15,7 +16,8 @@ import dagger.assisted.AssistedInject
 class TaskUploadWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
-    private val taskRepository: TaskRepository
+    private val taskRepository: TaskRepository,
+    private val workerDao: WorkerDao
 ) : CoroutineWorker(context, params) {
 
     companion object {
@@ -53,6 +55,7 @@ class TaskUploadWorker @AssistedInject constructor(
             )
 
             return if (result is ApiResponse.Success) {
+                workerDao.deleteByWorkId(id)
                 val taskId = result.data.id
                 Result.success(workDataOf("task_id_input" to taskId))
             } else {

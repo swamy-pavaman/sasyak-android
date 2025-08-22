@@ -74,6 +74,7 @@ import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import coil.compose.rememberAsyncImagePainter
+import com.kapilagro.sasyak.data.db.entities.WorkJobEntity
 import com.kapilagro.sasyak.di.IoDispatcher
 import com.kapilagro.sasyak.domain.models.ScoutingDetails
 import com.kapilagro.sasyak.presentation.common.catalog.CategoriesState
@@ -376,6 +377,16 @@ fun ScoutingRequestScreen(
                             .setConstraints(constraints)
                             .addTag(FileUploadWorker.UPLOAD_TAG)
                             .build()
+
+                        val workRequest = WorkJobEntity(
+                            workId = fileUploadRequest.id,
+                            taskID = createdTask.id,
+                            taskType = "SCOUTING",
+                            folder = folder,
+                            enqueuedAt = System.currentTimeMillis()
+                        )
+
+                        viewModel.updateToWorker(workRequest)
 
                         // 2. Create the second work request for attaching the URLs.
                         //    It doesn't need input data here because it gets it from the first worker.

@@ -80,6 +80,7 @@ import com.kapilagro.sasyak.presentation.common.catalog.CategoriesState
 import com.kapilagro.sasyak.presentation.common.catalog.CategoryViewModel
 import com.kapilagro.sasyak.presentation.common.components.SuccessDialog
 import com.kapilagro.sasyak.presentation.common.image.ImageCaptureViewModel
+import com.kapilagro.sasyak.data.db.entities.WorkJobEntity
 import com.kapilagro.sasyak.presentation.common.navigation.Screen
 import com.kapilagro.sasyak.presentation.common.theme.AgroPrimary
 import com.kapilagro.sasyak.presentation.home.HomeViewModel
@@ -307,6 +308,16 @@ fun SowingRequestScreen(
                         .setConstraints(constraints)
                         .addTag(FileUploadWorker.UPLOAD_TAG)
                         .build()
+
+                    val workRequest = WorkJobEntity(
+                        workId = fileUploadRequest.id,
+                        taskID = createdTask.id,
+                        taskType = "SOWING",
+                        folder = folder,
+                        enqueuedAt = System.currentTimeMillis()
+                    )
+
+                    viewModel.updateToWorker(workRequest)
 
                     // Create the work request to attach the URLs to the task
                     val attachUrlRequest = OneTimeWorkRequestBuilder<AttachUrlWorker>()

@@ -67,6 +67,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.kapilagro.sasyak.data.db.entities.WorkJobEntity
 import androidx.navigation.NavController
 import androidx.work.Constraints
 import androidx.work.NetworkType
@@ -331,6 +332,16 @@ fun SprayingRequestScreen(
                         .setConstraints(constraints)
                         .addTag(FileUploadWorker.UPLOAD_TAG)
                         .build()
+
+                    val workRequest = WorkJobEntity(
+                        workId = fileUploadRequest.id,
+                        taskID = createdTask.id,
+                        taskType = "SPRAYING",
+                        folder = folder,
+                        enqueuedAt = System.currentTimeMillis()
+                    )
+
+                    viewModel.updateToWorker(workRequest)
 
                     val attachUrlRequest = OneTimeWorkRequestBuilder<AttachUrlWorker>()
                         .setConstraints(constraints)

@@ -92,6 +92,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import com.kapilagro.sasyak.presentation.common.components.TaskSubmittedDialog
+import com.kapilagro.sasyak.data.db.entities.WorkJobEntity
 import com.kapilagro.sasyak.utils.NetworkUtils
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -309,6 +310,15 @@ fun FuelRequestScreen(
                         .addTag(FileUploadWorker.UPLOAD_TAG)
                         .build()
 
+                    val workRequest = WorkJobEntity(
+                        workId = fileUploadRequest.id,
+                        taskID = createdTask.id,
+                        taskType = "FUEL",
+                        folder = folder,
+                        enqueuedAt = System.currentTimeMillis()
+                    )
+
+                    viewModel.updateToWorker(workRequest)
 
                     val attachUrlRequest = OneTimeWorkRequestBuilder<AttachUrlWorker>()
                         .setConstraints(constraints)

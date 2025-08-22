@@ -10,7 +10,9 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import com.kapilagro.sasyak.data.db.dao.PreviewDao
+import com.kapilagro.sasyak.data.db.dao.WorkerDao
 import com.kapilagro.sasyak.data.db.entities.PreviewEntity
+import com.kapilagro.sasyak.data.db.entities.WorkJobEntity
 import com.kapilagro.sasyak.di.IoDispatcher
 import com.kapilagro.sasyak.domain.models.ApiResponse
 import com.kapilagro.sasyak.domain.models.ScoutingDetails
@@ -35,7 +37,8 @@ import kotlinx.serialization.encodeToString
 class ScoutingListViewModel @Inject constructor(
     private val taskRepository: TaskRepository,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
-    private val previewDao: PreviewDao
+    private val previewDao: PreviewDao,
+    private val workerDao: WorkerDao
 ) : ViewModel() {
 
     private val _tasksState = MutableStateFlow<TasksState>(TasksState.Loading)
@@ -226,6 +229,16 @@ class ScoutingListViewModel @Inject constructor(
             )
             .build()
 
+        val workRequest = WorkJobEntity(
+            workId = taskUploadRequest.id,
+            taskType = "SCOUTING",
+            description = description,
+            enqueuedAt = System.currentTimeMillis()
+        )
+        viewModelScope.launch(ioDispatcher) {
+            workerDao.insert(workRequest)
+        }
+
         // ------------------ Step 2: FileUploadWorker ------------------
         val fileUploadData = workDataOf(
             "image_paths_input" to imagesJson?.toTypedArray(),
@@ -261,6 +274,12 @@ class ScoutingListViewModel @Inject constructor(
 
         // Optional: show pending state to UI immediately
         //_createScoutingState.value = CreateScoutingState.Success(TaskResponce(0, "Pending", "Task is queued for upload"))
+    }
+
+    fun updateToWorker(data:WorkJobEntity){
+        viewModelScope.launch(ioDispatcher) {
+            workerDao.insert(data)
+        }
     }
 
 

@@ -8,6 +8,7 @@ import com.kapilagro.sasyak.data.db.dao.PreviewDao
 import com.kapilagro.sasyak.data.db.dao.TaskDao
 import com.kapilagro.sasyak.data.db.dao.UserDao
 import com.kapilagro.sasyak.data.db.dao.WeatherDao
+import com.kapilagro.sasyak.data.db.dao.WorkerDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -55,4 +56,10 @@ object DatabaseModule {
     fun provideProfileDao(appDatabase: AppDatabase): PreviewDao {
         return appDatabase.previewDao()
     }
+
+    @Provides
+    fun provideWorkerDao(appDatabase: AppDatabase): WorkerDao {
+        return appDatabase.workerDao()
+    }
+
 }

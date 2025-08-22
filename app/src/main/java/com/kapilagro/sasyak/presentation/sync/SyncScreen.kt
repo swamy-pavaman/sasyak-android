@@ -109,7 +109,13 @@ fun UploadJobCard(
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Type: ${job.folder}",
+                text = "Type: ${job.taskType}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Folder: ${job.folder}",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -165,7 +171,7 @@ fun TaskJobCard(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text("Type: ${job.taskType}", style = MaterialTheme.typography.titleMedium)
-            Text("Description: ${job.description}", style = MaterialTheme.typography.bodyMedium)
+            Text("Description: ${job.description}", style = MaterialTheme.typography.bodyMedium, maxLines = 2)
             Text("Created: ${formatTimestamp(job.enqueuedAt)}", style = MaterialTheme.typography.bodySmall)
             Spacer(Modifier.height(8.dp))
 

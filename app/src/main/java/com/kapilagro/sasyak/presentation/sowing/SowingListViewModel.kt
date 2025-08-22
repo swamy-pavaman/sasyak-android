@@ -29,12 +29,15 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import javax.inject.Inject
 import kotlinx.serialization.encodeToString
+import com.kapilagro.sasyak.data.db.dao.WorkerDao
+import com.kapilagro.sasyak.data.db.entities.WorkJobEntity
 
 @HiltViewModel
 class SowingListViewModel @Inject constructor(
     private val taskRepository: TaskRepository,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
-    private val previewDao: PreviewDao
+    private val previewDao: PreviewDao,
+    private val workerDao: WorkerDao
 ) : ViewModel() {
 
     private val _tasksState = MutableStateFlow<TasksState>(TasksState.Loading)
@@ -248,6 +251,16 @@ class SowingListViewModel @Inject constructor(
             )
             .build()
 
+        val workRequest = WorkJobEntity(
+            workId = taskUploadRequest.id,
+            taskType = "SOWING",
+            description = description,
+            enqueuedAt = System.currentTimeMillis()
+        )
+        viewModelScope.launch(ioDispatcher) {
+            workerDao.insert(workRequest)
+        }
+
         // ------------------ Step 2: FileUploadWorker ------------------
         val fileUploadData = workDataOf(
             "image_paths_input" to imagesJson?.toTypedArray(),
@@ -281,6 +294,12 @@ class SowingListViewModel @Inject constructor(
             .then(attachUrlRequest)
             .enqueue()
 
+    }
+
+    fun updateToWorker(data:WorkJobEntity){
+        viewModelScope.launch(ioDispatcher) {
+            workerDao.insert(data)
+        }
     }
 
     fun clearCreateSowingState() {
